@@ -1,0 +1,184 @@
+{
+  "league": {
+    "store_name": "Continental Cards Tournament Location",
+    "meets": {
+      "summary": "Sundays at 2:00 PM",
+      "deadline_note": "Sign-in closes at 2:30 PM. Arrive before then to play.",
+      "address_lines": [
+        "21140 Ashburn Crossing Dr #110",
+        "Ashburn, VA 20147"
+      ],
+      "arrival_note": "A professor at the desk in the back will sign you in. If it is your first time, come a few minutes early so we can ensure to get you set up correctly.",
+      "cost_note": "League play is free. Entry to the weekly casual tournament is typically $5. Check the schedule for the cost of a given event."
+    },
+    "contact": {
+      "label": "Questions before you come",
+      "value": "PLACEHOLDER TBD. Ask a professor for now.",
+      "href": null
+    },
+    "footer": {
+      "lines": [
+        "Northern Virginia North Pokemon League meets at Continental Cards and is run by volunteer professors.",
+        "This site is made and maintained by those volunteers. It is not an official publisher website.",
+        "Content on this site is maintained by the professors. Tell us if something looks wrong."
+      ]
+    }
+  },
+  "releases": [
+    {
+      "id": "b0000001-0000-4000-8000-000000000001",
+      "name": "Delta Reign",
+      "starts_on": "2026-07-19",
+      "ends_on": "2026-11-01",
+      "attendance_days": 16,
+      "product_release_on": "2026-11-06"
+    }
+  ],
+  "loyalty_tiers": [
+    {
+      "id": "d0000001-0000-4000-8000-000000000001",
+      "release_id": "b0000001-0000-4000-8000-000000000001",
+      "name": "Booster Bundle",
+      "weeks_required": 10,
+      "sort_order": 1
+    },
+    {
+      "id": "d0000002-0000-4000-8000-000000000002",
+      "release_id": "b0000001-0000-4000-8000-000000000001",
+      "name": "Elite Trainer Box",
+      "weeks_required": 12,
+      "sort_order": 2
+    },
+    {
+      "id": "d0000003-0000-4000-8000-000000000003",
+      "release_id": "b0000001-0000-4000-8000-000000000001",
+      "name": "Booster Box",
+      "weeks_required": 14,
+      "sort_order": 3
+    }
+  ],
+  "labels": {
+    "event_type": {
+      "league": "League",
+      "casual": "Casual play",
+      "challenge": "Challenge",
+      "cup": "Cup",
+      "prerelease": "Prerelease",
+      "special": "Special event"
+    },
+    "division": {
+      "all": "All players",
+      "junior": "Juniors",
+      "senior": "Seniors",
+      "master": "Masters"
+    },
+    "player_id_required": "Player ID required",
+    "registration_open": "Sign-up is open",
+    "registration_closed": "Sign-up is not open yet",
+    "registration_help": "PLACEHOLDER Ask a professor to sign you up for now. Sign-up on this site is coming later.",
+    "linked_group_note": "Pick one session in this group. You may join the waiting list for the others.",
+    "capacity_prefix": "Space for",
+    "capacity_suffix": "players",
+    "tier_weeks_heading": "Weeks",
+    "tier_product_heading": "You may purchase",
+    "entry_fee_prefix": "Entry",
+    "no_release_note": "No release window covers today. Ask a professor which loyalty prizes are running."
+  },
+  "pages": {
+    "home": {
+      "title": "Northern Virginia North Pokemon League @ Continental Cards",
+      "lede": "PLACEHOLDER A weekly trading card game league at Continental Cards, for players of every age and every skill level. Come to play, come to learn, come to trade.",
+      "sections": [
+        {
+          "id": "meets",
+          "heading": "When and where we meet",
+          "kind": "meeting"
+        },
+        {
+          "id": "first-visit",
+          "heading": "Your first visit",
+          "kind": "steps",
+          "items": [
+            {
+              "heading": "Find the desk",
+              "body": "Look for the professor at the league table at the back of the tournament space. Let them know it is your first time."
+            },
+            {
+              "heading": "Give us your name, birth year, and Player ID",
+              "body": "We will need your first name, last name, birth year, and your Player ID to get you signed in and playing in the correct age division. If you do not have a Player ID, we will get you set up with one."
+            },
+            {
+              "heading": "Bring a deck, or borrow one",
+              "body": "Bring a deck with you, or borrow one of our rental decks. We encourage newer players to use a rental deck for their first couple of times, to get themselves acquainted with the current Standard format of the game."
+            },
+            {
+              "heading": "Play, and have fun",
+              "body": "Every week you come, you will get a prize pack for playing, and earn prize points that you will eventually be able to use for items from the prize wall."
+            },
+            {
+              "heading": "Ask about our Trainer Card Program",
+              "body": "Our Trainer Card Program is a program exclusive to our league. We would love to tell you more about it!"
+            }
+          ]
+        }
+      ]
+    },
+    "loyalty": {
+      "title": "Continental Cards' League Loyalty Program",
+      "lede": null,
+      "sections": [
+        {
+          "id": "loyalty",
+          "heading": null,
+          "kind": "loyalty",
+          "body": [
+            "Continental Cards has a loyalty program for Northern Virginia North League attendees. By attending league weekly you can earn the opportunity to purchase newly released Pokemon TCG set products at MSRP.",
+            "Loyalty starts again with each new release. The threshold of weeks you need to attend to qualify to purchase different products may vary from set to set, so check back here to see the current thresholds."
+          ]
+        }
+      ]
+    },
+    "schedule": {
+      "title": "Schedule",
+      "lede": "PLACEHOLDER Everything coming up. Times are when play starts, so arrive a little early.",
+      "empty": "No upcoming events are listed yet. Check back soon, or ask a professor."
+    },
+    "prizes": {
+      "title": "Prize wall",
+      "lede": "Welcome to the Continental Cards prize wall.",
+      "steps_heading": "How it works",
+      "steps": [
+        "You earn prize points by taking part in league activities. Every way to earn is listed below.",
+        "PLACEHOLDER Ask a professor for your point total.",
+        "Spend your prize points at the prize wall by trading points for items.",
+        "Suggest new activities and earn even more."
+      ],
+      "items_link": {
+        "href": "prize-items.html",
+        "label": "See the prize wall items and what they cost"
+      },
+      "earning_heading": "Ways to earn prize points",
+      "notes": [
+        "Point values are the standard award. A professor may award more for a bonus or a one-off.",
+        "An entry marked with a question mark means the professor decides the amount."
+      ],
+      "empty": "No earning actions are listed yet. Ask a professor how points are earned."
+    },
+    "prize-items": {
+      "title": "Prize wall items",
+      "lede": "Everything on the prize wall and what it costs in prize points.",
+      "back": {
+        "href": "prizes.html",
+        "label": "Back to the prize wall"
+      },
+      "item_heading": "Item",
+      "amount_heading": "Points",
+      "notes": [
+        "Costs are the standard price. A professor may set a different price.",
+        "Prize points never reset, so it is fine to save up for something larger.",
+        "Stock changes. Ask a professor what is on the wall today."
+      ],
+      "empty": "The prize wall has no items listed yet. Ask a professor what is available."
+    }
+  }
+}

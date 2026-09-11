@@ -1,0 +1,80 @@
+{
+  "events": [
+    {
+      "id": "e1111111-1111-4111-8111-111111111111",
+      "name": "PLACEHOLDER Sunday League",
+      "event_type": "league",
+      "starts_at": "2026-08-16T14:00:00-04:00",
+      "is_premier": false,
+      "registration_open": false,
+      "linked_group_id": null,
+      "entry_fee": null,
+      "description": "PLACEHOLDER Open play, trading, and help for new players. No sign-up. Come for an hour or stay for the afternoon."
+    },
+    {
+      "id": "e2222222-2222-4222-8222-222222222222",
+      "name": "PLACEHOLDER August Challenge",
+      "event_type": "challenge",
+      "starts_at": "2026-08-22T11:00:00-04:00",
+      "is_premier": true,
+      "registration_open": true,
+      "linked_group_id": null,
+      "entry_fee": "PLACEHOLDER $5",
+      "description": "PLACEHOLDER A short tournament, about three rounds. Bring a legal deck and a deck list. Prize support from the store."
+    },
+    {
+      "id": "e3333333-3333-4333-8333-333333333333",
+      "name": "PLACEHOLDER Prerelease, morning session",
+      "event_type": "prerelease",
+      "starts_at": "2026-09-12T10:00:00-04:00",
+      "is_premier": false,
+      "registration_open": true,
+      "linked_group_id": "4d111111-1111-4111-8111-111111111111",
+      "entry_fee": "PLACEHOLDER $30",
+      "description": "PLACEHOLDER Build a deck from a sealed kit and play four rounds. Good for a first tournament. No Player ID needed."
+    },
+    {
+      "id": "e4444444-4444-4444-8444-444444444444",
+      "name": "PLACEHOLDER Prerelease, afternoon session",
+      "event_type": "prerelease",
+      "starts_at": "2026-09-12T14:30:00-04:00",
+      "is_premier": false,
+      "registration_open": true,
+      "linked_group_id": "4d111111-1111-4111-8111-111111111111",
+      "entry_fee": "PLACEHOLDER $30",
+      "description": "PLACEHOLDER The same format as the morning session, for players who cannot come early."
+    }
+  ],
+  "event_capacities": [
+    {
+      "event_id": "e1111111-1111-4111-8111-111111111111",
+      "division": "all",
+      "capacity": 40
+    },
+    {
+      "event_id": "e2222222-2222-4222-8222-222222222222",
+      "division": "junior",
+      "capacity": 8
+    },
+    {
+      "event_id": "e2222222-2222-4222-8222-222222222222",
+      "division": "senior",
+      "capacity": 8
+    },
+    {
+      "event_id": "e2222222-2222-4222-8222-222222222222",
+      "division": "master",
+      "capacity": 16
+    },
+    {
+      "event_id": "e3333333-3333-4333-8333-333333333333",
+      "division": "all",
+      "capacity": 24
+    },
+    {
+      "event_id": "e4444444-4444-4444-8444-444444444444",
+      "division": "all",
+      "capacity": 24
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "earning_actions": [
+    {
+      "id": "a0000001-0000-4000-8000-000000000001",
+      "label": "Attend Sunday League",
+      "default_points": 1,
+      "eligibility_note": null,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 1
+    },
+    {
+      "id": "a0000002-0000-4000-8000-000000000002",
+      "label": "Create and donate a 30-card deck for learn to play",
+      "default_points": 4,
+      "eligibility_note": null,
+      "notes": "We are not currently accepting learn to play decks.",
+      "is_active": false,
+      "sort_order": 2
+    },
+    {
+      "id": "a0000003-0000-4000-8000-000000000003",
+      "label": "Bring a friend to league",
+      "default_points": 2,
+      "eligibility_note": null,
+      "notes": "20 points for the whole month of October.",
+      "is_active": true,
+      "sort_order": 3
+    },
+    {
+      "id": "a0000004-0000-4000-8000-000000000004",
+      "label": "Run a learn to play session",
+      "default_points": 10,
+      "eligibility_note": "Masters only",
+      "notes": null,
+      "is_active": true,
+      "sort_order": 4
+    },
+    {
+      "id": "a0000005-0000-4000-8000-000000000005",
+      "label": "Create and donate a rental library GLC format competitive deck",
+      "default_points": 10,
+      "eligibility_note": null,
+      "notes": "Proxy free rental GLC decks earn an extra 20 points.",
+      "is_active": true,
+      "sort_order": 5
+    },
+    {
+      "id": "a0000006-0000-4000-8000-000000000006",
+      "label": "Create and donate a rental library Standard format competitive deck",
+      "default_points": 10,
+      "eligibility_note": null,
+      "notes": "Proxy free rental decks earn an extra 10 points.",
+      "is_active": true,
+      "sort_order": 6
+    },
+    {
+      "id": "a0000007-0000-4000-8000-000000000007",
+      "label": "Update a competitive rental deck for a new meta",
+      "default_points": 3,
+      "eligibility_note": null,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 7
+    },
+    {
+      "id": "a0000008-0000-4000-8000-000000000008",
+      "label": "Play in casual league tournament",
+      "default_points": 1,
+      "eligibility_note": null,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 8
+    },
+    {
+      "id": "a0000009-0000-4000-8000-000000000009",
+      "label": "Play in a league Championship Event",
+      "default_points": 2,
+      "eligibility_note": null,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 9
+    },
+    {
+      "id": "a0000010-0000-4000-8000-000000000010",
+      "label": "Be a buddy for a new league attendee",
+      "default_points": 5,
+      "eligibility_note": "Juniors and Seniors only",
+      "notes": null,
+      "is_active": true,
+      "sort_order": 10
+    },
+    {
+      "id": "a0000011-0000-4000-8000-000000000011",
+      "label": "Bring a snack or treat to share with the league",
+      "default_points": 2,
+      "eligibility_note": null,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 11
+    },
+    {
+      "id": "a0000012-0000-4000-8000-000000000012",
+      "label": "Participate in a league special event or contest",
+      "default_points": 1,
+      "eligibility_note": null,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 12
+    },
+    {
+      "id": "a0000013-0000-4000-8000-000000000013",
+      "label": "Material donations, such as sleeves, deck boxes, or playable cards",
+      "default_points": 0,
+      "eligibility_note": null,
+      "notes": "Professor discretion. The professor sets the amount.",
+      "is_active": true,
+      "sort_order": 13
+    }
+  ]
+}

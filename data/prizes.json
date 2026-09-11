@@ -1,0 +1,308 @@
+{
+  "prize_items": [
+    {
+      "id": "c0000001-0000-4000-8000-000000000001",
+      "label": "Arceus figurine",
+      "default_cost": 10,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 1
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000002",
+      "label": "Bearbrick Pikachu worlds promo",
+      "default_cost": 25,
+      "notes": "A promo item from the 2024 World Championship in Hawaii.",
+      "is_active": true,
+      "sort_order": 2
+    },
+    {
+      "id": "c0000003-0000-4000-8000-000000000003",
+      "label": "Booster pack",
+      "default_cost": 24,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 3
+    },
+    {
+      "id": "c0000004-0000-4000-8000-000000000004",
+      "label": "Card binder, 160 card, small",
+      "default_cost": 40,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 4
+    },
+    {
+      "id": "c0000005-0000-4000-8000-000000000005",
+      "label": "Cardguard folio",
+      "default_cost": 80,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 5
+    },
+    {
+      "id": "c0000006-0000-4000-8000-000000000006",
+      "label": "Charizard playmat",
+      "default_cost": 40,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 6
+    },
+    {
+      "id": "c0000007-0000-4000-8000-000000000007",
+      "label": "Charizard statue",
+      "default_cost": 200,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 7
+    },
+    {
+      "id": "c0000008-0000-4000-8000-000000000008",
+      "label": "Cookbook",
+      "default_cost": 80,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 8
+    },
+    {
+      "id": "c0000009-0000-4000-8000-000000000009",
+      "label": "Deck boxes",
+      "default_cost": 30,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 9
+    },
+    {
+      "id": "c0000010-0000-4000-8000-000000000010",
+      "label": "Deck boxes, premium",
+      "default_cost": 60,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 10
+    },
+    {
+      "id": "c0000011-0000-4000-8000-000000000011",
+      "label": "Deck boxes, small",
+      "default_cost": 30,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 11
+    },
+    {
+      "id": "c0000012-0000-4000-8000-000000000012",
+      "label": "Delibird league card",
+      "default_cost": 16,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 12
+    },
+    {
+      "id": "c0000013-0000-4000-8000-000000000013",
+      "label": "EUIC pen",
+      "default_cost": 25,
+      "notes": "EUIC 2025.",
+      "is_active": true,
+      "sort_order": 13
+    },
+    {
+      "id": "c0000014-0000-4000-8000-000000000014",
+      "label": "Glaceon and Pikachu keychain",
+      "default_cost": 10,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 14
+    },
+    {
+      "id": "c0000015-0000-4000-8000-000000000015",
+      "label": "Metal damage markers",
+      "default_cost": 8,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 15
+    },
+    {
+      "id": "c0000016-0000-4000-8000-000000000016",
+      "label": "Painted binder, 3-ring",
+      "default_cost": 100,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 16
+    },
+    {
+      "id": "c0000017-0000-4000-8000-000000000017",
+      "label": "Pikachu dice bag",
+      "default_cost": 8,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 17
+    },
+    {
+      "id": "c0000018-0000-4000-8000-000000000018",
+      "label": "Pikachu eraser",
+      "default_cost": 10,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 18
+    },
+    {
+      "id": "c0000019-0000-4000-8000-000000000019",
+      "label": "Pikachu promo",
+      "default_cost": 8,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 19
+    },
+    {
+      "id": "c0000020-0000-4000-8000-000000000020",
+      "label": "Pikachu promo dice and damage markers",
+      "default_cost": 8,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 20
+    },
+    {
+      "id": "c0000021-0000-4000-8000-000000000021",
+      "label": "Plush, large",
+      "default_cost": 130,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 21
+    },
+    {
+      "id": "c0000022-0000-4000-8000-000000000022",
+      "label": "Plush, medium",
+      "default_cost": 70,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 22
+    },
+    {
+      "id": "c0000023-0000-4000-8000-000000000023",
+      "label": "Plush, small",
+      "default_cost": 25,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 23
+    },
+    {
+      "id": "c0000024-0000-4000-8000-000000000024",
+      "label": "Pokemon Center pins",
+      "default_cost": 30,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 24
+    },
+    {
+      "id": "c0000025-0000-4000-8000-000000000025",
+      "label": "Posters, print",
+      "default_cost": 120,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 25
+    },
+    {
+      "id": "c0000026-0000-4000-8000-000000000026",
+      "label": "Professor's Research, Juniper slab",
+      "default_cost": 70,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 26
+    },
+    {
+      "id": "c0000027-0000-4000-8000-000000000027",
+      "label": "Promo card, stamped",
+      "default_cost": 35,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 27
+    },
+    {
+      "id": "c0000028-0000-4000-8000-000000000028",
+      "label": "Puzzle, 151",
+      "default_cost": 10,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 28
+    },
+    {
+      "id": "c0000029-0000-4000-8000-000000000029",
+      "label": "Shinx figure",
+      "default_cost": 20,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 29
+    },
+    {
+      "id": "c0000030-0000-4000-8000-000000000030",
+      "label": "Single magnetic slab, pokeball",
+      "default_cost": 25,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 30
+    },
+    {
+      "id": "c0000031-0000-4000-8000-000000000031",
+      "label": "Slab binder",
+      "default_cost": 100,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 31
+    },
+    {
+      "id": "c0000032-0000-4000-8000-000000000032",
+      "label": "Sleeves, premium",
+      "default_cost": 35,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 32
+    },
+    {
+      "id": "c0000033-0000-4000-8000-000000000033",
+      "label": "Stickers, Pokemon Center EUIC",
+      "default_cost": 30,
+      "notes": "EUIC 2025.",
+      "is_active": true,
+      "sort_order": 33
+    },
+    {
+      "id": "c0000034-0000-4000-8000-000000000034",
+      "label": "Sweatshirt, Worlds youth large",
+      "default_cost": 300,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 34
+    },
+    {
+      "id": "c0000035-0000-4000-8000-000000000035",
+      "label": "Tin, 2 packs",
+      "default_cost": 70,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 35
+    },
+    {
+      "id": "c0000036-0000-4000-8000-000000000036",
+      "label": "Triple card set in slab",
+      "default_cost": 100,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 36
+    },
+    {
+      "id": "c0000037-0000-4000-8000-000000000037",
+      "label": "Various pins",
+      "default_cost": 10,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 37
+    },
+    {
+      "id": "c0000038-0000-4000-8000-000000000038",
+      "label": "Window cling",
+      "default_cost": 20,
+      "notes": null,
+      "is_active": true,
+      "sort_order": 38
+    }
+  ]
+}

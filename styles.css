@@ -1,0 +1,734 @@
+/* Northern Virginia North Pokemon League — all styles.
+   Mobile first: the base rules are the phone layout. Wider screens are added at
+   the two media queries near the end. */
+
+:root {
+  /* Aurora Night palette */
+  --ink: #0e1726;
+  --ink-soft: #16233a;
+  --teal: #1f7f76;
+  --teal-lift: #2fa89b;
+  --amber: #e8a33d;
+  --paper: #f7f8fa;
+  --card: #ffffff;
+  --text: #1b2230;
+  --muted: #5a6478;
+  --line: #dce1e8;
+
+  --font-head: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-body: -apple-system, "Segoe UI Variable Text", "Segoe UI", Roboto,
+    system-ui, sans-serif;
+
+  --gap: 1rem;
+  --radius: 8px;
+  --measure: 36rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.55;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-head);
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0 0 0.5rem;
+}
+
+h1 {
+  font-size: 1.75rem;
+}
+
+h2 {
+  font-size: 1.3rem;
+}
+
+h3 {
+  font-size: 1.05rem;
+}
+
+p {
+  margin: 0 0 0.75rem;
+  max-width: var(--measure);
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+a {
+  color: var(--teal);
+}
+
+a:hover {
+  color: var(--teal-lift);
+}
+
+:focus-visible {
+  outline: 3px solid var(--teal-lift);
+  outline-offset: 2px;
+}
+
+/* Read by a screen reader, not shown on screen. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+}
+
+.skip-link:focus {
+  left: 0.5rem;
+  top: 0.5rem;
+  z-index: 2;
+  background: var(--card);
+  color: var(--text);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+}
+
+/* --- Header and nav ------------------------------------------------------- */
+
+.site-header {
+  background: var(--ink);
+  color: var(--card);
+  padding: 0.85rem var(--gap) 0;
+}
+
+.site-header a {
+  color: var(--card);
+}
+
+/* Amber has the contrast to stay visible against the dark header. */
+.site-header :focus-visible {
+  outline-color: var(--amber);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+}
+
+.brand-mark {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.03em;
+  background: var(--teal);
+  color: var(--card);
+  border-radius: var(--radius);
+  padding: 0.3rem 0.45rem;
+  line-height: 1;
+}
+
+/* The league name is too long for one line on a phone, so the venue sits under it. */
+.brand-name {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.brand-league {
+  font-family: var(--font-head);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.brand-venue {
+  font-size: 0.78rem;
+  color: #c3cad6;
+  letter-spacing: 0.02em;
+}
+
+.site-nav {
+  margin-top: 0.75rem;
+}
+
+.site-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
+.site-nav a {
+  display: inline-block;
+  padding: 0.5rem 0;
+  font-size: 0.95rem;
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+}
+
+.site-nav a:hover {
+  border-bottom-color: var(--teal-lift);
+}
+
+.site-nav a[aria-current="page"] {
+  border-bottom-color: var(--amber);
+  font-weight: 600;
+}
+
+/* --- Layout --------------------------------------------------------------- */
+
+main {
+  flex: 1 0 auto;
+  width: 100%;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1.5rem var(--gap) 2.5rem;
+}
+
+.page-heading {
+  margin-bottom: 1.5rem;
+}
+
+.lede {
+  font-size: 1.05rem;
+  color: var(--muted);
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.1rem var(--gap);
+  margin-bottom: var(--gap);
+}
+
+.panel-quiet {
+  background: transparent;
+  border-style: dashed;
+}
+
+/* --- Notices -------------------------------------------------------------- */
+
+.notice {
+  color: var(--muted);
+  margin: 0;
+}
+
+.notice-problem {
+  background: var(--card);
+  border-left: 4px solid var(--amber);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 0.75rem var(--gap);
+  color: var(--text);
+  max-width: var(--measure);
+}
+
+.notice-quiet {
+  padding: 0.75rem 0;
+}
+
+/* --- Home page ------------------------------------------------------------ */
+
+.meets-when {
+  font-family: var(--font-head);
+  font-size: 1.15rem;
+  color: var(--text);
+}
+
+/* Missing the sign-in time means missing the day, so it gets its own marked line. */
+.meets-deadline {
+  font-weight: 600;
+  border-left: 4px solid var(--amber);
+  padding-left: 0.7rem;
+  margin-bottom: 0.85rem;
+}
+
+.meets-where {
+  font-style: normal;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.steps {
+  list-style: none;
+  counter-reset: step;
+  margin: 0;
+  padding: 0;
+}
+
+.step {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.25rem;
+  margin-bottom: 1rem;
+}
+
+.step:last-child {
+  margin-bottom: 0;
+}
+
+.step::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--amber);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-heading {
+  margin-bottom: 0.15rem;
+}
+
+/* --- Loyalty tiers -------------------------------------------------------- */
+
+.tier-block {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+.tier-table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: var(--measure);
+  text-align: left;
+}
+
+.tier-table caption {
+  text-align: left;
+  padding-bottom: 0.5rem;
+}
+
+.tier-release {
+  display: block;
+  font-family: var(--font-head);
+  font-weight: 700;
+}
+
+.tier-window {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.tier-facts {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+
+.tier-table th,
+.tier-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.6rem 0.5rem 0.6rem 0;
+}
+
+.tier-table thead th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.tier-weeks {
+  width: 4.5rem;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.1rem;
+}
+
+/* --- Cards ---------------------------------------------------------------- */
+
+.card-list {
+  list-style: none;
+  margin: 0 0 var(--gap);
+  padding: 0;
+  display: grid;
+  gap: var(--gap);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.badges {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.6rem;
+  padding: 0;
+}
+
+.badge {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--card);
+  background: var(--teal);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+}
+
+.badge-note {
+  background: var(--ink-soft);
+}
+
+/* --- Event cards ---------------------------------------------------------- */
+
+.event-when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0 0 0.2rem;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.event-time {
+  color: var(--text);
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.event-name {
+  margin-bottom: 0.5rem;
+}
+
+.event-capacity {
+  margin: 0.75rem 0 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.event-capacity-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.division-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 18rem;
+}
+
+.division-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.division-list li:last-child {
+  border-bottom: 0;
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.event-fee {
+  margin: 0.4rem 0 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.event-note {
+  margin: 0.6rem 0 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.event-signup {
+  margin: 0.85rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* Must not shrink: as a flex row beside the help text it would wrap mid-word. */
+.status {
+  font-size: 0.9rem;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.status-open {
+  color: var(--teal);
+}
+
+.status-closed {
+  color: var(--muted);
+}
+
+.status-help {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+/* --- Prize wall and earning list ----------------------------------------- */
+
+.item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap);
+  margin-bottom: 0.5rem;
+}
+
+.item-label {
+  margin: 0;
+}
+
+/* Amber on white is too weak for text, so point values sit on ink. */
+.points {
+  margin: 0;
+  flex: 0 0 auto;
+  background: var(--ink);
+  color: var(--amber);
+  border-radius: var(--radius);
+  padding: 0.3rem 0.55rem;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.points-value {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.points-unit {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--card);
+}
+
+.item-notes {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.list-heading {
+  margin-top: 1.75rem;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.callout {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--teal);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 0.85rem var(--gap);
+  margin-bottom: var(--gap);
+  font-weight: 600;
+  max-width: none;
+}
+
+/* --- Prize item price table ---------------------------------------------- */
+
+.price-block {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.5rem var(--gap) 0.25rem;
+  margin-bottom: var(--gap);
+  overflow-x: auto;
+}
+
+.price-table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+}
+
+.price-table th,
+.price-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.6rem 0;
+  vertical-align: baseline;
+}
+
+.price-table tbody tr:last-child th,
+.price-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.price-table thead th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.price-table tbody th {
+  font-weight: 400;
+  padding-right: var(--gap);
+}
+
+.price-label {
+  display: block;
+}
+
+.price-notes {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.price-amount {
+  text-align: right;
+  width: 4.5rem;
+  white-space: nowrap;
+}
+
+/* --- Footer -------------------------------------------------------------- */
+
+.site-footer {
+  background: var(--ink);
+  color: var(--card);
+  padding: 1.5rem var(--gap);
+  font-size: 0.9rem;
+}
+
+.site-footer a {
+  color: var(--amber);
+}
+
+.site-footer :focus-visible {
+  outline-color: var(--amber);
+}
+
+.footer-contact {
+  margin-bottom: 0.85rem;
+}
+
+.footer-line {
+  color: #c3cad6;
+  margin-bottom: 0.4rem;
+  max-width: 44rem;
+}
+
+.site-footer .notice {
+  color: #c3cad6;
+}
+
+/* --- Wider screens ------------------------------------------------------- */
+
+@media (min-width: 34rem) {
+  h1 {
+    font-size: 2.1rem;
+  }
+
+  h2 {
+    font-size: 1.45rem;
+  }
+
+  .card-list {
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  }
+
+  .event-signup {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+}
+
+@media (min-width: 52rem) {
+  .site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap);
+    padding: 0.85rem 1.5rem;
+  }
+
+  .brand-league {
+    font-size: 1.15rem;
+  }
+
+  .brand-venue {
+    font-size: 0.85rem;
+  }
+
+  .site-nav {
+    margin-top: 0;
+  }
+
+  main {
+    padding-top: 2rem;
+  }
+
+  .panel {
+    padding: 1.4rem 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
