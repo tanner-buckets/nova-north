@@ -47,8 +47,8 @@ against real functions and policies later. Current phase: **1**.
 
 | Phase | Work | State |
 |---|---|---|
-| 1 | Reference tables: `earning_actions`, `prize_items`, `releases`, `loyalty_tiers` | in progress |
-| 2 | People and consent: `players`, `professors`, `consent_log`, visibility helpers | |
+| 1 | Reference tables: `earning_actions`, `prize_items`, `releases`, `loyalty_tiers` | done |
+| 2 | People and consent: `players`, `professors`, `consent_log`, visibility helpers | in progress |
 | 3 | Points and attendance: `attendance`, `point_ledger`, consent expiry | |
 | 4 | Events and registration | |
 | 5 | Public pages, built against the real tables | |
@@ -110,6 +110,43 @@ Write policies call `public.is_professor()`, which reads a `professors` table th
 phase 2 creates. The helper is `plpgsql` on purpose: its body is not resolved until
 it runs, so this migration applies cleanly today, and the policies need no change
 when that table arrives.
+
+**Phase 2** — `supabase/migrations/20260911170252_people_and_consent.sql`
+
+`players`, `professors` and `consent_log`, plus the visibility helpers and the
+`public_players` view. Creating `professors` also completes phase 1 retroactively:
+`is_professor()` starts returning real answers.
+
+Two mechanisms carry the privacy model, and both are enforced by the database
+rather than by discipline:
+
+- **`anon` receives exactly one grant in the whole migration** — `select` on
+  `public_players`. It has no access to `players`, `professors` or `consent_log`.
+  The view works because `security_invoker` is off, so it runs as its owner and
+  reads a table the caller cannot.
+- **`UPDATE` on `players` is granted per column**, and the consent columns are
+  not in the list. A professor cannot write `show_player_id` or `show_name`
+  directly; the only route is `set_player_visibility()`, which always writes a
+  `consent_log` row. RLS is row-level, so keeping a column out of reach needs a
+  grant, not a policy.
+
+`consent_log` has no insert, update or delete policies at all. Rows arrive only
+through that function and can never be altered.
+
+**`public_players` returns zero rows until phase 3.** Visibility requires
+attendance within three months, and `last_attendance_on()` is a stub returning
+null, so the model fails closed. Phase 3 replaces that one function body; no
+policy or view changes.
+
+### Importing players
+
+Not as a migration. Migration files are committed to this public repository, so
+seeding players there would publish their names permanently. The import runs out
+of band — Supabase Studio's CSV import, or a local script using `service_role`
+that never enters git.
+
+The same applies to professors. Each signs up through Supabase Auth, then their
+`user_id`, display name and Player ID are inserted by hand in the dashboard.
 
 ### Verifying a deployed migration
 
