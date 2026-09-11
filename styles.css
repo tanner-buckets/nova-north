@@ -1,0 +1,235 @@
+/* NoVa North League — all styles.
+   Mobile first: the base rules are the phone layout, widened at the media query. */
+
+:root {
+  --ink: #0e1726;
+  --teal: #1f7f76;
+  --teal-lift: #2fa89b;
+  --amber: #e8a33d;
+  --paper: #f7f8fa;
+  --card: #ffffff;
+  --text: #1b2230;
+  --muted: #5a6478;
+  --line: #dce1e8;
+
+  --font-head: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-body: -apple-system, "Segoe UI Variable Text", "Segoe UI", Roboto,
+    system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.55;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+h1,
+h2 {
+  font-family: var(--font-head);
+  line-height: 1.2;
+  margin: 0 0 0.5rem;
+}
+
+h1 {
+  font-size: 1.75rem;
+}
+
+h2 {
+  font-size: 1.3rem;
+}
+
+p {
+  margin: 0 0 0.75rem;
+  max-width: 36rem;
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+a {
+  color: var(--teal);
+}
+
+a:hover {
+  color: var(--teal-lift);
+}
+
+:focus-visible {
+  outline: 3px solid var(--teal-lift);
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+}
+
+.skip-link:focus {
+  left: 0.5rem;
+  top: 0.5rem;
+  z-index: 2;
+  background: var(--card);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+}
+
+/* --- Header --------------------------------------------------------------- */
+
+.site-header {
+  background: var(--ink);
+  color: var(--card);
+  padding: 0.85rem 1rem 0;
+}
+
+.site-header a {
+  color: var(--card);
+}
+
+/* Amber has the contrast to stay visible against the dark header. */
+.site-header :focus-visible {
+  outline-color: var(--amber);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+}
+
+.brand-mark {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.03em;
+  background: var(--teal);
+  border-radius: 8px;
+  padding: 0.3rem 0.45rem;
+  line-height: 1;
+}
+
+.brand-name {
+  font-family: var(--font-head);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.site-nav {
+  margin-top: 0.75rem;
+}
+
+.site-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
+.site-nav a {
+  display: inline-block;
+  padding: 0.5rem 0;
+  font-size: 0.95rem;
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+}
+
+.site-nav a:hover {
+  border-bottom-color: var(--teal-lift);
+}
+
+.site-nav a[aria-current="page"] {
+  border-bottom-color: var(--amber);
+  font-weight: 600;
+}
+
+/* --- Content -------------------------------------------------------------- */
+
+main {
+  flex: 1 0 auto;
+  width: 100%;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 2.5rem;
+}
+
+.lede {
+  font-size: 1.05rem;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.1rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.meets-when {
+  font-family: var(--font-head);
+  font-size: 1.15rem;
+}
+
+/* Missing the sign-in time means missing the day, so it gets its own marked line. */
+.meets-deadline {
+  font-weight: 600;
+  border-left: 4px solid var(--amber);
+  padding-left: 0.7rem;
+  margin-bottom: 0.85rem;
+}
+
+.meets-where {
+  font-style: normal;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+/* --- Footer --------------------------------------------------------------- */
+
+.site-footer {
+  background: var(--ink);
+  color: #c3cad6;
+  padding: 1.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+.site-footer p {
+  max-width: 44rem;
+  margin-bottom: 0.4rem;
+}
+
+@media (min-width: 34rem) {
+  h1 {
+    font-size: 2.1rem;
+  }
+}
+
+@media (min-width: 52rem) {
+  .site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1.5rem;
+  }
+
+  .site-nav {
+    margin-top: 0;
+  }
+}
