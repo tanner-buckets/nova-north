@@ -1,4 +1,19 @@
-﻿.env
+.env
 .env.local
 node_modules/
 .supabase/
+
+# Supabase CLI local state: project ref, pooler URL, service versions.
+supabase/.temp/
+
+# Player data: deny by default.
+#
+# The spreadsheet exports carry full names, and most players are children.
+# CLAUDE.md: last name is protected, and the only public player fields are
+# Player ID, first name and last initial. This repository is public.
+#
+# Everything in data/source/ is excluded unless explicitly allowed below, so a
+# new export dropped in here is ignored by default rather than by luck.
+data/source/*
+!data/source/earning-actions.csv
+!data/source/prize-items.csv
