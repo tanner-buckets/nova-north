@@ -124,11 +124,18 @@ rather than by discipline:
   `public_players`. It has no access to `players`, `professors` or `consent_log`.
   The view works because `security_invoker` is off, so it runs as its owner and
   reads a table the caller cannot.
-- **`UPDATE` on `players` is granted per column**, and the consent columns are
-  not in the list. A professor cannot write `show_player_id` or `show_name`
-  directly; the only route is `set_player_visibility()`, which always writes a
+- **`INSERT` and `UPDATE` on `players` are both granted per column**, and the
+  consent columns are in neither list. A professor cannot write
+  `show_player_id` or `show_name` directly, nor set them when creating a row;
+  the only route is `set_player_visibility()`, which always writes a
   `consent_log` row. RLS is row-level, so keeping a column out of reach needs a
   grant, not a policy.
+
+`player_id` is updatable so a mis-entry can be corrected. Every foreign key
+referencing it must therefore use `ON UPDATE CASCADE`, or the correction is
+refused. That is settled for `professors` and `consent_log`; `point_ledger` in
+phase 3 needs a decision, because cascading conflicts with "never update a
+ledger row".
 
 `consent_log` has no insert, update or delete policies at all. Rows arrive only
 through that function and can never be altered.
