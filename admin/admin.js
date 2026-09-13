@@ -63,7 +63,7 @@ const TOOLS = [
   { href: 'points.html', name: 'Points',
     note: 'Award points for anything else earned, and record what is spent at the prize wall. Corrections are reversing entries, never edits.' },
   { href: 'trainer-card.html', name: 'Trainer Card',
-    note: 'Record badges, Elite 4 wins and Champion status.' },
+    note: 'Record badges, Elite 4 wins and Champion. Rank follows from what is recorded; it is not set by hand.' },
   { href: 'players.html', name: 'Players',
     note: 'Add a player, or correct a name or Player ID.' },
   { href: 'events.html', name: 'Events',

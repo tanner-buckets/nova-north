@@ -1297,11 +1297,12 @@ a.player-button:hover .player-label {
   gap: 0.75rem;
   flex-wrap: wrap;
 }
-
-/* Demo pages only; never shipped to a public screen. */
-.demo-link {
-  margin-right: 0.75rem;
+/* A display declaration beats the browser's own [hidden] rule, so without this
+   every confirm step renders open and confirms nothing. */
+.confirm-row[hidden] {
+  display: none;
 }
+
 
 /* --- Points ----------------------------------------------------------------- */
 
@@ -1455,4 +1456,99 @@ a.player-button:hover .player-label {
   width: 100%;
   max-width: 22rem;
   box-sizing: border-box;
+}
+
+/* --- Trainer Card ----------------------------------------------------------- */
+
+.rank-line {
+  margin: 0.5rem 0 0.25rem;
+}
+.rank-name {
+  font-family: var(--font-head);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--teal);
+}
+
+/* A badge is a toggle, so it has to read as earned or not at a glance. An
+   unearned badge keeps its colour as an outline and fills in once awarded,
+   rather than being a different colour, so the wall of them stays legible. */
+.badge-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+/* No background here on purpose. The badge-cN colour classes set it, and they
+   are defined earlier in this file, so declaring one would win over all of them
+   and leave an earned badge with white text on nothing. */
+.badge-toggle {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+  text-align: center;
+}
+.badge-toggle:not(.is-earned) {
+  background: transparent;
+  border: 2px dashed var(--line);
+  color: var(--muted);
+}
+.badge-toggle:not(.is-earned):hover {
+  border-style: solid;
+  color: var(--text);
+}
+.badge-toggle.is-earned {
+  border: 2px solid transparent;
+  color: var(--card);
+}
+.badge-toggle.is-earned:hover {
+  border-color: var(--ink);
+}
+.badge-toggle-date {
+  font-size: 0.7rem;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.battle-toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(4.2rem, 1fr));
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+.battle-toggle {
+  font: inherit;
+  display: grid;
+  gap: 0.2rem;
+  justify-items: center;
+  padding: 0.7rem 0.5rem;
+  border-radius: 8px;
+  border: 2px dashed var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.battle-toggle:hover {
+  border-style: solid;
+  color: var(--text);
+}
+.battle-toggle.is-won {
+  border-style: solid;
+  border-color: var(--teal);
+  background: var(--teal);
+  color: var(--card);
+}
+.battle-number {
+  font-family: var(--font-head);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.battle-state {
+  font-size: 0.75rem;
 }

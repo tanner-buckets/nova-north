@@ -445,6 +445,31 @@ event in November would be written an hour out by a rule that was correct in
 July. The conversion round-trips exactly on both clock-change Sundays, including
 the repeated hour and the hour that does not exist.
 
+### Trainer Card
+
+`admin/trainer-card.html` records badges, Elite 4 battles and Champion.
+
+**Rank is not recorded and not computed here.** `player_rank()` decides it from
+the season's badges, the ranks table and any Champion award, and the screen asks
+it rather than keeping a second opinion that could disagree. The Champion
+threshold is read from `trainer_card_ranks` too, so moving it is a data change
+rather than a code change.
+
+Nothing is edited. All three tables grant `INSERT` and `DELETE` and no `UPDATE`,
+so every control is a toggle: award it, or take it back. A badge given to the
+wrong player is taken off them and given to the right one. Badges are coloured by
+position in the season's list, the same rule the public player card uses, so next
+season's badges colour themselves.
+
+Only Elite 4 **wins** are recorded. A lost battle is nothing and a player may
+retry as often as they like, so there is no attempt to store. Everything on the
+screen is seasonal and resets when the next season's badge list arrives; past
+seasons stay on the player's record.
+
+Recording a Champion who does not yet meet the threshold is **warned about, not
+blocked** — `player_rank()` does not check eligibility either, and a professor
+who watched the battles outranks a count. It says what is missing and asks.
+
 ### Players
 
 `admin/players.html` adds someone who did not arrive through a tournament file,
