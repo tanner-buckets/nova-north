@@ -862,6 +862,144 @@ h3 {
 .player-label { font-weight: 600; }
 .player-id { color: var(--muted); font-weight: 400; }
 
+/* The summary sits above the list, so a long list never pushes it out of sight.
+   On a wide screen the two sit side by side and the summary sticks while the
+   list scrolls. On a phone it stays at the top and selecting a player scrolls
+   back to it -- a card this tall cannot usefully be pinned to a small screen. */
+.player-layout {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+.result-col:empty { display: none; }
+
+/* One colour per badge, assigned by position in the season's list. Each clears
+   4.5:1 against white. */
+.badge-c0  { background: #1f7f76; }
+.badge-c1  { background: #6b4fa0; }
+.badge-c2  { background: #a8641a; }
+.badge-c3  { background: #2b6cb0; }
+.badge-c4  { background: #9b2c52; }
+.badge-c5  { background: #2f7a3f; }
+.badge-c6  { background: #7a5c1e; }
+.badge-c7  { background: #3f5f8a; }
+.badge-c8  { background: #8a3f6b; }
+.badge-c9  { background: #1f6f8f; }
+.badge-c10 { background: #b3452a; }
+.badge-c11 { background: #4a6b1f; }
+.badge-c12 { background: #7d2f3f; }
+
+/* --- Professor tools -------------------------------------------------------- */
+
+.tool-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.tool-card {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.tool-card:hover { border-color: var(--teal-lift); }
+
+.tool-name {
+  display: block;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--teal);
+  margin-bottom: 0.15rem;
+}
+
+.tool-note {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.link-button {
+  font: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--teal);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* The bar a professor sees at the foot of every public page. It is a
+   convenience, not a control: hiding it from everyone else protects nothing,
+   and the database refuses the queries regardless. */
+.prof-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--ink);
+  color: var(--card);
+  border-top: 3px solid var(--amber);
+  z-index: 10;
+  font-size: 0.9rem;
+}
+
+.prof-bar-inner {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 0.6rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.prof-who {
+  color: #c3cad6;
+  flex: 1 1 100%;
+  font-size: 0.8rem;
+}
+
+.prof-links {
+  display: flex;
+  gap: 1rem;
+  flex: 1 1 auto;
+}
+
+.prof-bar a { color: var(--card); }
+
+.prof-primary {
+  font-weight: 700;
+  color: var(--amber) !important;
+}
+
+.prof-signout {
+  font: inherit;
+  background: none;
+  border: 1px solid #3a4a63;
+  border-radius: 6px;
+  color: #c3cad6;
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+}
+
+.prof-bar :focus-visible { outline-color: var(--amber); }
+
+/* Keeps the bar from covering the end of a page. */
+.has-prof-bar .site-footer { padding-bottom: 4.5rem; }
+
+@media (min-width: 34rem) {
+  .prof-who { flex: 0 1 auto; }
+}
+
 @media (min-width: 34rem) {
   h1 {
     font-size: 2.1rem;
@@ -878,6 +1016,20 @@ h3 {
 }
 
 @media (min-width: 52rem) {
+  .player-layout {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  }
+
+  .result-col {
+    position: sticky;
+    top: 1rem;
+  }
+
+  .list-col {
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+
   .brand-league {
     font-size: 1.15rem;
   }
@@ -897,4 +1049,701 @@ h3 {
   .site-nav {
     margin-top: 0;
   }
+}
+
+/* --- TDF upload ------------------------------------------------------------ */
+
+.field select {
+  font: inherit;
+  font-size: 1rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--text);
+  max-width: 26rem;
+}
+
+/* A checkbox sits beside its label rather than above it, unlike every other
+   field: a stacked checkbox reads as a heading with an orphaned box. */
+.field-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+.field-inline input {
+  width: 1.1rem;
+  height: 1.1rem;
+  max-width: none;
+  flex: none;
+}
+.field-inline label {
+  font-weight: 400;
+}
+
+.summary-list {
+  margin: 0.75rem 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.3rem 1rem;
+  font-size: 0.95rem;
+}
+.summary-list dt {
+  color: var(--muted);
+}
+.summary-list dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.attendee-list {
+  max-height: 18rem;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.4rem;
+  background: var(--paper);
+}
+.attendee {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.3rem 0.4rem;
+  font-size: 0.95rem;
+}
+
+.tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+}
+.tag-new {
+  background: var(--amber);
+  color: var(--ink);
+}
+.tag-added {
+  background: var(--teal);
+  color: var(--card);
+}
+
+/* The count of people about to be created is the one thing on this screen worth
+   stopping for, so it gets the same treatment as a warning rather than sitting
+   inline with the rest of the form. */
+.warn-block {
+  margin: 0.85rem 0;
+  padding: 0.75rem 0.9rem;
+  border-left: 4px solid var(--amber);
+  background: var(--paper);
+  border-radius: 0 6px 6px 0;
+}
+.warn-block p:first-child {
+  margin-top: 0;
+}
+.warn-block .field-help {
+  margin-bottom: 0;
+}
+
+.disclosure-body {
+  padding-top: 0.5rem;
+}
+
+.search-results {
+  display: grid;
+  gap: 0.35rem;
+  max-width: 26rem;
+}
+
+/* --- Visibility consent ----------------------------------------------------- */
+
+/* Whether the player is public *right now* is the one thing a professor must
+   read correctly before saying anything to a parent, so it gets stated plainly
+   rather than inferred from two switches further down the card. */
+.live-state {
+  margin: 0.5rem 0;
+  font-weight: 600;
+  padding: 0.5rem 0.7rem;
+  border-radius: 6px;
+}
+.live-state.is-on {
+  background: #e8f4f2;
+  border-left: 4px solid var(--teal);
+}
+.live-state.is-off {
+  background: var(--paper);
+  border-left: 4px solid var(--line);
+  color: var(--muted);
+}
+
+.field-help.is-warning {
+  color: var(--text);
+  border-left: 4px solid var(--amber);
+  padding-left: 0.7rem;
+  max-width: 26rem;
+}
+
+.log-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.log-list li {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--paper);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.log-when {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.log-note {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* The same row used as a link rather than a button. An anchor does not inherit
+   the button reset, so the two need to agree explicitly. */
+a.player-button {
+  text-decoration: none;
+  box-sizing: border-box;
+}
+a.player-button:hover .player-label {
+  text-decoration: underline;
+}
+
+/* --- Manual attendance, players, drops -------------------------------------- */
+
+.field textarea {
+  font: inherit;
+  font-size: 1rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--text);
+  max-width: 26rem;
+  resize: vertical;
+}
+
+.picker {
+  margin-bottom: 0.5rem;
+}
+
+.tag-division {
+  background: var(--ink-soft);
+  color: var(--card);
+}
+
+/* An event row carries two things at once: which event it is, and how much is
+   waiting on it. They stack on a phone and sit apart once there is room. */
+.event-row {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.event-row-main {
+  display: grid;
+  gap: 0.15rem;
+}
+.event-row-counts {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.reg-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+.reg-row {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.7rem 0.8rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.reg-row p {
+  margin: 0.3rem 0 0;
+}
+.reg-person {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* A drop nobody asked for is the one destructive click on these screens, so it
+   gets its own weight rather than looking like every other button. */
+.button-danger {
+  background: var(--amber);
+  color: var(--ink);
+  border-color: var(--amber);
+}
+.confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+/* A display declaration beats the browser's own [hidden] rule, so without this
+   every confirm step renders open and confirms nothing. */
+.confirm-row[hidden] {
+  display: none;
+}
+
+
+/* --- Points ----------------------------------------------------------------- */
+
+.stated-award {
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.8rem;
+  background: var(--paper);
+  border-left: 4px solid var(--teal);
+  border-radius: 0 6px 6px 0;
+}
+
+.balance {
+  margin: 0.5rem 0 0.25rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.balance-number {
+  font-family: var(--font-head);
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--teal);
+  line-height: 1;
+}
+
+.ledger-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.ledger-row {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr auto;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--paper);
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+/* A reversed entry stays on the record and stays legible; it is struck through
+   rather than removed, because the balance is the sum of what is still here. */
+.ledger-row.is-voided .ledger-delta,
+.ledger-row.is-voided .ledger-what > span:first-child {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.ledger-delta {
+  font-family: var(--font-head);
+  font-weight: 700;
+  text-align: right;
+}
+.ledger-delta.is-up { color: var(--teal); }
+.ledger-delta.is-down { color: var(--muted); }
+.ledger-what {
+  display: grid;
+  gap: 0.1rem;
+}
+.ledger-row .form-status {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.tag-voided {
+  background: var(--line);
+  color: var(--muted);
+}
+.balance-number.is-negative {
+  color: var(--amber);
+}
+
+/* --- Prize wall and events -------------------------------------------------- */
+
+.item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.item-row.is-retired .player-label {
+  color: var(--muted);
+}
+.item-list .disclosure {
+  margin-top: 0;
+  border-top: none;
+  padding-top: 0;
+  background: var(--paper);
+  border-radius: 6px;
+}
+.item-list summary {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+}
+.item-list .disclosure-body {
+  padding: 0.25rem 0.75rem 0.75rem;
+}
+
+/* Save and retire sit on one line, and the retire confirmation replaces the
+   retire button in place rather than pushing the form around. */
+.item-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* A label that wraps its own input, used where a page of repeated fields would
+   otherwise need a unique id for every one of them. */
+.field label input,
+.field label select {
+  display: block;
+  margin-top: 0.25rem;
+  font-weight: 400;
+}
+
+/* display:flex on a summary drops the default disclosure marker, leaving a row
+   that opens with nothing to say so. This puts the affordance back explicitly. */
+.item-list summary {
+  cursor: pointer;
+  list-style: none;
+}
+.item-list summary::-webkit-details-marker {
+  display: none;
+}
+.item-list summary::after {
+  content: "\203A";
+  margin-left: auto;
+  color: var(--teal);
+  font-size: 1.3rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+.item-list details[open] > summary::after {
+  transform: rotate(90deg);
+}
+.item-list summary:hover {
+  background: #eef3f2;
+  border-radius: 6px;
+}
+
+/* A wrapped input is not a flex child of .field, so it does not stretch the way
+   the id-linked ones do. Without this the two styles of field are visibly
+   different widths on the same page. */
+.field label input,
+.field label select {
+  width: 100%;
+  max-width: 22rem;
+  box-sizing: border-box;
+}
+
+/* --- Trainer Card ----------------------------------------------------------- */
+
+.rank-line {
+  margin: 0.5rem 0 0.25rem;
+}
+.rank-name {
+  font-family: var(--font-head);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--teal);
+}
+
+/* A badge is a toggle, so it has to read as earned or not at a glance. An
+   unearned badge keeps its colour as an outline and fills in once awarded,
+   rather than being a different colour, so the wall of them stays legible. */
+.badge-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+/* No background here on purpose. The badge-cN colour classes set it, and they
+   are defined earlier in this file, so declaring one would win over all of them
+   and leave an earned badge with white text on nothing. */
+.badge-toggle {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+  text-align: center;
+}
+.badge-toggle:not(.is-earned) {
+  background: transparent;
+  border: 2px dashed var(--line);
+  color: var(--muted);
+}
+.badge-toggle:not(.is-earned):hover {
+  border-style: solid;
+  color: var(--text);
+}
+.badge-toggle.is-earned {
+  border: 2px solid transparent;
+  color: var(--card);
+}
+.badge-toggle.is-earned:hover {
+  border-color: var(--ink);
+}
+.badge-toggle-date {
+  font-size: 0.7rem;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.battle-toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(4.2rem, 1fr));
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+.battle-toggle {
+  font: inherit;
+  display: grid;
+  gap: 0.2rem;
+  justify-items: center;
+  padding: 0.7rem 0.5rem;
+  border-radius: 8px;
+  border: 2px dashed var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.battle-toggle:hover {
+  border-style: solid;
+  color: var(--text);
+}
+.battle-toggle.is-won {
+  border-style: solid;
+  border-color: var(--teal);
+  background: var(--teal);
+  color: var(--card);
+}
+.battle-number {
+  font-family: var(--font-head);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.battle-state {
+  font-size: 0.75rem;
+}
+
+/* --- Reference sections ----------------------------------------------------- */
+
+.jump-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+}
+
+.section-heading {
+  font-size: 1.5rem;
+  margin: 1.5rem 0 0.25rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 2px solid var(--line);
+}
+
+.reference-section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tier-row {
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.tier-row h5 {
+  margin: 0 0 0.4rem;
+  font-family: var(--font-head);
+  font-size: 1rem;
+}
+
+/* --- Printable sheets ------------------------------------------------------- */
+
+.sheet {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+.sheet-head {
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 0.6rem;
+  margin-bottom: 1rem;
+}
+.sheet-head h2 {
+  margin: 0 0 0.2rem;
+}
+.sheet-head p {
+  margin: 0;
+  color: var(--muted);
+}
+.sheet-sub {
+  font-size: 0.9rem;
+}
+.sheet-section {
+  margin-top: 1.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--line);
+}
+.sheet-group {
+  margin-bottom: 1.25rem;
+}
+.sheet-group h3 {
+  margin: 0.75rem 0 0.4rem;
+  font-size: 1.05rem;
+}
+
+/* Tables are the one thing allowed to be wider than the page body, each in its
+   own scroller, so a narrow phone never scrolls the whole document sideways. */
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  display: block;
+  overflow-x: auto;
+}
+.sheet-table th,
+.sheet-table td {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.sheet-table th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  border-bottom-width: 2px;
+}
+/* An empty box to tick with a pen. It has to survive printing, so it is a border
+   rather than a background colour that a printer may drop. */
+.sheet-table .sheet-tick {
+  width: 3rem;
+}
+.sheet-table tbody .sheet-tick::before {
+  content: "";
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+}
+.sheet-foot {
+  margin-top: 1.5rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.print-hint {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+@media print {
+  /* Everything that is not the sheet goes, so the paper carries the list and
+     nothing else. No PDF library: this is the whole mechanism. */
+  .no-print,
+  .prof-bar,
+  .skip-link {
+    display: none !important;
+  }
+
+  body,
+  .print-page {
+    background: #ffffff;
+    color: #000000;
+    margin: 0;
+    padding: 0;
+  }
+
+  .sheet {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    background: #ffffff;
+  }
+
+  .sheet-table {
+    display: table;
+    overflow: visible;
+    font-size: 10pt;
+  }
+  .sheet-table th,
+  .sheet-table td {
+    border-bottom: 1px solid #999999;
+    white-space: normal;
+  }
+
+  /* A division or tier should not be split across a page break if it fits, and a
+     header must never be the last thing on a page. */
+  .sheet-group {
+    break-inside: avoid;
+  }
+  .sheet-head,
+  .sheet-section,
+  .sheet-group h3 {
+    break-after: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tr {
+    break-inside: avoid;
+  }
+
+  a {
+    color: #000000;
+    text-decoration: none;
+  }
+}
+
+.caps-block {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  background: var(--paper);
+  border-radius: 6px;
+}
+.caps-block h4 {
+  margin: 0 0 0.4rem;
+}
+/* Same trap as .confirm-row: a display declaration would beat the browser's own
+   [hidden] rule and leave the block on screen. */
+.caps-block[hidden] {
+  display: none;
 }

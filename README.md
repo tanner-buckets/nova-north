@@ -43,7 +43,7 @@ again and fail. Let the integration apply it.
 ## Build phases
 
 Schema comes before pages. Building UI against mocked data means rebuilding it
-against real functions and policies later. Current phase: **5**.
+against real functions and policies later. All seven phases are built.
 
 | Phase | Work | State |
 |---|---|---|
@@ -51,9 +51,9 @@ against real functions and policies later. Current phase: **5**.
 | 2 | People and consent: `players`, `professors`, `consent_log`, visibility helpers | done |
 | 3 | Points and attendance: `attendance`, `point_ledger`, consent expiry | done |
 | 4 | Events and registration | done |
-| 5 | Public pages, built against the real tables | in progress |
-| 6 | Professor screens | |
-| 7 | TDF upload and parsing | |
+| 5 | Public pages, built against the real tables | done |
+| 6 | Professor screens, including TDF upload | done |
+| 7 | Printable lists for the store and the desk | done |
 
 Running alongside phase 1: a minimal static shell on GitHub Pages — one page and a
 nav — to prove the deploy chain works while nothing is at stake. It does not grow
@@ -301,6 +301,318 @@ judged on the most recent season's badges.
 The thirteen seeded badges are the 2025–26 list, so they belong to season 2026.
 There is no 2027 list yet.
 
+### Professor screens
+
+Sign in at `admin/index.html` with the Supabase Auth account tied to a
+`professors` row. `auth.js` decides what to *show*; it is not a security
+boundary. The admin HTML is a static file anyone can fetch, so hiding a button
+protects nothing — row level security refuses every professor query without a
+real session, and that is what actually holds.
+
+Once signed in, a bar appears at the foot of the public pages. Its links are
+contextual: the way back to the tools is everywhere, and the upload shortcut only
+on the home page, where a professor lands after an event.
+
+### TDF upload
+
+`admin/upload.html` is how attendance is normally recorded, and the main way new
+players enter the system. The file is parsed with `DOMParser` in the browser and
+thrown away — never uploaded, never stored.
+
+The birth year is read from the file, because it is what gives a new player a
+division, and division drives registration caps and minor status. **Only the
+year.** The month and day are discarded inside the parser, at the only point in
+the program where they exist, so a full date of birth never reaches a variable
+that could be written. An import sets a birth year only on a player it is
+creating; a professor who corrected one by hand outranks a file.
+
+Each attendee gets two things: an `attendance` row, and point ledger entries for
+attending and for playing. The screen asks one question, "was this a premier
+event?", which switches the play award between the casual and championship
+actions. Both dropdowns stay editable, because point values are defaults a
+professor may override.
+
+Two consequences of the domain rules show up in the result message rather than as
+errors:
+
+- **A second event on the same day adds no attendance row.** The unique
+  constraint on (player, date) is the one-loyalty-week-per-day rule working.
+  Those players still receive the play points, because two events are two things
+  played.
+- **A player in the file who is not in `players` yet is created on the spot**,
+  with the birth year from the file. One whose date of birth is missing or
+  unreadable gets a null year and counts as a minor until a professor records
+  one. Either way they stay hidden — appearing in a tournament file is not
+  consent, and nothing in this path touches a visibility flag.
+
+Anyone who played but is missing from the file is added by hand, by Player ID or
+by searching for the ID by name.
+
+Attendance and points are two statements, not one transaction. A failure between
+them leaves attendance written and points not, which the error message says
+plainly so the ledger can be checked before a retry. Moving both into one
+`SECURITY DEFINER` function is the fix when it is worth the migration.
+
+### Manual attendance
+
+`admin/attendance.html`, for a day the file will not export and for a player who
+comes along before they ever enter a tournament. The write is shared with the
+upload in `admin/attendance-core.js`; duplicating it would let the two drift, and
+the one that drifted would be the rarely used one, discovered only when
+somebody's points were wrong.
+
+**It records turning up and nothing else: one point and one loyalty week.** No
+play award, because nothing here claims a tournament was played — a tournament
+file *is* that claim, which is why the upload adds the play point and this screen
+does not. The award is stated rather than offered as a dropdown, so the screen
+cannot be talked into paying for something else. Everything else a player earns
+or spends goes through the points screen, where it can be described and reversed.
+
+It does create players. Somebody often turns up for a few Sundays before their
+first event, and those Sundays count. Nothing is written when they are typed in:
+the new player joins the pending list and is created when the attendance is
+recorded, so an abandoned form leaves nothing behind. A typed ID that already
+belongs to somebody is refused as a typo rather than accepted as a new person.
+
+The date defaults to today in league time, not the browser's, so a professor
+entering Sunday's attendance from a laptop set to another zone still gets Sunday.
+
+### Points
+
+`admin/points.html`. Everything a player earns beyond turning up, and everything
+they spend at the prize wall.
+
+Append only, and not by convention: professors hold `INSERT` on `point_ledger`
+and no `UPDATE` or `DELETE` at all, with no policy for either, so a row cannot be
+altered or removed through the API. A mistake is corrected by writing a reversing
+entry that points at the original with `voids_id`. Both stay visible, which is
+the point — a balance nobody can quietly rewrite is worth more than a tidy one.
+An entry that has already been reversed cannot be reversed again, or the
+correction would cancel the correction and the balance would drift back.
+
+Balance is the sum of the deltas. There is no total column and there must never
+be one.
+
+Spending is a negative delta carrying `prize_item_id`, so it is a transaction
+like any other. A spend that would take somebody below zero is **warned about,
+not blocked** — a professor may knowingly hand something over on credit, and
+refusing would make the screen lie about who decides. The resulting balance is
+stated before the button is pressed, and a negative balance is coloured so
+somebody notices it.
+
+Point values are defaults. Each is prefilled from the action or item and stays
+editable, and an action worth zero plus a note is how a one-off award is
+recorded.
+
+Handing something over does **not** by itself take it off the prize wall — most
+items are restocked. Retiring one is a separate checkbox on the redemption, and
+because it changes what every professor and player sees rather than just this
+player's balance, it asks for confirmation naming the item. The ledger is written
+first and the retire second: the points are the part that has to be right, so if
+the retire then fails the redemption stands and the message says exactly what is
+left to do.
+
+Every action and item is loaded, active or retired, because history has to keep
+naming what a past entry was for. Only the active subset is offered in the
+dropdowns.
+
+### Prize wall and earning
+
+`admin/prizes.html` holds both sides of the prize point ledger: what points buy,
+and what earns them. `prize_items` and `earning_actions` are the same shape — a
+label, a number, a note, a sort order and an `is_active` flag — so one component
+drives both rather than two that would drift.
+
+Nothing is ever deleted. A row is retired, which takes it out of every dropdown
+and off the public pages while leaving it intact, because ledger entries hold
+foreign keys to both tables and history has to keep naming what somebody earned
+or took. Deleting would either orphan those rows or be refused outright. Putting
+something back is immediate; taking it away asks first, because that direction
+changes what everyone sees.
+
+The earning list is also what attendance depends on: the upload and the manual
+screen both look for the attendance award **by name**, and fall back to a
+dropdown rather than a wrong value if it has been renamed.
+
+### Reference data
+
+`admin/reference.html` covers badges, Trainer Card ranks, and releases with their
+loyalty tiers. These are the tables that decide what the rest of the site means,
+and all of them are read live rather than copied anywhere, so a change re-decides
+what everybody has already earned.
+
+**Adding a badge for a later season rolls the league over.**
+`current_badge_season()` is `max(season_year)` on `badges`, so the first 2027
+badge makes 2027 the current season: every player's rank is judged on 2027 badges
+from that moment and 2026 becomes history. The add form says so when the year
+typed is later than the season running now, because it is not obvious and it is
+not undoable by deleting one row.
+
+Ranks can be edited but not added or removed. Four ranks is the program, and a
+fifth would need the public pages thought through first — `player_rank()` reads
+the thresholds from this table rather than having them written into it, so moving
+one changes every player's rank at once.
+
+Releases have no active flag: the one running is whichever window contains today,
+which is why two overlapping windows would fight. Adding an overlapping release
+is **not refused** — the database does not refuse it, and a professor correcting
+one window at a time would be blocked halfway — but it is named in the result.
+
+### Events
+
+`admin/events.html` creates and edits events, sets what they cost, and decides
+which take pre-registration. Everything on it reaches the public schedule.
+
+Capacity is per division. **`all` is a fallback, not a total**: registration uses
+it only when a player's own division has no row of its own. An event with no
+capacity rows is uncapped, and clearing a division on screen deletes its row
+rather than leaving an old number quietly capping an event a professor believes
+is now open.
+
+Times are league time, not the browser's. A `datetime-local` input carries no
+zone, so the value is composed and parsed against `America/New_York` explicitly,
+reading the offset from the date itself rather than assuming one — otherwise an
+event in November would be written an hour out by a rule that was correct in
+July. The conversion round-trips exactly on both clock-change Sundays, including
+the repeated hour and the hour that does not exist.
+
+### Trainer Card
+
+`admin/trainer-card.html` records badges, Elite 4 battles and Champion.
+
+**Rank is not recorded and not computed here.** `player_rank()` decides it from
+the season's badges, the ranks table and any Champion award, and the screen asks
+it rather than keeping a second opinion that could disagree. The Champion
+threshold is read from `trainer_card_ranks` too, so moving it is a data change
+rather than a code change.
+
+Nothing is edited. All three tables grant `INSERT` and `DELETE` and no `UPDATE`,
+so every control is a toggle: award it, or take it back. A badge given to the
+wrong player is taken off them and given to the right one. Badges are coloured by
+position in the season's list, the same rule the public player card uses, so next
+season's badges colour themselves.
+
+Only Elite 4 **wins** are recorded. A lost battle is nothing and a player may
+retry as often as they like, so there is no attempt to store. Everything on the
+screen is seasonal and resets when the next season's badge list arrives; past
+seasons stay on the player's record.
+
+Recording a Champion who does not yet meet the threshold is **warned about, not
+blocked** — `player_rank()` does not check eligibility either, and a professor
+who watched the battles outranks a count. It says what is missing and asks.
+
+### Players
+
+`admin/players.html` adds someone who did not arrive through a tournament file,
+and corrects a record that is wrong. It writes names, birth year, contact and
+notes.
+
+It cannot write a visibility flag — not because it declines to, but because
+professors hold no `UPDATE` grant on those columns, so the attempt would be
+refused. The screen states the current visibility and links to the consent screen
+rather than offering a control.
+
+There is no delete. A player record is never removed: attendance, ledger entries,
+badges and registrations all point at it, and history has to keep resolving.
+Correcting a Player ID is supported instead, and every foreign key referencing
+players cascades so the correction carries rather than orphaning rows.
+
+### Drop confirmation
+
+`admin/drops.html`. A player asking to drop does not drop them: `request_drop()`
+only marks the registration, and nothing moves until a professor confirms. That
+is the point of the two steps — confirming is what promotes somebody off the
+waiting list, and a promotion should not happen on an anonymous click.
+
+The promotion rule lives in `confirm_drop()`, not in the page. It walks the
+waitlist in order, skips anyone already holding a confirmed spot on another
+flight of the same linked group, and skips anyone whose division is still full.
+The screen's own job is to **name who was promoted**, because otherwise nobody
+knows who to tell.
+
+Two kinds of drop, deliberately weighted differently:
+
+- **Someone who asked** has already confirmed it. The request is the
+  confirmation, so one click finishes it.
+- **Someone who did not ask** is a different act: it takes their place away and
+  may promote somebody else, neither of which can be clicked back. That one asks
+  first, naming the player.
+
+The list is narrowed to events that **take registration**. A casual event nobody
+signs up for has nobody to drop and no waiting list to promote from, so listing
+it is noise at the desk. The one exception is any event with a request already
+waiting, which is listed whatever its state — registration closes, and a request
+made before it closed still has to be confirmable, or the player who asked is
+stranded.
+
+These lists are never public. Full names are shown for the same reason they
+appear on a printed desk list.
+
+### Visibility consent
+
+`admin/consent.html` is the only screen that can make a player public, and it
+cannot write the consent columns directly: professors hold no `UPDATE` grant on
+them, so `set_player_visibility()` is not the preferred route but the only one
+the API allows. Each switch is a separate call, so `consent_log` keeps one row
+per decision rather than one row covering two.
+
+The card reports what is **in force**, not what the flags say. Those differ more
+often than they agree:
+
+- `show_player_id` is a tri-state. Null means the age default is still in charge
+  and moves with the player as they get older; true or false is a recorded
+  decision that outlives their next birthday. The screen says which, because "no"
+  and "nobody asked" are not the same fact.
+- `show_name` is not null and defaults to false, so false carries no information
+  about whether anyone was ever asked. It is worded differently for that reason.
+- Consent needs attendance inside three months behind it. A player can have both
+  switches on and still be invisible.
+
+**Lapsed players are the case the screen exists for.** Their switches already say
+yes, so an ordinary "save what changed" form would record nothing on exactly the
+visit that matters. When consent has lapsed the form re-writes both switches and
+a fresh consent date, and the button says re-confirm.
+
+Lapsed is derived from `id_visible()` rather than recomputed in the browser: if
+the switches permit, attendance exists, and the database still says no, the only
+remaining reason is recency. That cannot drift from the three months actually
+enforced.
+
+Two rules the database does not hold, which the interface therefore does:
+
+- **A minor's consent comes from a parent or guardian.** The function accepts
+  either source for anybody. For a minor the control is removed rather than
+  defaulted, so it cannot be set to "the player" by a slip. A player with no
+  birth year counts as a minor and is treated the same way.
+- **A name is never shown without the Player ID.** The database holds this one —
+  `name_visible()` is false whenever `id_visible()` is — but recording a switch
+  that silently does nothing misleads the professor, so the form says so.
+
+### Printable lists
+
+`admin/print.html`. Loyalty tiers to hand to the store, and pre-registration to
+work from at the desk. Both are `@media print` stylesheets on a professor-only
+page — there is no PDF library and no generated file.
+
+Both sheets carry full names and Player IDs. That is a **disclosure to the venue
+and to whoever runs the desk, not publication**: nothing on them is ever rendered
+on a public page. Most of these players are children, so each sheet is footed
+with what it contains and the instruction to hand it to a person rather than
+leave it out.
+
+The loyalty sheet asks `loyalty_weeks()` once per player rather than counting
+attendance in the browser. The rule — distinct days inside the window plus the
+carryover bridge — lives in the database, and a second copy here would be a
+second answer that could disagree with the player's own card. It is a handful of
+calls for a sheet printed once a release, and only for players with attendance in
+the window at all. If the league outgrows that, the fix is a view, not a copy of
+the rule.
+
+Players below every threshold are listed under "Not yet at a tier" rather than
+dropped, so the store is told who is close and not only who has arrived. The
+waiting list prints in **queue order, not alphabetically** — the order is the
+only information a waiting list carries, and sorting it by name would destroy it.
+
 ### Known gaps, carried forward
 
 - **16 Player IDs appear in the league spreadsheets but in neither official
@@ -309,10 +621,11 @@ There is no 2027 list yet.
   insert: the sets do not overlap, so there is no duplication risk.
 - **`finalize_release()` is not written.** Deferred until Delta Reign closes on
   1 November 2026. `loyalty_results` exists and is waiting for it.
-- **Nothing is player-facing yet, and nobody is visible.** Visibility needs a
-  consent flag *and* attendance within three months, and `attendance` is empty by
-  design — the imported weeks had no dates, which is why `loyalty_carryover`
-  exists. The first real check-in is what brings the system to life.
+- **Nobody is visible yet.** Visibility needs a consent flag *and* attendance
+  within three months, and `attendance` starts empty by design — the imported
+  weeks had no dates, which is why `loyalty_carryover` exists. The first TDF
+  upload is what brings the system to life, and the consent screen is what makes
+  anyone appear on the public site afterwards.
 
 ### Scheduling the consent expiry job
 

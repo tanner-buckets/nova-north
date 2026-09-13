@@ -190,13 +190,23 @@ is applied to the production database.** There is no confirmation step.
 - TDF files are XML. Parse them **in the browser** with `DOMParser`.
 - **Never upload the file anywhere.** Never store it. Never put it in Supabase
   Storage.
-- Extract only Player ID, name, and what is needed to award points. **Do not store
-  the date of birth found in the file** — birth year is captured separately at
-  registration.
+- Extract Player ID, name, birth year, and what is needed to award points. TDF
+  files are the main way new players enter the system, so the birth year in the
+  file is what gives a new player a division.
+- **Store the year only.** The file carries a full date of birth. Read the year
+  as the file is parsed and drop the month and day there, so they never reach a
+  variable that could be written. A full date of birth is never stored, from a
+  file or from anywhere else.
+- Birth year is set when a player is **created**. An import never overwrites the
+  birth year of a player who already has a row: division drives registration
+  caps, and a professor who corrected it by hand outranks a file.
 - A TDF import **never** sets a visibility flag. Appearing in a tournament file is
   not consent.
 - After parsing, prompt the professor for the event type so point values can be
-  applied, and offer to add other attendees present but not in the file.
+  applied, and **prompt** for other attendees present but not in the file. A
+  collapsed disclosure is not a prompt: anyone who turned up without entering the
+  tournament earns the same loyalty week, and the upload is the only moment they
+  are still standing there to be remembered.
 
 ---
 
@@ -234,7 +244,8 @@ supabase/migrations/  schema, one file per change
 Schema comes before pages. Building UI against mocked data means rebuilding it
 against real functions and policies later.
 
-Current phase: **5**.
+Current phase: **all seven are built**. New work extends them rather
+than skipping ahead.
 
 1. **Reference tables.** `earning_actions`, `prize_items`, `releases`,
    `loyalty_tiers`. Seeded from the spreadsheet exports. No personal data — this
@@ -248,9 +259,12 @@ Current phase: **5**.
    `public_event_counts`, `register_for_event()`, `request_drop()`,
    `confirm_drop()`.
 5. **Public pages.** Built against the real tables and functions.
-6. **Professor screens.** Login-gated admin pages for manual points, attendance,
-   visibility consent, drop confirmation, and the printable lists.
-7. **TDF upload and parsing.**
+6. **Professor screens.** Login-gated admin pages. TDF upload comes first,
+   because that is how attendance is recorded and nothing downstream is real
+   without it. Then visibility consent, drop confirmation, manual points, the
+   Trainer Card, players, events and reference data.
+7. **Printable lists.** Loyalty tiers for the store, pre-registration for the
+   desk. Print stylesheets, professor-only.
 
 Running alongside phase 1: deploy a minimal static shell to GitHub Pages — one
 page and a nav, confirmed live. This proves the deploy chain works while nothing

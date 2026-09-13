@@ -46,19 +46,21 @@
         <p><button type="submit" class="button">Look up</button></p>
       </form>
 
-      <div id="result" aria-live="polite"></div>
+      <div class="player-layout">
+        <div id="result" class="result-col" aria-live="polite"></div>
 
-      <section class="panel panel-quiet" aria-labelledby="listed-heading">
-        <h2 id="listed-heading">Listed players</h2>
-        <p>
-          Being listed here is a choice. A professor turns it on with your
+        <section class="panel panel-quiet list-col" aria-labelledby="listed-heading">
+          <h2 id="listed-heading">Listed players</h2>
+          <p>
+            Being listed here is a choice. A professor turns it on with your
           consent, and for anyone under 18 only with a parent’s. It switches
           itself off after three months without attending.
         </p>
-        <div id="visible-players" aria-busy="true" data-content-name="The player list">
-          <p class="notice">Loading the list.</p>
-        </div>
-      </section>
+          <div id="visible-players" aria-busy="true" data-content-name="The player list">
+            <p class="notice">Loading the list.</p>
+          </div>
+        </section>
+      </div>
     </main>
 
     <footer class="site-footer">
@@ -71,5 +73,9 @@
         official publisher website.
       </p>
     </footer>
+    <script type="module">
+      import { mountProfessorBar } from './auth.js';
+      mountProfessorBar();
+    </script>
   </body>
 </html>

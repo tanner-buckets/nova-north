@@ -17,3 +17,7 @@ supabase/.temp/
 data/source/*
 !data/source/earning-actions.csv
 !data/source/prize-items.csv
+
+# Local-only demo pages. Never committed.
+_demo*.html
+_demo*.js
