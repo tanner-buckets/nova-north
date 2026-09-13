@@ -315,10 +315,16 @@ on the home page, where a professor lands after an event.
 
 ### TDF upload
 
-`admin/upload.html` is how attendance is normally recorded. The file is parsed
-with `DOMParser` in the browser and thrown away — it is never uploaded, never
-stored, and the dates of birth inside it are dropped as it is read rather than
-carried and discarded later.
+`admin/upload.html` is how attendance is normally recorded, and the main way new
+players enter the system. The file is parsed with `DOMParser` in the browser and
+thrown away — never uploaded, never stored.
+
+The birth year is read from the file, because it is what gives a new player a
+division, and division drives registration caps and minor status. **Only the
+year.** The month and day are discarded inside the parser, at the only point in
+the program where they exist, so a full date of birth never reaches a variable
+that could be written. An import sets a birth year only on a player it is
+creating; a professor who corrected one by hand outranks a file.
 
 Each attendee gets two things: an `attendance` row, and point ledger entries for
 attending and for playing. The screen asks one question, "was this a premier
@@ -333,11 +339,11 @@ errors:
   constraint on (player, date) is the one-loyalty-week-per-day rule working.
   Those players still receive the play points, because two events are two things
   played.
-- **A player in the file who is not in `players` yet is created with no birth
-  year.** A tournament file's date of birth is never stored, so there is nothing
-  to fill it with. Until a professor records it the player counts as a minor, and
-  they stay hidden either way — appearing in a tournament file is not consent,
-  and nothing in this path touches a visibility flag.
+- **A player in the file who is not in `players` yet is created on the spot**,
+  with the birth year from the file. One whose date of birth is missing or
+  unreadable gets a null year and counts as a minor until a professor records
+  one. Either way they stay hidden — appearing in a tournament file is not
+  consent, and nothing in this path touches a visibility flag.
 
 Anyone who played but is missing from the file is added by hand, by Player ID or
 by searching for the ID by name.

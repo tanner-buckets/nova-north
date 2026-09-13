@@ -1,9 +1,11 @@
-// TDF upload: the only way attendance normally gets recorded.
+// TDF upload: the only way attendance normally gets recorded, and the main way
+// new players enter the system.
 //
-// The file is read here in the browser and thrown away. It is never uploaded,
-// never stored, and the dates of birth inside it are dropped as it is parsed
-// rather than carried and discarded later -- a birth year is captured at
-// registration, by a person, not inferred from a tournament export.
+// The file is read here in the browser and thrown away. It is never uploaded and
+// never stored. The birth year is kept, because it is what gives a new player a
+// division; the month and day are dropped inside the parser rather than carried
+// and trimmed later, so a full date of birth never reaches a variable this code
+// could write.
 //
 // Appearing in a tournament file is not consent. Nothing here touches a
 // visibility flag, so a player added from a file starts hidden and stays hidden
@@ -29,6 +31,15 @@ let actions = [];       // earning_actions rows
 
 // --- Parsing -----------------------------------------------------------------
 
+// The year, and nothing else. The month and day are discarded here, at the only
+// point in the program where they exist, so no later change can start storing
+// them by accident. An unreadable date gives null, which reads as a minor until
+// a professor records one.
+function birthYear(text) {
+  const m = String(text || '').trim().match(/^\d{1,2}\/\d{1,2}\/(\d{4})$/);
+  return m ? Number(m[1]) : null;
+}
+
 function parseTdf(text) {
   const doc = new DOMParser().parseFromString(text, 'application/xml');
   if (doc.querySelector('parsererror')) {
@@ -49,8 +60,8 @@ function parseTdf(text) {
     .map((p) => ({
       player_id: (p.getAttribute('userid') || '').trim(),
       first_name: p.querySelector('firstname')?.textContent?.trim() || '',
-      last_name: p.querySelector('lastname')?.textContent?.trim() || ''
-      // birthdate is deliberately never read.
+      last_name: p.querySelector('lastname')?.textContent?.trim() || '',
+      birth_year: birthYear(p.querySelector('birthdate')?.textContent)
     }))
     .filter((p) => p.player_id);
 
@@ -229,10 +240,15 @@ function renderReview() {
         createMissing, el('label', { for: 'create-missing', text: 'Add them as players' })
       ]),
       el('p', { className: 'field-help',
-        text: 'They are added with no birth year, because a tournament file’s '
-            + 'date of birth is never stored. Until a professor records it they '
-            + 'count as a minor, and they stay off the public site either way: '
-            + 'being in a tournament file is not consent.' })
+        text: 'Their birth year comes from the file, which is what sets their '
+            + 'division. Only the year is kept.' }),
+      unknown.some((p) => !p.birth_year) ? el('p', { className: 'field-help',
+        text: `${unknown.filter((p) => !p.birth_year).length} of them have no `
+            + 'readable birth year in the file and count as a minor until a '
+            + 'professor records one.' }) : null,
+      el('p', { className: 'field-help',
+        text: 'Either way they stay off the public site until consent is '
+            + 'recorded: being in a tournament file is not consent.' })
     ]) : null,
     el('p', {}, [go]),
     result
@@ -291,9 +307,9 @@ function renderPicker() {
 
   return el('section', { className: 'card' }, [
     el('h2', { text: 'Choose a tournament file' }),
-    el('p', { text: 'A .tdf exported from TOM. It is read here in your browser: it '
-        + 'is never uploaded, never stored, and the dates of birth inside it are '
-        + 'discarded as it is read.' }),
+    el('p', { text: 'A .tdf exported from TOM. It is read here in your browser '
+        + 'and never uploaded or stored. Birth years are read from it for players '
+        + 'who are new; only the year is kept.' }),
     el('p', { className: 'field' }, [
       el('label', { for: 'tdf', text: 'Tournament file' }), input
     ]),
@@ -316,11 +332,16 @@ async function commit({ attendedOn, attendActionId, playActionId, createMissing,
     const missing = attendees.filter((p) => !known.has(p.player_id));
 
     if (missing.length && createMissing) {
+      // Only players being created. An import never overwrites an existing
+      // birth year: division drives registration caps, and a professor who
+      // corrected one by hand outranks a file.
       const { error } = await supabase.from('players').insert(missing.map((p) => ({
         player_id: p.player_id,
         first_name: p.first_name || 'Unknown',
-        last_name: p.last_name || 'Unknown'
-        // birth_year and every consent column deliberately omitted.
+        last_name: p.last_name || 'Unknown',
+        birth_year: p.birth_year ?? null
+        // Every consent column is deliberately omitted, and the grant would
+        // refuse them anyway.
       })));
       if (error) throw error;
       await refreshKnown();
@@ -380,7 +401,8 @@ async function commit({ attendedOn, attendActionId, playActionId, createMissing,
         text: `${repeats} already had attendance for that day, so that day was not `
             + 'counted twice. They still received points for playing.' }) : null,
       el('p', { className: 'muted-note',
-        text: 'The file was read in your browser and has not been stored anywhere.' }),
+        text: 'The file itself was read in your browser and has not been stored '
+            + 'anywhere.' }),
       el('p', {}, [el('a', { href: 'upload.html', text: 'Upload another file' })])
     );
     button.remove();
