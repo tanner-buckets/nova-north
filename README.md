@@ -43,13 +43,13 @@ again and fail. Let the integration apply it.
 ## Build phases
 
 Schema comes before pages. Building UI against mocked data means rebuilding it
-against real functions and policies later. Current phase: **1**.
+against real functions and policies later. Current phase: **3**.
 
 | Phase | Work | State |
 |---|---|---|
 | 1 | Reference tables: `earning_actions`, `prize_items`, `releases`, `loyalty_tiers` | done |
-| 2 | People and consent: `players`, `professors`, `consent_log`, visibility helpers | in progress |
-| 3 | Points and attendance: `attendance`, `point_ledger`, consent expiry | |
+| 2 | People and consent: `players`, `professors`, `consent_log`, visibility helpers | done |
+| 3 | Points and attendance: `attendance`, `point_ledger`, consent expiry | in progress |
 | 4 | Events and registration | |
 | 5 | Public pages, built against the real tables | |
 | 6 | Professor screens | |
@@ -132,10 +132,10 @@ rather than by discipline:
   grant, not a policy.
 
 `player_id` is updatable so a mis-entry can be corrected. Every foreign key
-referencing it must therefore use `ON UPDATE CASCADE`, or the correction is
-refused. That is settled for `professors` and `consent_log`; `point_ledger` in
-phase 3 needs a decision, because cascading conflicts with "never update a
-ledger row".
+referencing it therefore uses `ON UPDATE CASCADE`, or the correction would be
+refused — `professors`, `consent_log`, and all four phase 3 tables. Cascading
+does not conflict with "never update a ledger row": it corrects a label that was
+always wrong, and rewrites no transaction.
 
 `consent_log` has no insert, update or delete policies at all. Rows arrive only
 through that function and can never be altered.
@@ -144,6 +144,50 @@ through that function and can never be altered.
 attendance within three months, and `last_attendance_on()` is a stub returning
 null, so the model fails closed. Phase 3 replaces that one function body; no
 policy or view changes.
+
+**Phase 3** — `supabase/migrations/20260912210720_points_and_attendance.sql`
+
+`attendance`, `point_ledger`, `loyalty_carryover`, `loyalty_results`, the first
+public RPC, and the consent expiry job.
+
+This is the migration that switches the visibility model on. `last_attendance_on()`
+stops returning null and reads `max(attended_on)` from `attendance`. Nothing else
+changes — no policy, no view.
+
+- **`point_ledger` is append only in fact**, not by convention. No `UPDATE` or
+  `DELETE` policy and no `UPDATE` or `DELETE` grant exists for anyone. A mistake
+  is corrected with a reversing row carrying `voids_id`.
+- **`attendance` can be deleted**, deliberately unlike the ledger. A check-in
+  against the wrong player is a clerical error, and leaving it would grant a
+  loyalty week nobody earned.
+- **`anon` gains two things only**: `get_player_summary()` and `active_release()`.
+  No table access.
+- **`get_player_summary()` returns null for an unknown Player ID and for a player
+  without visibility**, deliberately indistinguishable, so it cannot be used to
+  discover which IDs exist.
+
+`loyalty_carryover` is a one-time bridge. The previous tracking counted weeks
+without recording dates, so those weeks cannot become attendance rows. From here
+weeks derive from dated attendance and nobody types a count again — the table
+should never gain another row.
+
+**`point_ledger.reason` is publicly visible** for a player whose ID visibility is
+in force, because it appears in their transaction history. It is for "Bring a
+friend bonus", never for anything about a person.
+
+### Scheduling the consent expiry job
+
+Deliberately not in the migration: creating an extension behaves differently per
+environment, and a failure there would block the whole deploy. Enable Cron at
+Dashboard → Integrations, then run once:
+
+```sql
+select cron.schedule('expire-stale-consent', '0 7 * * *',
+                     'select public.expire_stale_consent()');
+```
+
+The read-time check in `id_visible()` fails closed regardless, so nothing is at
+risk if this is late. The job only stops stale flags sitting in the database.
 
 ### Importing players
 
