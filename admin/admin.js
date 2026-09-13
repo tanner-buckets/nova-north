@@ -68,10 +68,10 @@ const TOOLS = [
     note: 'Add a player, or correct a name or Player ID.' },
   { href: 'events.html', name: 'Events',
     note: 'Create and edit events, set what they cost, and decide which take pre-registration.' },
-  { href: 'prizes.html', name: 'Prize wall',
-    note: 'Add items and set their cost. Items are taken off the wall, never deleted.' },
+  { href: 'prizes.html', name: 'Prize wall and earning',
+    note: 'What points buy and what earns them. Rows are retired, never deleted.' },
   { href: 'reference.html', name: 'Reference data',
-    note: 'Earning actions, badges, ranks and releases.' },
+    note: 'Badges, Trainer Card ranks, and releases with their loyalty tiers.' },
   { href: 'print.html', name: 'Printable lists',
     note: 'Loyalty tiers for the store, and pre-registration lists for the desk.' }
 ];

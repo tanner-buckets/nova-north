@@ -416,16 +416,47 @@ Every action and item is loaded, active or retired, because history has to keep
 naming what a past entry was for. Only the active subset is offered in the
 dropdowns.
 
-### Prize wall
+### Prize wall and earning
 
-`admin/prizes.html` adds items, sets their cost and sort order, and takes them
-off the wall.
+`admin/prizes.html` holds both sides of the prize point ledger: what points buy,
+and what earns them. `prize_items` and `earning_actions` are the same shape — a
+label, a number, a note, a sort order and an `is_active` flag — so one component
+drives both rather than two that would drift.
 
-Nothing is ever deleted. An item is retired, which removes it from the public
-prize wall and from every dropdown while leaving the row intact, because every
-past redemption holds a foreign key to it. Deleting would either orphan those
-rows or be refused outright. Putting an item back is immediate; taking one off
-asks first, because that direction changes what everyone sees.
+Nothing is ever deleted. A row is retired, which takes it out of every dropdown
+and off the public pages while leaving it intact, because ledger entries hold
+foreign keys to both tables and history has to keep naming what somebody earned
+or took. Deleting would either orphan those rows or be refused outright. Putting
+something back is immediate; taking it away asks first, because that direction
+changes what everyone sees.
+
+The earning list is also what attendance depends on: the upload and the manual
+screen both look for the attendance award **by name**, and fall back to a
+dropdown rather than a wrong value if it has been renamed.
+
+### Reference data
+
+`admin/reference.html` covers badges, Trainer Card ranks, and releases with their
+loyalty tiers. These are the tables that decide what the rest of the site means,
+and all of them are read live rather than copied anywhere, so a change re-decides
+what everybody has already earned.
+
+**Adding a badge for a later season rolls the league over.**
+`current_badge_season()` is `max(season_year)` on `badges`, so the first 2027
+badge makes 2027 the current season: every player's rank is judged on 2027 badges
+from that moment and 2026 becomes history. The add form says so when the year
+typed is later than the season running now, because it is not obvious and it is
+not undoable by deleting one row.
+
+Ranks can be edited but not added or removed. Four ranks is the program, and a
+fifth would need the public pages thought through first — `player_rank()` reads
+the thresholds from this table rather than having them written into it, so moving
+one changes every player's rank at once.
+
+Releases have no active flag: the one running is whichever window contains today,
+which is why two overlapping windows would fight. Adding an overlapping release
+is **not refused** — the database does not refuse it, and a professor correcting
+one window at a time would be blocked halfway — but it is named in the result.
 
 ### Events
 
