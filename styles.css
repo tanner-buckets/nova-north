@@ -890,6 +890,116 @@ h3 {
 .badge-c11 { background: #4a6b1f; }
 .badge-c12 { background: #7d2f3f; }
 
+/* --- Professor tools -------------------------------------------------------- */
+
+.tool-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.tool-card {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.tool-card:hover { border-color: var(--teal-lift); }
+
+.tool-name {
+  display: block;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--teal);
+  margin-bottom: 0.15rem;
+}
+
+.tool-note {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.link-button {
+  font: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--teal);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* The bar a professor sees at the foot of every public page. It is a
+   convenience, not a control: hiding it from everyone else protects nothing,
+   and the database refuses the queries regardless. */
+.prof-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--ink);
+  color: var(--card);
+  border-top: 3px solid var(--amber);
+  z-index: 10;
+  font-size: 0.9rem;
+}
+
+.prof-bar-inner {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 0.6rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.prof-who {
+  color: #c3cad6;
+  flex: 1 1 100%;
+  font-size: 0.8rem;
+}
+
+.prof-links {
+  display: flex;
+  gap: 1rem;
+  flex: 1 1 auto;
+}
+
+.prof-bar a { color: var(--card); }
+
+.prof-primary {
+  font-weight: 700;
+  color: var(--amber) !important;
+}
+
+.prof-signout {
+  font: inherit;
+  background: none;
+  border: 1px solid #3a4a63;
+  border-radius: 6px;
+  color: #c3cad6;
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+}
+
+.prof-bar :focus-visible { outline-color: var(--amber); }
+
+/* Keeps the bar from covering the end of a page. */
+.has-prof-bar .site-footer { padding-bottom: 4.5rem; }
+
+@media (min-width: 34rem) {
+  .prof-who { flex: 0 1 auto; }
+}
+
 @media (min-width: 34rem) {
   h1 {
     font-size: 2.1rem;
