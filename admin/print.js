@@ -8,7 +8,10 @@
 // holding a sheet of children's names should know what they are holding.
 //
 // The output is a print stylesheet, not a generated file. No PDF library.
-import { supabase, el, problem, formatEventDay, formatEventTime } from '../supabase-client.js';
+import {
+  supabase, el, problem, formatEventDay, formatEventTime,
+  DIVISION_ORDER, DIVISION_LABEL
+} from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status } from './attendance-core.js';
 
@@ -18,8 +21,9 @@ const sheet = document.querySelector('#sheet');
 
 let professor = null;
 
-const DIVISIONS = [['junior', 'Junior'], ['senior', 'Senior'], ['master', 'Master']];
-const DIVISION_LABEL = Object.fromEntries(DIVISIONS);
+// Age groups only. 'all' is the event total, not somebody's division, so nobody
+// is ever filed under it.
+const AGE_DIVISIONS = DIVISION_ORDER.filter((d) => d !== 'all');
 
 const DAY = new Intl.DateTimeFormat('en-US', {
   month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York'
@@ -163,8 +167,8 @@ export function registrationSheet(event, rows) {
     ]),
 
     el('h3', { className: 'sheet-section', text: 'Registered' }),
-    ...DIVISIONS.map(([key, label]) =>
-      divisionBlock(label, confirmed.filter((r) => r.division === key))),
+    ...AGE_DIVISIONS.map((key) =>
+      divisionBlock(DIVISION_LABEL[key], confirmed.filter((r) => r.division === key))),
 
     el('h3', { className: 'sheet-section', text: 'Wait list' }),
     waiting.length

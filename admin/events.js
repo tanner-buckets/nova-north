@@ -7,7 +7,10 @@
 // Capacity is per division, and 'all' is the fallback the registration function
 // looks for when a player's own division has no row. An event with no capacity
 // rows at all is uncapped.
-import { supabase, el, problem, formatEventDay, formatEventTime } from '../supabase-client.js';
+import {
+  supabase, el, problem, formatEventDay, formatEventTime,
+  DIVISION_ORDER, DIVISION_LABEL
+} from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status } from './attendance-core.js';
 
@@ -24,13 +27,6 @@ const TYPES = [
   ['cup', 'League Cup'],
   ['prerelease', 'Prerelease'],
   ['special', 'Something else']
-];
-
-const DIVISIONS = [
-  ['all', 'Everyone'],
-  ['junior', 'Junior'],
-  ['senior', 'Senior'],
-  ['master', 'Master']
 ];
 
 const LEAGUE_ZONE = 'America/New_York';
@@ -98,14 +94,16 @@ async function loadCapacities(eventId) {
 function capacityFields(rows) {
   const inputs = new Map();
 
-  const nodes = DIVISIONS.map(([key, label]) => {
+  const nodes = DIVISION_ORDER.map((key) => {
     const existing = rows.find((r) => r.division === key);
     const input = el('input', {
       type: 'number', step: '1', min: '0',
       value: existing ? existing.capacity : ''
     });
     inputs.set(key, input);
-    return el('p', { className: 'field' }, [el('label', { text: label }, [input])]);
+    return el('p', { className: 'field' }, [
+      el('label', { text: DIVISION_LABEL[key] }, [input])
+    ]);
   });
 
   const help = el('p', { className: 'field-help',
@@ -137,7 +135,7 @@ function capacityFields(rows) {
 // every division absent loses its row. A cleared field has to delete, or an old
 // number keeps capping an event the professor believes is now open.
 async function saveCapacities(eventId, wanted) {
-  const gone = DIVISIONS.map(([k]) => k)
+  const gone = DIVISION_ORDER
     .filter((k) => !wanted.some((w) => w.division === k));
 
   if (gone.length) {

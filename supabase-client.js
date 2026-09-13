@@ -50,6 +50,35 @@ export function leagueDayKey(startsAt) {
   return DAY_KEY_FORMAT.format(new Date(startsAt));
 }
 
+// --- Divisions ---------------------------------------------------------------
+
+// Age divisions are always shown youngest first: Junior, Senior, Master. That is
+// the order the programme itself uses, and a list that changes order between two
+// screens reads as two different lists.
+//
+// 'all' leads where it appears, because it is the whole event rather than an age
+// group. Nothing here is a source of truth for what a division *is* -- division()
+// in the database decides that -- this is only the order and the wording.
+export const DIVISION_ORDER = ['all', 'junior', 'senior', 'master'];
+
+export const DIVISION_LABEL = {
+  all: 'Everyone',
+  junior: 'Junior',
+  senior: 'Senior',
+  master: 'Master'
+};
+
+// Anything unrecognised sorts last rather than first, so a division added to the
+// database later appears at the end instead of silently jumping the queue.
+function divisionRank(value) {
+  const i = DIVISION_ORDER.indexOf(value);
+  return i === -1 ? DIVISION_ORDER.length : i;
+}
+
+export function byDivision(a, b) {
+  return divisionRank(a) - divisionRank(b);
+}
+
 // --- Small DOM helpers -------------------------------------------------------
 
 export function el(tag, options = {}, children = []) {

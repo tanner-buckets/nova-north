@@ -13,7 +13,9 @@
 //
 // Registration lists are never public. This page is professor-only and shows
 // full names, the same disclosure as a printed desk list.
-import { supabase, el, problem, formatEventDay, formatEventTime } from '../supabase-client.js';
+import {
+  supabase, el, problem, formatEventDay, formatEventTime, DIVISION_LABEL
+} from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status } from './attendance-core.js';
 
@@ -21,8 +23,6 @@ const gate = document.querySelector('#gate');
 const app = document.querySelector('#app');
 
 let professor = null;
-
-const DIVISION = { junior: 'Junior', senior: 'Senior', master: 'Master' };
 
 // --- Event list --------------------------------------------------------------
 
@@ -72,7 +72,7 @@ function personLine(r) {
   return el('span', { className: 'reg-person' }, [
     el('span', { className: 'player-label', text: `${r.first_name} ${r.last_name}` }),
     el('span', { className: 'player-id count', text: r.player_id }),
-    el('span', { className: 'tag tag-division', text: DIVISION[r.division] || r.division })
+    el('span', { className: 'tag tag-division', text: DIVISION_LABEL[r.division] || r.division })
   ]);
 }
 
@@ -137,7 +137,7 @@ export function registrationRow(r, event, refresh) {
         note.className = 'form-status is-good';
         note.replaceChildren(
           el('strong', { text: `${data.promoted.name} moves up off the waiting list.` }),
-          el('span', { text: ` ${DIVISION[data.promoted.division] || data.promoted.division}`
+          el('span', { text: ` ${DIVISION_LABEL[data.promoted.division] || data.promoted.division}`
             + `, ${data.promoted.player_id}. Tell them.` })
         );
       } else {

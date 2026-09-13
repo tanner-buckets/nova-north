@@ -1,5 +1,6 @@
 import {
-  supabase, el, problem, formatEventDay, formatEventTime, leagueDayKey
+  supabase, el, problem, formatEventDay, formatEventTime, leagueDayKey,
+  DIVISION_LABEL, byDivision
 } from './supabase-client.js';
 
 const list = document.querySelector('#event-list');
@@ -34,8 +35,14 @@ function takesRegistration(counts) {
 function spotsLine(counts) {
   if (!counts.length) return null;
 
-  const rows = counts.map((c) => {
-    const label = c.division === 'all' ? 'Spots' : capitalise(c.division) + 's';
+  // public_event_counts has no ORDER BY, so without this the divisions arrive in
+  // whatever order the database felt like and Masters can sit above Juniors.
+  const ordered = [...counts].sort((a, b) => byDivision(a.division, b.division));
+
+  const rows = ordered.map((c) => {
+    const label = c.division === 'all'
+      ? 'Spots'
+      : `${DIVISION_LABEL[c.division] || capitalise(c.division)}s`;
     let value;
     if (c.capacity === null) {
       value = c.confirmed_count > 0 ? `${c.confirmed_count} registered` : null;
