@@ -353,6 +353,46 @@ them leaves attendance written and points not, which the error message says
 plainly so the ledger can be checked before a retry. Moving both into one
 `SECURITY DEFINER` function is the fix when it is worth the migration.
 
+### Visibility consent
+
+`admin/consent.html` is the only screen that can make a player public, and it
+cannot write the consent columns directly: professors hold no `UPDATE` grant on
+them, so `set_player_visibility()` is not the preferred route but the only one
+the API allows. Each switch is a separate call, so `consent_log` keeps one row
+per decision rather than one row covering two.
+
+The card reports what is **in force**, not what the flags say. Those differ more
+often than they agree:
+
+- `show_player_id` is a tri-state. Null means the age default is still in charge
+  and moves with the player as they get older; true or false is a recorded
+  decision that outlives their next birthday. The screen says which, because "no"
+  and "nobody asked" are not the same fact.
+- `show_name` is not null and defaults to false, so false carries no information
+  about whether anyone was ever asked. It is worded differently for that reason.
+- Consent needs attendance inside three months behind it. A player can have both
+  switches on and still be invisible.
+
+**Lapsed players are the case the screen exists for.** Their switches already say
+yes, so an ordinary "save what changed" form would record nothing on exactly the
+visit that matters. When consent has lapsed the form re-writes both switches and
+a fresh consent date, and the button says re-confirm.
+
+Lapsed is derived from `id_visible()` rather than recomputed in the browser: if
+the switches permit, attendance exists, and the database still says no, the only
+remaining reason is recency. That cannot drift from the three months actually
+enforced.
+
+Two rules the database does not hold, which the interface therefore does:
+
+- **A minor's consent comes from a parent or guardian.** The function accepts
+  either source for anybody. For a minor the control is removed rather than
+  defaulted, so it cannot be set to "the player" by a slip. A player with no
+  birth year counts as a minor and is treated the same way.
+- **A name is never shown without the Player ID.** The database holds this one —
+  `name_visible()` is false whenever `id_visible()` is — but recording a switch
+  that silently does nothing misleads the professor, so the form says so.
+
 ### Known gaps, carried forward
 
 - **16 Player IDs appear in the league spreadsheets but in neither official

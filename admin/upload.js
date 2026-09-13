@@ -331,6 +331,8 @@ async function commit({ attendedOn, attendActionId, playActionId, createMissing,
     const attendees = allAttendees();
     const missing = attendees.filter((p) => !known.has(p.player_id));
 
+    const created = (missing.length && createMissing) ? missing : [];
+
     if (missing.length && createMissing) {
       // Only players being created. An import never overwrites an existing
       // birth year: division drives registration caps, and a professor who
@@ -403,6 +405,22 @@ async function commit({ attendedOn, attendActionId, playActionId, createMissing,
       el('p', { className: 'muted-note',
         text: 'The file itself was read in your browser and has not been stored '
             + 'anywhere.' }),
+
+      // New players are hidden until someone asks them, and the moment to ask is
+      // while they are still standing at the desk.
+      created.length ? el('div', { className: 'warn-block' }, [
+        el('p', { text: `${created.length} new player`
+          + `${created.length === 1 ? ' is' : 's are'} not listed publicly and will `
+          + 'stay that way until consent is recorded. Ask them before they leave:' }),
+        el('ul', { className: 'player-list' }, created.map((p) =>
+          el('li', {}, [
+            el('a', { className: 'player-button', href: `consent.html?id=${encodeURIComponent(p.player_id)}` }, [
+              el('span', { className: 'player-label', text: `${p.first_name} ${p.last_name}`.trim() }),
+              el('span', { className: 'player-id count', text: p.player_id })
+            ])
+          ])))
+      ]) : null,
+
       el('p', {}, [el('a', { href: 'upload.html', text: 'Upload another file' })])
     );
     button.remove();

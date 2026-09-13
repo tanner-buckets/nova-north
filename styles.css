@@ -1156,3 +1156,65 @@ h3 {
   gap: 0.35rem;
   max-width: 26rem;
 }
+
+/* --- Visibility consent ----------------------------------------------------- */
+
+/* Whether the player is public *right now* is the one thing a professor must
+   read correctly before saying anything to a parent, so it gets stated plainly
+   rather than inferred from two switches further down the card. */
+.live-state {
+  margin: 0.5rem 0;
+  font-weight: 600;
+  padding: 0.5rem 0.7rem;
+  border-radius: 6px;
+}
+.live-state.is-on {
+  background: #e8f4f2;
+  border-left: 4px solid var(--teal);
+}
+.live-state.is-off {
+  background: var(--paper);
+  border-left: 4px solid var(--line);
+  color: var(--muted);
+}
+
+.field-help.is-warning {
+  color: var(--text);
+  border-left: 4px solid var(--amber);
+  padding-left: 0.7rem;
+  max-width: 26rem;
+}
+
+.log-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.log-list li {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--paper);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.log-when {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.log-note {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* The same row used as a link rather than a button. An anchor does not inherit
+   the button reset, so the two need to agree explicitly. */
+a.player-button {
+  text-decoration: none;
+  box-sizing: border-box;
+}
+a.player-button:hover .player-label {
+  text-decoration: underline;
+}
