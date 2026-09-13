@@ -74,6 +74,7 @@ create table public.registrations (
   status text not null default 'confirmed'
     check (status in ('confirmed', 'waitlist', 'drop_requested', 'dropped')),
   waitlist_position integer,
+  source_ip inet,
   created_at timestamptz not null default now()
 );
 
@@ -88,6 +89,8 @@ create index registrations_waitlist_idx on public.registrations (event_id, waitl
   where status = 'waitlist';
 -- Present so a per-IP throttle can be added later without reshaping the table.
 create index registrations_created_at_idx on public.registrations (created_at desc);
+create index registrations_ip_idx on public.registrations (event_id, source_ip)
+  where source_ip is not null;
 
 comment on table public.registrations is
   'Public INSERT through register_for_event() only. No public SELECT: pre-registration lists are never public.';
@@ -96,6 +99,8 @@ comment on column public.registrations.birth_year is 'Protected. Captured to der
 comment on column public.registrations.contact is 'Protected. Optional.';
 comment on column public.registrations.waitlist_position is
   'Position in one queue for the whole event. Promotion then picks the first person whose division has room.';
+comment on column public.registrations.source_ip is
+  'Protected. Recorded only to throttle bulk submissions. Never public, never returned by any function. Safe to clear once an event has passed.';
 
 -- ---------------------------------------------------------------------------
 -- public_event_counts
@@ -153,7 +158,38 @@ declare
   v_status text;
   v_position integer;
   v_existing text;
+  v_ip inet;
+  v_from_ip integer;
 begin
+  -- Throttle, for anonymous callers only.
+  --
+  -- PostgREST passes the request headers through to Postgres, so the caller's
+  -- address is readable here. A missing or unparseable header means no throttle
+  -- rather than a refusal: this exists to make bulk submission tedious, not to
+  -- be a security control, and it must never block a legitimate registration.
+  --
+  -- A signed-in professor is exempt. They register people at the desk from one
+  -- address all afternoon, which is exactly the pattern this would otherwise
+  -- mistake for abuse.
+  if not public.is_professor() then
+    begin
+      v_ip := split_part(
+                coalesce(current_setting('request.headers', true)::json ->> 'x-forwarded-for', ''),
+                ',', 1)::inet;
+    exception when others then
+      v_ip := null;
+    end;
+
+    if v_ip is not null then
+      select count(*) into v_from_ip
+      from public.registrations
+      where event_id = p_event_id and source_ip = v_ip;
+
+      if v_from_ip >= 10 then
+        return jsonb_build_object('ok', false, 'code', 'too_many_from_this_address');
+      end if;
+    end if;
+  end if;
   -- Every registrant needs a Player ID. Someone without one is sent to the help
   -- page rather than given an anonymous registration.
   if p_player_id is null or btrim(p_player_id) = '' then
@@ -243,10 +279,10 @@ begin
 
   insert into public.registrations
     (event_id, player_id, first_name, last_name, birth_year, contact, division,
-     status, waitlist_position)
+     status, waitlist_position, source_ip)
   values
     (p_event_id, p_player_id, btrim(p_first_name), btrim(p_last_name), p_birth_year,
-     nullif(btrim(coalesce(p_contact, '')), ''), v_division, v_status, v_position);
+     nullif(btrim(coalesce(p_contact, '')), ''), v_division, v_status, v_position, v_ip);
 
   return jsonb_build_object('ok', true, 'status', v_status,
                             'waitlist_position', v_position,

@@ -201,20 +201,34 @@ someone through the function. A direct insert would let a caller write their own
 - **`public_event_counts` emits integers only** — capacity, confirmed, waitlist,
   per event and division. No names, no IDs, at any consent level.
 
-### Rate limiting, if it is ever wanted
+### The registration throttle
 
 Registration is deliberately open: no login, no captcha. Supabase's configurable
-rate limits cover Auth endpoints only and do not apply to the Data API.
+rate limits cover Auth endpoints only and do not apply to the Data API, so the
+throttle lives inside `register_for_event()` instead.
 
-If abuse appears, a throttle can live in `register_for_event()` itself, since
-PostgREST exposes the caller's headers to Postgres:
+PostgREST passes the request headers to Postgres, so the function reads
+`x-forwarded-for` and refuses an eleventh registration for the same event from
+the same address. The address is stored in `registrations.source_ip`, which is
+protected: no public grant, absent from `public_event_counts`, and returned by no
+function.
 
-```sql
-current_setting('request.headers', true)::json ->> 'x-forwarded-for'
-```
+Two deliberate choices:
 
-`registrations` carries a `created_at` index so this can be added without
-reshaping the table.
+- **A signed-in professor is exempt.** They register people at the desk from one
+  address all afternoon, which is precisely the pattern this would otherwise
+  mistake for abuse.
+- **A missing or unparseable header means no throttle**, not a refusal. This
+  exists to make bulk submission tedious, not to be a security control, and it
+  must never block a legitimate registration.
+
+Households share an address, and so does a game store's wifi. Ten per event is
+generous for a family but reachable if many players register on site at a busy
+prerelease. If that happens, raise the number or scope it to a time window rather
+than the life of the event.
+
+`source_ip` is safe to clear once an event has passed.
+
 
 ### Known gaps, carried forward
 
