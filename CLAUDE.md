@@ -177,7 +177,11 @@ is applied to the production database.** There is no confirmation step.
   on-screen confirmation naming who was promoted.
 - Drop requests require Player ID **and** matching name, and do not take effect
   until a professor confirms.
-- Premier events require a Player ID. Prereleases do not.
+- **Every registration requires a Player ID**, prereleases included. Someone
+  without one is sent to a help page explaining how to look one up or create one,
+  including for a child, with professor contact details as the fallback. A
+  registration is never anonymous: the ID is what makes duplicate detection and
+  self-service drops possible.
 
 ---
 

@@ -221,7 +221,7 @@ pre-registration lists are never public, regardless of any visibility consent.
 |---|---|---|
 | `id` | uuid PK | |
 | `event_id` | uuid FK | |
-| `player_id` | text null | Null allowed for prereleases only |
+| `player_id` | text | Required for every registration, prereleases included |
 | `first_name` | text | **Protected** |
 | `last_name` | text | **Protected** |
 | `birth_year` | int | **Protected** |

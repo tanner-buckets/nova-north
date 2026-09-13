@@ -43,14 +43,14 @@ again and fail. Let the integration apply it.
 ## Build phases
 
 Schema comes before pages. Building UI against mocked data means rebuilding it
-against real functions and policies later. Current phase: **3**.
+against real functions and policies later. Current phase: **4**.
 
 | Phase | Work | State |
 |---|---|---|
 | 1 | Reference tables: `earning_actions`, `prize_items`, `releases`, `loyalty_tiers` | done |
 | 2 | People and consent: `players`, `professors`, `consent_log`, visibility helpers | done |
-| 3 | Points and attendance: `attendance`, `point_ledger`, consent expiry | in progress |
-| 4 | Events and registration | |
+| 3 | Points and attendance: `attendance`, `point_ledger`, consent expiry | done |
+| 4 | Events and registration | in progress |
 | 5 | Public pages, built against the real tables | |
 | 6 | Professor screens | |
 | 7 | TDF upload and parsing | |
@@ -175,11 +175,82 @@ should never gain another row.
 in force, because it appears in their transaction history. It is for "Bring a
 friend bonus", never for anything about a person.
 
+**Phase 4** — `supabase/migrations/20260913001725_events_and_registration.sql`
+
+`events`, `event_capacities`, `registrations`, the `public_event_counts` view,
+and the three registration functions.
+
+**The first phase with public write.** A stranger with the anon key can now create
+a registration — but only by calling `register_for_event()`. `registrations` has
+no anon grant and **no INSERT policy at all**, so even a professor registers
+someone through the function. A direct insert would let a caller write their own
+`status` and take a confirmed spot past a full division.
+
+- **A Player ID is required for every registration**, prereleases included. This
+  departs from the earlier design, which allowed a blank ID for prereleases.
+  Requiring it makes duplicate detection work everywhere and gives every
+  registrant a way to drop. Someone without one goes to a help page.
+- **Division is derived from the event's date, not today's.** Seasons roll over
+  on 1 September, so registering in August for a September event must use the
+  season the event falls in.
+- **One queue per event, promotion by division.** `waitlist_position` is global
+  for the event; `confirm_drop()` then promotes the first person whose division
+  has room and who is not already confirmed on another flight.
+- **`request_drop()` returns the same result whether or not anything matched**,
+  so it cannot be used to discover which Player IDs are registered.
+- **`public_event_counts` emits integers only** — capacity, confirmed, waitlist,
+  per event and division. No names, no IDs, at any consent level.
+
+### Registration abuse: detection, not prevention
+
+Registration is deliberately open — no login, no captcha. Supabase's configurable
+rate limits cover Auth endpoints only and do not apply to the Data API.
+
+A per-address cap was written and then removed, for a concrete reason worth
+remembering: **everyone on the store's wifi shares one public address.** Capping
+registrations per address would turn a busy prerelease sign-up into a wall of
+rejections for real players, which is a worse outcome than the abuse it prevents.
+
+So the address is recorded and nothing is refused on the strength of it:
+
+- `registrations.source_ip` is protected — no public grant, absent from
+  `public_event_counts`, returned by no function. Safe to clear once an event has
+  passed.
+- **`registration_ip_activity`** shows professors any address with more than one
+  registration for an event, with first and last seen. A shared address is
+  normal; a professor decides whether twelve from one address is a family, a
+  scout troop, or a script.
+- **`event_registration_summary`** gives the counts a professor sees on logging
+  in: confirmed, waitlisted, and drops awaiting confirmation, per event.
+
+Both professor views use `security_invoker = true`, the opposite of
+`public_event_counts`. RLS on `registrations` therefore applies, so a signed-in
+non-professor sees zero rows. The public view has it off precisely so it can
+count rows the caller cannot read; these two must not.
+
+If abuse ever does appear, the better lever is a *rate* rather than a total — say
+five submissions from one address within a minute, which a script trips instantly
+and a room full of people never does.
+
+### Known gaps, carried forward
+
+- **16 Player IDs appear in the league spreadsheets but in neither official
+  export.** They hold 18 opening balances worth 77 points and 5 carryover rows
+  worth 5 weeks, all skipped rather than guessed at. Adding them later is a clean
+  insert: the sets do not overlap, so there is no duplication risk.
+- **`finalize_release()` is not written.** Deferred until Delta Reign closes on
+  1 November 2026. `loyalty_results` exists and is waiting for it.
+- **Nothing is player-facing yet, and nobody is visible.** Visibility needs a
+  consent flag *and* attendance within three months, and `attendance` is empty by
+  design — the imported weeks had no dates, which is why `loyalty_carryover`
+  exists. The first real check-in is what brings the system to life.
+
 ### Scheduling the consent expiry job
 
-Deliberately not in the migration: creating an extension behaves differently per
-environment, and a failure there would block the whole deploy. Enable Cron at
-Dashboard → Integrations, then run once:
+Scheduled and running daily at 07:00 UTC. Deliberately not in the migration:
+creating an extension behaves differently per environment, and a failure there
+would block the whole deploy. It was enabled at Dashboard → Integrations and
+scheduled with:
 
 ```sql
 select cron.schedule('expire-stale-consent', '0 7 * * *',
