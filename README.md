@@ -353,6 +353,63 @@ them leaves attendance written and points not, which the error message says
 plainly so the ledger can be checked before a retry. Moving both into one
 `SECURITY DEFINER` function is the fix when it is worth the migration.
 
+### Manual attendance
+
+`admin/attendance.html`, for a day the file will not export, a player who played
+but never got entered, and the casual session that was never a tournament. It
+grants exactly what an upload grants, because the write itself lives in
+`admin/attendance-core.js` and both screens call it. Duplicating that logic would
+let the two drift, and the one that drifted would be the rarely used one,
+discovered only when somebody's points were wrong.
+
+One deliberate difference: **manual entry never creates a player.** Every
+attendee is picked from a search, so a typed ID that matched nobody is refused at
+the picker rather than quietly becoming a new person. Uploads create players
+because a tournament file is evidence someone exists; a typed number is not.
+
+The date defaults to today in league time, not the browser's, so a professor
+entering Sunday's attendance from a laptop set to another zone still gets Sunday.
+
+### Players
+
+`admin/players.html` adds someone who did not arrive through a tournament file,
+and corrects a record that is wrong. It writes names, birth year, contact and
+notes.
+
+It cannot write a visibility flag — not because it declines to, but because
+professors hold no `UPDATE` grant on those columns, so the attempt would be
+refused. The screen states the current visibility and links to the consent screen
+rather than offering a control.
+
+There is no delete. A player record is never removed: attendance, ledger entries,
+badges and registrations all point at it, and history has to keep resolving.
+Correcting a Player ID is supported instead, and every foreign key referencing
+players cascades so the correction carries rather than orphaning rows.
+
+### Drop confirmation
+
+`admin/drops.html`. A player asking to drop does not drop them: `request_drop()`
+only marks the registration, and nothing moves until a professor confirms. That
+is the point of the two steps — confirming is what promotes somebody off the
+waiting list, and a promotion should not happen on an anonymous click.
+
+The promotion rule lives in `confirm_drop()`, not in the page. It walks the
+waitlist in order, skips anyone already holding a confirmed spot on another
+flight of the same linked group, and skips anyone whose division is still full.
+The screen's own job is to **name who was promoted**, because otherwise nobody
+knows who to tell.
+
+Two kinds of drop, deliberately weighted differently:
+
+- **Someone who asked** has already confirmed it. The request is the
+  confirmation, so one click finishes it.
+- **Someone who did not ask** is a different act: it takes their place away and
+  may promote somebody else, neither of which can be clicked back. That one asks
+  first, naming the player.
+
+These lists are never public. Full names are shown for the same reason they
+appear on a printed desk list.
+
 ### Visibility consent
 
 `admin/consent.html` is the only screen that can make a player public, and it

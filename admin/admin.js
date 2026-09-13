@@ -54,6 +54,8 @@ function showSignIn(message) {
 const TOOLS = [
   { href: 'upload.html', name: 'Upload a TDF',
     note: 'Records attendance and awards points for an event. The file is read in your browser and never uploaded anywhere.' },
+  { href: 'attendance.html', name: 'Record attendance by hand',
+    note: 'For a day with no tournament file. Grants the same loyalty week and points an upload does.' },
   { href: 'consent.html', name: 'Visibility and consent',
     note: 'Turn a player\u2019s listing on or off. Every change is logged.' },
   { href: 'drops.html', name: 'Drop requests',

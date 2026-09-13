@@ -1218,3 +1218,87 @@ a.player-button {
 a.player-button:hover .player-label {
   text-decoration: underline;
 }
+
+/* --- Manual attendance, players, drops -------------------------------------- */
+
+.field textarea {
+  font: inherit;
+  font-size: 1rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--text);
+  max-width: 26rem;
+  resize: vertical;
+}
+
+.picker {
+  margin-bottom: 0.5rem;
+}
+
+.tag-division {
+  background: var(--ink-soft);
+  color: var(--card);
+}
+
+/* An event row carries two things at once: which event it is, and how much is
+   waiting on it. They stack on a phone and sit apart once there is room. */
+.event-row {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.event-row-main {
+  display: grid;
+  gap: 0.15rem;
+}
+.event-row-counts {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.reg-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+.reg-row {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.7rem 0.8rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.reg-row p {
+  margin: 0.3rem 0 0;
+}
+.reg-person {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* A drop nobody asked for is the one destructive click on these screens, so it
+   gets its own weight rather than looking like every other button. */
+.button-danger {
+  background: var(--amber);
+  color: var(--ink);
+  border-color: var(--amber);
+}
+.confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Demo pages only; never shipped to a public screen. */
+.demo-link {
+  margin-right: 0.75rem;
+}

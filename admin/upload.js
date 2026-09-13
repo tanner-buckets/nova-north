@@ -1,5 +1,5 @@
-// TDF upload: the only way attendance normally gets recorded, and the main way
-// new players enter the system.
+// TDF upload: the usual way attendance gets recorded, and the main way new
+// players enter the system.
 //
 // The file is read here in the browser and thrown away. It is never uploaded and
 // never stored. The birth year is kept, because it is what gives a new player a
@@ -10,18 +10,17 @@
 // Appearing in a tournament file is not consent. Nothing here touches a
 // visibility flag, so a player added from a file starts hidden and stays hidden
 // until a professor records consent on the visibility screen.
+//
+// The writing itself lives in attendance-core.js, shared with manual entry.
 import { supabase, el } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
+import {
+  ATTEND_LABEL, CASUAL_LABEL, PREMIER_LABEL,
+  loadActions, actionField, status, playerPicker, recordAttendance, outcomeNodes
+} from './attendance-core.js';
 
 const gate = document.querySelector('#gate');
 const app = document.querySelector('#app');
-
-// Expected labels in earning_actions, used only to preselect a dropdown. A
-// professor can change either choice at entry, and a renamed action means
-// nothing is preselected rather than a silently wrong award.
-const ATTEND_LABEL = 'Attend Sunday League';
-const CASUAL_LABEL = 'Play in casual league tournament';
-const PREMIER_LABEL = 'Play in a league Championship Event';
 
 let professor = null;
 let parsed = null;      // { eventName, attendedOn, players: [...] }
@@ -56,6 +55,8 @@ function parseTdf(text) {
     ? `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`
     : null;
 
+  // Scoped to the players block on purpose: the standings block repeats the same
+  // tag and would otherwise be counted as a second roster.
   const players = [...doc.querySelectorAll('tournament > players > player')]
     .map((p) => ({
       player_id: (p.getAttribute('userid') || '').trim(),
@@ -69,11 +70,6 @@ function parseTdf(text) {
 }
 
 // --- Helpers -----------------------------------------------------------------
-
-function status(node, message, kind) {
-  node.className = 'form-status' + (kind ? ` is-${kind}` : '');
-  node.textContent = message;
-}
 
 function allAttendees() {
   const seen = new Set();
@@ -93,26 +89,7 @@ async function refreshKnown() {
   known = new Set(data.map((r) => r.player_id));
 }
 
-function pointsFor(actionId) {
-  const a = actions.find((x) => x.id === actionId);
-  return a ? a.default_points : 0;
-}
-
 // --- Rendering ---------------------------------------------------------------
-
-function actionField(id, label, preselectLabel) {
-  const select = el('select', { id },
-    actions.map((a) => el('option', {
-      value: a.id, text: `${a.label} (${a.default_points})`
-    })));
-  const match = actions.find((a) => a.label === preselectLabel);
-  if (match) select.value = match.id;
-
-  return el('p', { className: 'field' }, [
-    el('label', { for: id, text: label }),
-    select
-  ]);
-}
 
 function attendeeList() {
   return el('div', {}, [
@@ -124,69 +101,6 @@ function attendeeList() {
         known.has(p.player_id) ? null : el('span', { className: 'tag tag-new', text: 'new' }),
         p.added ? el('span', { className: 'tag tag-added', text: 'added by hand' }) : null
       ])))
-  ]);
-}
-
-function addExtraForm() {
-  const idInput = el('input', { id: 'extra-id', inputmode: 'numeric', placeholder: '1234567' });
-  const addById = el('button', { type: 'button', className: 'button button-quiet', text: 'Add by ID' });
-  const nameInput = el('input', { id: 'extra-name', placeholder: 'Start typing a name' });
-  const found = el('div', { className: 'search-results' });
-  const note = el('p', { className: 'form-status', role: 'status' });
-
-  addById.addEventListener('click', async () => {
-    const id = idInput.value.trim();
-    if (!id) return;
-    const { data, error } = await supabase.from('players')
-      .select('player_id, first_name, last_name').eq('player_id', id).maybeSingle();
-    if (error) {
-      status(note, `That lookup failed: ${error.message}. Try again.`, 'error');
-      return;
-    }
-    if (!data) {
-      status(note, 'No player has that ID. Check the digits, or search by name below.', 'error');
-      return;
-    }
-    idInput.value = '';
-    add(data, note);
-  });
-
-  nameInput.addEventListener('input', async () => {
-    const q = nameInput.value.trim();
-    if (q.length < 2) { found.replaceChildren(); return; }
-    const { data } = await supabase.from('players')
-      .select('player_id, first_name, last_name')
-      .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%`)
-      .order('first_name').limit(8);
-    if (!data) return;
-
-    found.replaceChildren(...data.map((p) => {
-      const button = el('button', { type: 'button', className: 'player-button' }, [
-        el('span', { className: 'player-label', text: `${p.first_name} ${p.last_name}` }),
-        el('span', { className: 'player-id count', text: p.player_id })
-      ]);
-      button.addEventListener('click', () => {
-        nameInput.value = '';
-        found.replaceChildren();
-        add(p, note);
-      });
-      return button;
-    }));
-  });
-
-  return el('details', { className: 'disclosure' }, [
-    el('summary', { text: 'Add someone who played but is not in the file' }),
-    el('div', { className: 'disclosure-body' }, [
-      el('p', { className: 'field' }, [
-        el('label', { for: 'extra-id', text: 'Player ID' }), idInput
-      ]),
-      el('p', {}, [addById]),
-      el('p', { className: 'field' }, [
-        el('label', { for: 'extra-name', text: 'Or look up an ID by name' }), nameInput
-      ]),
-      found,
-      note
-    ])
   ]);
 }
 
@@ -205,8 +119,8 @@ function renderReview() {
 
   const dateInput = el('input', { type: 'date', id: 'attended-on', value: parsed.attendedOn });
   const premier = el('input', { type: 'checkbox', id: 'premier' });
-  const attendField = actionField('attend-action', 'Award for attending', ATTEND_LABEL);
-  const playField = actionField('play-action', 'Award for playing', CASUAL_LABEL);
+  const attendField = actionField(actions, 'attend-action', 'Award for attending', ATTEND_LABEL);
+  const playField = actionField(actions, 'play-action', 'Award for playing', CASUAL_LABEL);
 
   premier.addEventListener('change', () => {
     const match = actions.find((a) => a.label === (premier.checked ? PREMIER_LABEL : CASUAL_LABEL));
@@ -275,7 +189,10 @@ function renderReview() {
         + `${unknown.length} new` })
     ]),
     attendeeList(),
-    addExtraForm(),
+    el('details', { className: 'disclosure' }, [
+      el('summary', { text: 'Add someone who played but is not in the file' }),
+      el('div', { className: 'disclosure-body' }, [playerPicker({ onPick: add })])
+    ]),
     form
   ]);
 }
@@ -313,7 +230,11 @@ function renderPicker() {
     el('p', { className: 'field' }, [
       el('label', { for: 'tdf', text: 'Tournament file' }), input
     ]),
-    note
+    note,
+    el('p', { className: 'muted-note' }, [
+      el('span', { text: 'No file for the day? ' }),
+      el('a', { href: 'attendance.html', text: 'Record attendance by hand' })
+    ])
   ]);
 }
 
@@ -328,99 +249,22 @@ async function commit({ attendedOn, attendActionId, playActionId, createMissing,
   status(resultNode, 'Recording.');
 
   try {
-    const attendees = allAttendees();
-    const missing = attendees.filter((p) => !known.has(p.player_id));
+    const outcome = await recordAttendance({
+      attendees: allAttendees(),
+      known,
+      attendedOn,
+      attendActionId,
+      playActionId,
+      createMissing,
+      professor,
+      actions,
+      source: 'tdf',
+      reason: `Played in ${parsed.eventName}`
+    });
 
-    const created = (missing.length && createMissing) ? missing : [];
-
-    if (missing.length && createMissing) {
-      // Only players being created. An import never overwrites an existing
-      // birth year: division drives registration caps, and a professor who
-      // corrected one by hand outranks a file.
-      const { error } = await supabase.from('players').insert(missing.map((p) => ({
-        player_id: p.player_id,
-        first_name: p.first_name || 'Unknown',
-        last_name: p.last_name || 'Unknown',
-        birth_year: p.birth_year ?? null
-        // Every consent column is deliberately omitted, and the grant would
-        // refuse them anyway.
-      })));
-      if (error) throw error;
-      await refreshKnown();
-    }
-
-    const eligible = attendees.filter((p) => known.has(p.player_id));
-    if (!eligible.length) {
-      throw new Error('Nobody on this list is a player yet, so there is nothing to record.');
-    }
-
-    // One loyalty week per calendar day. A second event on the same Sunday adds
-    // no attendance row, and the unique constraint saying so is the rule working
-    // rather than an error to report.
-    const { data: inserted, error: attErr } = await supabase
-      .from('attendance')
-      .upsert(eligible.map((p) => ({
-        player_id: p.player_id,
-        attended_on: attendedOn,
-        source: 'tdf',
-        created_by: professor.userId
-      })), { onConflict: 'player_id,attended_on', ignoreDuplicates: true })
-      .select('player_id');
-    if (attErr) throw attErr;
-
-    // Attendance points go only to those whose attendance row is new. Play
-    // points go to everyone who played, because two events in a day are two
-    // things played even though they are one loyalty week.
-    const newlyPresent = new Set((inserted || []).map((r) => r.player_id));
-
-    const ledger = [];
-    for (const p of eligible) {
-      if (newlyPresent.has(p.player_id)) {
-        ledger.push({
-          player_id: p.player_id, delta: pointsFor(attendActionId),
-          earning_action_id: attendActionId, created_by: professor.userId
-        });
-      }
-      ledger.push({
-        player_id: p.player_id, delta: pointsFor(playActionId),
-        earning_action_id: playActionId, created_by: professor.userId,
-        // Public through get_player_summary(). An event name is already public
-        // on the schedule, so this is safe; never write anything private here.
-        reason: `Played in ${parsed.eventName}`
-      });
-    }
-
-    const { error: ledErr } = await supabase.from('point_ledger').insert(ledger);
-    if (ledErr) throw ledErr;
-
-    const repeats = eligible.length - newlyPresent.size;
     resultNode.className = 'form-status is-good';
     resultNode.replaceChildren(
-      el('p', { text: `Recorded. ${newlyPresent.size} attendance row`
-          + `${newlyPresent.size === 1 ? '' : 's'} for ${attendedOn}, and `
-          + `${ledger.length} point entries across ${eligible.length} players.` }),
-      repeats ? el('p', { className: 'muted-note',
-        text: `${repeats} already had attendance for that day, so that day was not `
-            + 'counted twice. They still received points for playing.' }) : null,
-      el('p', { className: 'muted-note',
-        text: 'The file itself was read in your browser and has not been stored '
-            + 'anywhere.' }),
-
-      // New players are hidden until someone asks them, and the moment to ask is
-      // while they are still standing at the desk.
-      created.length ? el('div', { className: 'warn-block' }, [
-        el('p', { text: `${created.length} new player`
-          + `${created.length === 1 ? ' is' : 's are'} not listed publicly and will `
-          + 'stay that way until consent is recorded. Ask them before they leave:' }),
-        el('ul', { className: 'player-list' }, created.map((p) =>
-          el('li', {}, [
-            el('a', { className: 'player-button', href: `consent.html?id=${encodeURIComponent(p.player_id)}` }, [
-              el('span', { className: 'player-label', text: `${p.first_name} ${p.last_name}`.trim() }),
-              el('span', { className: 'player-id count', text: p.player_id })
-            ])
-          ])))
-      ]) : null,
-
+      ...outcomeNodes(outcome, attendedOn, { fileNote: true }),
       el('p', {}, [el('a', { href: 'upload.html', text: 'Upload another file' })])
     );
     button.remove();
@@ -445,14 +289,14 @@ async function commit({ attendedOn, attendActionId, playActionId, createMissing,
     return;
   }
 
-  const { data, error } = await supabase
-    .from('earning_actions').select('*').eq('is_active', true).order('sort_order');
-  if (error || !data) {
+  try {
+    actions = await loadActions();
+  } catch (err) {
+    console.error(err);
     gate.replaceChildren(el('p', { className: 'notice notice-problem',
       text: 'The list of point awards could not be loaded, so nothing can be '
           + 'recorded safely. Reload the page and try again.' }));
     return;
   }
-  actions = data;
   app.replaceChildren(renderPicker());
 })();
