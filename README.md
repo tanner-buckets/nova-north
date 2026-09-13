@@ -43,13 +43,13 @@ again and fail. Let the integration apply it.
 ## Build phases
 
 Schema comes before pages. Building UI against mocked data means rebuilding it
-against real functions and policies later. Current phase: **3**.
+against real functions and policies later. Current phase: **4**.
 
 | Phase | Work | State |
 |---|---|---|
 | 1 | Reference tables: `earning_actions`, `prize_items`, `releases`, `loyalty_tiers` | done |
 | 2 | People and consent: `players`, `professors`, `consent_log`, visibility helpers | done |
-| 3 | Points and attendance: `attendance`, `point_ledger`, consent expiry | in progress |
+| 3 | Points and attendance: `attendance`, `point_ledger`, consent expiry | done |
 | 4 | Events and registration | |
 | 5 | Public pages, built against the real tables | |
 | 6 | Professor screens | |
@@ -175,11 +175,25 @@ should never gain another row.
 in force, because it appears in their transaction history. It is for "Bring a
 friend bonus", never for anything about a person.
 
+### Known gaps, carried forward
+
+- **16 Player IDs appear in the league spreadsheets but in neither official
+  export.** They hold 18 opening balances worth 77 points and 5 carryover rows
+  worth 5 weeks, all skipped rather than guessed at. Adding them later is a clean
+  insert: the sets do not overlap, so there is no duplication risk.
+- **`finalize_release()` is not written.** Deferred until Delta Reign closes on
+  1 November 2026. `loyalty_results` exists and is waiting for it.
+- **Nothing is player-facing yet, and nobody is visible.** Visibility needs a
+  consent flag *and* attendance within three months, and `attendance` is empty by
+  design — the imported weeks had no dates, which is why `loyalty_carryover`
+  exists. The first real check-in is what brings the system to life.
+
 ### Scheduling the consent expiry job
 
-Deliberately not in the migration: creating an extension behaves differently per
-environment, and a failure there would block the whole deploy. Enable Cron at
-Dashboard → Integrations, then run once:
+Scheduled and running daily at 07:00 UTC. Deliberately not in the migration:
+creating an extension behaves differently per environment, and a failure there
+would block the whole deploy. It was enabled at Dashboard → Integrations and
+scheduled with:
 
 ```sql
 select cron.schedule('expire-stale-consent', '0 7 * * *',
