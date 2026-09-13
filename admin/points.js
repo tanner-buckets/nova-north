@@ -12,15 +12,22 @@
 // never be one.
 import { supabase, el, problem } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
-import { loadActions, status, playerPicker } from './attendance-core.js';
+import { status, playerPicker } from './attendance-core.js';
 
 const gate = document.querySelector('#gate');
 const app = document.querySelector('#app');
 
 let professor = null;
+
+// Every action and item, active or retired. History has to keep naming what a
+// past entry was for, and an action retired last season still has entries
+// pointing at it. The dropdowns offer the active subset instead.
 let actions = [];
 let items = [];
 let player = null;
+
+const activeActions = () => actions.filter((a) => a.is_active !== false);
+const activeItems = () => items.filter((i) => i.is_active !== false);
 
 // Set by the local demo so the panels can render without a session.
 export function _setReference(a, i, p) { actions = a; items = i; player = p; }
@@ -60,13 +67,28 @@ function describe(row) {
 
 // --- Writing -----------------------------------------------------------------
 
-async function write(entry, resultNode, button) {
+async function write(entry, resultNode, button, retireItemId = null) {
   button.disabled = true;
   status(resultNode, 'Recording.');
   try {
     const { error } = await supabase.from('point_ledger')
       .insert({ ...entry, player_id: player.player_id, created_by: professor.userId });
     if (error) throw error;
+
+    // After the ledger, deliberately. The points are the part that has to be
+    // right; if retiring the item then fails, the redemption stands and the
+    // message says exactly what is left to do rather than implying both failed.
+    if (retireItemId) {
+      const { error: retireErr } = await supabase.from('prize_items')
+        .update({ is_active: false }).eq('id', retireItemId);
+      if (retireErr) {
+        status(resultNode, 'The prize was recorded, but taking it off the wall '
+          + `failed: ${retireErr.message}. Retire it on the prize wall screen; do `
+          + 'not record the prize again.', 'error');
+        return;
+      }
+    }
+
     await show(player.player_id);
   } catch (err) {
     console.error(err);
@@ -78,15 +100,16 @@ async function write(entry, resultNode, button) {
 // --- Earn --------------------------------------------------------------------
 
 export function earnPanel(balance) {
+  const available = activeActions();
   const select = el('select', { id: 'earn-action' },
-    actions.map((a) => el('option', { value: a.id, text: `${a.label} (${a.default_points})` })));
+    available.map((a) => el('option', { value: a.id, text: `${a.label} (${a.default_points})` })));
   const amount = el('input', { id: 'earn-points', type: 'number', step: '1' });
   const reason = el('input', { id: 'earn-reason' });
   const result = el('p', { className: 'form-status', role: 'status' });
   const go = el('button', { type: 'submit', className: 'button', text: 'Award points' });
 
   function syncAmount() {
-    const a = actions.find((x) => x.id === select.value);
+    const a = available.find((x) => x.id === select.value);
     amount.value = a ? a.default_points : 0;
   }
   select.addEventListener('change', syncAmount);
@@ -135,23 +158,46 @@ export function earnPanel(balance) {
 // --- Spend -------------------------------------------------------------------
 
 export function spendPanel(balance) {
-  if (!items.length) {
+  const available = activeItems();
+  if (!available.length) {
     return el('section', { className: 'card' }, [
       el('h3', { text: 'Spend at the prize wall' }),
-      el('p', { className: 'muted-note', text: 'No prize items are active.' })
+      el('p', { className: 'muted-note' }, [
+        el('span', { text: 'Nothing is on the prize wall. ' }),
+        el('a', { href: 'prizes.html', text: 'Add some items' })
+      ])
     ]);
   }
 
   const select = el('select', { id: 'spend-item' },
-    items.map((i) => el('option', { value: i.id, text: `${i.label} (${i.default_cost})` })));
+    available.map((i) => el('option', { value: i.id, text: `${i.label} (${i.default_cost})` })));
   const cost = el('input', { id: 'spend-cost', type: 'number', step: '1', min: '0' });
   const reason = el('input', { id: 'spend-reason' });
   const after = el('p', { className: 'field-help' });
   const result = el('p', { className: 'form-status', role: 'status' });
   const go = el('button', { type: 'submit', className: 'button', text: 'Record the prize' });
 
+  // Handing something over does not usually mean the prize wall has run out of
+  // it. Most items are restocked, so retiring one is a separate decision a
+  // professor makes deliberately, not a side effect of a redemption.
+  const retire = el('input', { type: 'checkbox', id: 'spend-retire' });
+  const yes = el('button', { type: 'button', className: 'button button-danger',
+    text: 'Yes, record it and take it off' });
+  const no = el('button', { type: 'button', className: 'link-button', text: 'Go back' });
+  const confirmRow = el('span', { className: 'confirm-row', hidden: 'hidden' }, [yes, no]);
+
+  function chosen() {
+    return available.find((x) => x.id === select.value);
+  }
+
+  no.addEventListener('click', () => {
+    confirmRow.hidden = true;
+    go.hidden = false;
+    status(result, '');
+  });
+
   function syncCost() {
-    const i = items.find((x) => x.id === select.value);
+    const i = available.find((x) => x.id === select.value);
     if (i && !cost.dataset.touched) cost.value = i.default_cost;
     syncAfter();
   }
@@ -187,24 +233,64 @@ export function spendPanel(balance) {
     el('p', { className: 'field' }, [
       el('label', { for: 'spend-reason', text: 'Note, optional' }), reason
     ]),
-    el('p', {}, [go]),
+    el('p', { className: 'field field-inline' }, [
+      retire, el('label', { for: 'spend-retire', text: 'Take this off the prize wall' })
+    ]),
+    el('p', { className: 'field-help' }, [
+      el('span', { text: 'Only if that was the last one. The item is retired, not '
+        + 'deleted, so every past redemption still points at it and it can be put '
+        + 'back on the ' }),
+      el('a', { href: 'prizes.html', text: 'prize wall screen' }),
+      el('span', { text: '.' })
+    ]),
+    el('p', {}, [go, confirmRow]),
     result
   ]);
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
+  function valid() {
     const spend = Number(cost.value);
     if (!Number.isInteger(spend) || spend < 0) {
       status(result, 'The cost must be a whole number, zero or more.', 'error');
-      return;
+      return null;
     }
-    write({
+    return spend;
+  }
+
+  async function record(spend) {
+    await write({
       // Stored as a negative delta. Spending is a transaction like any other,
       // and the balance is still just a sum.
       delta: -spend,
       prize_item_id: select.value,
       reason: reason.value.trim() || null
-    }, result, go);
+    }, result, go, retire.checked ? select.value : null);
+  }
+
+  yes.addEventListener('click', () => {
+    const spend = valid();
+    if (spend === null) return;
+    yes.disabled = true;
+    record(spend);
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const spend = valid();
+    if (spend === null) return;
+
+    // Taking an item off the wall affects everyone who might have wanted it, not
+    // just the player at the desk, so it is confirmed before it happens.
+    if (retire.checked) {
+      const item = chosen();
+      go.hidden = true;
+      confirmRow.hidden = false;
+      status(result, `This records the prize and takes “${item ? item.label : 'it'}” `
+        + 'off the prize wall for everybody. Put it back on the prize wall screen '
+        + 'if that was wrong.');
+      return;
+    }
+
+    record(spend);
   });
 
   return el('section', { className: 'card' }, [
@@ -272,6 +358,11 @@ const detail = el('div', { id: 'detail' });
 async function show(playerId) {
   detail.replaceChildren(el('p', { className: 'notice', text: 'Loading.' }));
   try {
+    // Re-read, because a redemption may have just retired an item and the
+    // dropdown must not keep offering something that is off the wall.
+    const fresh = await supabase.from('prize_items').select('*').order('sort_order');
+    if (fresh.data) items = fresh.data;
+
     const { data, error } = await supabase.from('players')
       .select('player_id, first_name, last_name').eq('player_id', playerId).maybeSingle();
     if (error) throw error;
@@ -324,10 +415,11 @@ async function show(playerId) {
 
   try {
     const [a, i] = await Promise.all([
-      loadActions(),
-      supabase.from('prize_items').select('*').eq('is_active', true).order('sort_order')
+      supabase.from('earning_actions').select('*').order('sort_order'),
+      supabase.from('prize_items').select('*').order('sort_order')
     ]);
-    actions = a;
+    if (a.error || i.error) throw a.error || i.error;
+    actions = a.data || [];
     items = i.data || [];
   } catch (err) {
     console.error(err);

@@ -1373,3 +1373,86 @@ a.player-button:hover .player-label {
 .balance-number.is-negative {
   color: var(--amber);
 }
+
+/* --- Prize wall and events -------------------------------------------------- */
+
+.item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.item-row.is-retired .player-label {
+  color: var(--muted);
+}
+.item-list .disclosure {
+  margin-top: 0;
+  border-top: none;
+  padding-top: 0;
+  background: var(--paper);
+  border-radius: 6px;
+}
+.item-list summary {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+}
+.item-list .disclosure-body {
+  padding: 0.25rem 0.75rem 0.75rem;
+}
+
+/* Save and retire sit on one line, and the retire confirmation replaces the
+   retire button in place rather than pushing the form around. */
+.item-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* A label that wraps its own input, used where a page of repeated fields would
+   otherwise need a unique id for every one of them. */
+.field label input,
+.field label select {
+  display: block;
+  margin-top: 0.25rem;
+  font-weight: 400;
+}
+
+/* display:flex on a summary drops the default disclosure marker, leaving a row
+   that opens with nothing to say so. This puts the affordance back explicitly. */
+.item-list summary {
+  cursor: pointer;
+  list-style: none;
+}
+.item-list summary::-webkit-details-marker {
+  display: none;
+}
+.item-list summary::after {
+  content: "\203A";
+  margin-left: auto;
+  color: var(--teal);
+  font-size: 1.3rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+.item-list details[open] > summary::after {
+  transform: rotate(90deg);
+}
+.item-list summary:hover {
+  background: #eef3f2;
+  border-radius: 6px;
+}
+
+/* A wrapped input is not a flex child of .field, so it does not stretch the way
+   the id-linked ones do. Without this the two styles of field are visibly
+   different widths on the same page. */
+.field label input,
+.field label select {
+  width: 100%;
+  max-width: 22rem;
+  box-sizing: border-box;
+}

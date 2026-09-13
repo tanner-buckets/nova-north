@@ -67,9 +67,11 @@ const TOOLS = [
   { href: 'players.html', name: 'Players',
     note: 'Add a player, or correct a name or Player ID.' },
   { href: 'events.html', name: 'Events',
-    note: 'Create and edit events, capacities and registration.' },
+    note: 'Create and edit events, set what they cost, and decide which take pre-registration.' },
+  { href: 'prizes.html', name: 'Prize wall',
+    note: 'Add items and set their cost. Items are taken off the wall, never deleted.' },
   { href: 'reference.html', name: 'Reference data',
-    note: 'Earning actions, prize wall items, badges, ranks and releases.' },
+    note: 'Earning actions, badges, ranks and releases.' },
   { href: 'print.html', name: 'Printable lists',
     note: 'Loyalty tiers for the store, and pre-registration lists for the desk.' }
 ];

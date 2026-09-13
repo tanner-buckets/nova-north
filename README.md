@@ -404,6 +404,47 @@ Point values are defaults. Each is prefilled from the action or item and stays
 editable, and an action worth zero plus a note is how a one-off award is
 recorded.
 
+Handing something over does **not** by itself take it off the prize wall — most
+items are restocked. Retiring one is a separate checkbox on the redemption, and
+because it changes what every professor and player sees rather than just this
+player's balance, it asks for confirmation naming the item. The ledger is written
+first and the retire second: the points are the part that has to be right, so if
+the retire then fails the redemption stands and the message says exactly what is
+left to do.
+
+Every action and item is loaded, active or retired, because history has to keep
+naming what a past entry was for. Only the active subset is offered in the
+dropdowns.
+
+### Prize wall
+
+`admin/prizes.html` adds items, sets their cost and sort order, and takes them
+off the wall.
+
+Nothing is ever deleted. An item is retired, which removes it from the public
+prize wall and from every dropdown while leaving the row intact, because every
+past redemption holds a foreign key to it. Deleting would either orphan those
+rows or be refused outright. Putting an item back is immediate; taking one off
+asks first, because that direction changes what everyone sees.
+
+### Events
+
+`admin/events.html` creates and edits events, sets what they cost, and decides
+which take pre-registration. Everything on it reaches the public schedule.
+
+Capacity is per division. **`all` is a fallback, not a total**: registration uses
+it only when a player's own division has no row of its own. An event with no
+capacity rows is uncapped, and clearing a division on screen deletes its row
+rather than leaving an old number quietly capping an event a professor believes
+is now open.
+
+Times are league time, not the browser's. A `datetime-local` input carries no
+zone, so the value is composed and parsed against `America/New_York` explicitly,
+reading the offset from the date itself rather than assuming one — otherwise an
+event in November would be written an hour out by a rule that was correct in
+July. The conversion round-trips exactly on both clock-change Sundays, including
+the repeated hour and the hour that does not exist.
+
 ### Players
 
 `admin/players.html` adds someone who did not arrive through a tournament file,
@@ -440,6 +481,13 @@ Two kinds of drop, deliberately weighted differently:
 - **Someone who did not ask** is a different act: it takes their place away and
   may promote somebody else, neither of which can be clicked back. That one asks
   first, naming the player.
+
+The list is narrowed to events that **take registration**. A casual event nobody
+signs up for has nobody to drop and no waiting list to promote from, so listing
+it is noise at the desk. The one exception is any event with a request already
+waiting, which is listed whatever its state — registration closes, and a request
+made before it closed still has to be confirmable, or the player who asked is
+stranded.
 
 These lists are never public. Full names are shown for the same reason they
 appear on a printed desk list.

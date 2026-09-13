@@ -231,8 +231,17 @@ async function start() {
 
   try {
     const events = await loadEvents();
+
+    // Anything with a request waiting is listed whatever its state. Registration
+    // closes, and a request made before it closed still has to be confirmable --
+    // hiding it would strand the player who asked.
     const pending = events.filter((e) => Number(e.drop_requested_count) > 0);
-    const rest = events.filter((e) => !Number(e.drop_requested_count));
+
+    // Everything else is narrowed to events that actually take registration.
+    // A casual event nobody signs up for has no drops to confirm and no waiting
+    // list to promote from, so listing it is noise at the desk.
+    const open = events.filter((e) =>
+      e.registration_open && !Number(e.drop_requested_count));
 
     app.replaceChildren(
       pending.length
@@ -249,10 +258,17 @@ async function start() {
           ]),
 
       el('section', { className: 'card' }, [
-        el('h2', { text: 'All events' }),
-        rest.length
-          ? el('ul', { className: 'player-list' }, rest.map((row) => eventRow(row, showEvent)))
-          : el('p', { className: 'muted-note', text: 'No other events.' })
+        el('h2', { text: 'Taking registration' }),
+        open.length
+          ? el('ul', { className: 'player-list' }, open.map((row) => eventRow(row, showEvent)))
+          : el('p', { className: 'muted-note', text: 'No events are open for registration.' }),
+        el('p', { className: 'field-help' }, [
+          el('span', { text: 'Events that do not take registration are not listed: '
+            + 'they have nobody to drop and no waiting list to promote from. '
+            + 'Registration is opened and closed on the ' }),
+          el('a', { href: 'events.html', text: 'events screen' }),
+          el('span', { text: '.' })
+        ])
       ])
     );
   } catch (err) {
