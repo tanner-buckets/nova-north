@@ -239,10 +239,16 @@ Built so far:
 | File | In the nav | Reads from |
 |---|---|---|
 | `index.html` | Home | nothing — static copy |
+| `schedule.html` | Schedule | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
+| `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers` |
+| `prize-items.html` | no | `prize_items` |
 | `id_help.html` | no | nothing — static copy |
 
-Planned: `schedule.html` (with the registration form), `league_programs.html`,
-`prize-items.html` (linked from league programs, not in the nav), `players.html`.
+Planned: `players.html`.
+
+`supabase-client.js` holds the client, league-time formatting and the DOM
+helpers. Times are pinned to `America/New_York`: "2:00 PM" must mean the same
+thing to every reader, wherever they are.
 
 Nav entries for pages that do not exist yet render as `.nav-soon` spans rather
 than links, so the live site never serves a 404 while the set is filled in. Swap
