@@ -1050,3 +1050,109 @@ h3 {
     margin-top: 0;
   }
 }
+
+/* --- TDF upload ------------------------------------------------------------ */
+
+.field select {
+  font: inherit;
+  font-size: 1rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--text);
+  max-width: 26rem;
+}
+
+/* A checkbox sits beside its label rather than above it, unlike every other
+   field: a stacked checkbox reads as a heading with an orphaned box. */
+.field-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+.field-inline input {
+  width: 1.1rem;
+  height: 1.1rem;
+  max-width: none;
+  flex: none;
+}
+.field-inline label {
+  font-weight: 400;
+}
+
+.summary-list {
+  margin: 0.75rem 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.3rem 1rem;
+  font-size: 0.95rem;
+}
+.summary-list dt {
+  color: var(--muted);
+}
+.summary-list dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.attendee-list {
+  max-height: 18rem;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.4rem;
+  background: var(--paper);
+}
+.attendee {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.3rem 0.4rem;
+  font-size: 0.95rem;
+}
+
+.tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+}
+.tag-new {
+  background: var(--amber);
+  color: var(--ink);
+}
+.tag-added {
+  background: var(--teal);
+  color: var(--card);
+}
+
+/* The count of people about to be created is the one thing on this screen worth
+   stopping for, so it gets the same treatment as a warning rather than sitting
+   inline with the rest of the form. */
+.warn-block {
+  margin: 0.85rem 0;
+  padding: 0.75rem 0.9rem;
+  border-left: 4px solid var(--amber);
+  background: var(--paper);
+  border-radius: 0 6px 6px 0;
+}
+.warn-block p:first-child {
+  margin-top: 0;
+}
+.warn-block .field-help {
+  margin-bottom: 0;
+}
+
+.disclosure-body {
+  padding-top: 0.5rem;
+}
+
+.search-results {
+  display: grid;
+  gap: 0.35rem;
+  max-width: 26rem;
+}

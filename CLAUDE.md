@@ -234,7 +234,7 @@ supabase/migrations/  schema, one file per change
 Schema comes before pages. Building UI against mocked data means rebuilding it
 against real functions and policies later.
 
-Current phase: **5**.
+Current phase: **6**.
 
 1. **Reference tables.** `earning_actions`, `prize_items`, `releases`,
    `loyalty_tiers`. Seeded from the spreadsheet exports. No personal data — this
@@ -248,9 +248,12 @@ Current phase: **5**.
    `public_event_counts`, `register_for_event()`, `request_drop()`,
    `confirm_drop()`.
 5. **Public pages.** Built against the real tables and functions.
-6. **Professor screens.** Login-gated admin pages for manual points, attendance,
-   visibility consent, drop confirmation, and the printable lists.
-7. **TDF upload and parsing.**
+6. **Professor screens.** Login-gated admin pages. TDF upload comes first,
+   because that is how attendance is recorded and nothing downstream is real
+   without it. Then visibility consent, drop confirmation, manual points, the
+   Trainer Card, players, events and reference data.
+7. **Printable lists.** Loyalty tiers for the store, pre-registration for the
+   desk. Print stylesheets, professor-only.
 
 Running alongside phase 1: deploy a minimal static shell to GitHub Pages — one
 page and a nav, confirmed live. This proves the deploy chain works while nothing

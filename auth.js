@@ -37,7 +37,12 @@ export async function signOut() {
 
 // The bar that appears at the foot of every public page once a professor is
 // signed in. Invisible to everyone else, and absent entirely when signed out.
-export async function mountProfessorBar({ prefix = '' } = {}) {
+//
+// The links are contextual: every page offers the way back to the tools, but a
+// shortcut only appears where it belongs. Upload is on the home page, because
+// that is where a professor lands after an event, and inside the tools. Putting
+// it on the prize wall would be a button nobody is looking for there.
+export async function mountProfessorBar({ prefix = '', tdf = false } = {}) {
   const professor = await currentProfessor();
   if (!professor) return;
 
@@ -46,7 +51,9 @@ export async function mountProfessorBar({ prefix = '' } = {}) {
       el('span', { className: 'prof-who', text: professor.email }),
       el('nav', { className: 'prof-links', 'aria-label': 'Professor tools' }, [
         el('a', { href: `${prefix}admin/index.html`, text: 'Professor tools' }),
-        el('a', { href: `${prefix}admin/upload.html`, className: 'prof-primary', text: 'Upload TDF' })
+        tdf
+          ? el('a', { href: `${prefix}admin/upload.html`, className: 'prof-primary', text: 'Upload TDF' })
+          : null
       ]),
       el('button', { type: 'button', className: 'prof-signout', text: 'Sign out' })
     ])

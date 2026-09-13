@@ -43,7 +43,7 @@ again and fail. Let the integration apply it.
 ## Build phases
 
 Schema comes before pages. Building UI against mocked data means rebuilding it
-against real functions and policies later. Current phase: **5**.
+against real functions and policies later. Current phase: **6**.
 
 | Phase | Work | State |
 |---|---|---|
@@ -51,9 +51,9 @@ against real functions and policies later. Current phase: **5**.
 | 2 | People and consent: `players`, `professors`, `consent_log`, visibility helpers | done |
 | 3 | Points and attendance: `attendance`, `point_ledger`, consent expiry | done |
 | 4 | Events and registration | done |
-| 5 | Public pages, built against the real tables | in progress |
-| 6 | Professor screens | |
-| 7 | TDF upload and parsing | |
+| 5 | Public pages, built against the real tables | done |
+| 6 | Professor screens, including TDF upload | in progress |
+| 7 | Printable lists for the store and the desk | |
 
 Running alongside phase 1: a minimal static shell on GitHub Pages — one page and a
 nav — to prove the deploy chain works while nothing is at stake. It does not grow
@@ -301,6 +301,52 @@ judged on the most recent season's badges.
 The thirteen seeded badges are the 2025–26 list, so they belong to season 2026.
 There is no 2027 list yet.
 
+### Professor screens
+
+Sign in at `admin/index.html` with the Supabase Auth account tied to a
+`professors` row. `auth.js` decides what to *show*; it is not a security
+boundary. The admin HTML is a static file anyone can fetch, so hiding a button
+protects nothing — row level security refuses every professor query without a
+real session, and that is what actually holds.
+
+Once signed in, a bar appears at the foot of the public pages. Its links are
+contextual: the way back to the tools is everywhere, and the upload shortcut only
+on the home page, where a professor lands after an event.
+
+### TDF upload
+
+`admin/upload.html` is how attendance is normally recorded. The file is parsed
+with `DOMParser` in the browser and thrown away — it is never uploaded, never
+stored, and the dates of birth inside it are dropped as it is read rather than
+carried and discarded later.
+
+Each attendee gets two things: an `attendance` row, and point ledger entries for
+attending and for playing. The screen asks one question, "was this a premier
+event?", which switches the play award between the casual and championship
+actions. Both dropdowns stay editable, because point values are defaults a
+professor may override.
+
+Two consequences of the domain rules show up in the result message rather than as
+errors:
+
+- **A second event on the same day adds no attendance row.** The unique
+  constraint on (player, date) is the one-loyalty-week-per-day rule working.
+  Those players still receive the play points, because two events are two things
+  played.
+- **A player in the file who is not in `players` yet is created with no birth
+  year.** A tournament file's date of birth is never stored, so there is nothing
+  to fill it with. Until a professor records it the player counts as a minor, and
+  they stay hidden either way — appearing in a tournament file is not consent,
+  and nothing in this path touches a visibility flag.
+
+Anyone who played but is missing from the file is added by hand, by Player ID or
+by searching for the ID by name.
+
+Attendance and points are two statements, not one transaction. A failure between
+them leaves attendance written and points not, which the error message says
+plainly so the ledger can be checked before a retry. Moving both into one
+`SECURITY DEFINER` function is the fix when it is worth the migration.
+
 ### Known gaps, carried forward
 
 - **16 Player IDs appear in the league spreadsheets but in neither official
@@ -309,10 +355,11 @@ There is no 2027 list yet.
   insert: the sets do not overlap, so there is no duplication risk.
 - **`finalize_release()` is not written.** Deferred until Delta Reign closes on
   1 November 2026. `loyalty_results` exists and is waiting for it.
-- **Nothing is player-facing yet, and nobody is visible.** Visibility needs a
-  consent flag *and* attendance within three months, and `attendance` is empty by
-  design — the imported weeks had no dates, which is why `loyalty_carryover`
-  exists. The first real check-in is what brings the system to life.
+- **Nobody is visible yet.** Visibility needs a consent flag *and* attendance
+  within three months, and `attendance` starts empty by design — the imported
+  weeks had no dates, which is why `loyalty_carryover` exists. The first TDF
+  upload is what brings the system to life, and the consent screen is what makes
+  anyone appear on the public site afterwards.
 
 ### Scheduling the consent expiry job
 
