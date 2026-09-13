@@ -258,6 +258,26 @@ Pages are served from a project subpath, `tanner-buckets.github.io/nova-north/`,
 so every internal link is relative. An absolute `/styles.css` would resolve to the
 domain root and break.
 
+### The Trainer Card Program
+
+`trainer_card_ranks`, `badges` and `player_badges`, set up so the badge list can
+change without breaking anything:
+
+- An award references `badges.id`, never a name or a position. Rewording a badge
+  changes nothing about who earned it.
+- Retiring a badge sets `is_active = false`. The row stays, so a player who
+  earned it keeps it.
+- The number of badges a rank needs is a column, not prose and not page code. If
+  the list grows and Ace Trainer should need twelve, that is an `UPDATE`.
+
+**No rank is stored.** It derives from badges earned and league visits, plus the
+one fact that cannot be counted: `players.champion_awarded_on`, set when a
+professor witnesses someone beat the Elite 4.
+
+`player_badges` has no `UPDATE` grant. An award is either right, or it is deleted
+and re-recorded — editing in place would let the player or the date drift
+silently.
+
 ### Known gaps, carried forward
 
 - **16 Player IDs appear in the league spreadsheets but in neither official
