@@ -43,15 +43,15 @@ again and fail. Let the integration apply it.
 ## Build phases
 
 Schema comes before pages. Building UI against mocked data means rebuilding it
-against real functions and policies later. Current phase: **4**.
+against real functions and policies later. Current phase: **5**.
 
 | Phase | Work | State |
 |---|---|---|
 | 1 | Reference tables: `earning_actions`, `prize_items`, `releases`, `loyalty_tiers` | done |
 | 2 | People and consent: `players`, `professors`, `consent_log`, visibility helpers | done |
 | 3 | Points and attendance: `attendance`, `point_ledger`, consent expiry | done |
-| 4 | Events and registration | in progress |
-| 5 | Public pages, built against the real tables | |
+| 4 | Events and registration | done |
+| 5 | Public pages, built against the real tables | in progress |
 | 6 | Professor screens | |
 | 7 | TDF upload and parsing | |
 
