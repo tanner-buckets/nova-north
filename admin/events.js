@@ -90,11 +90,15 @@ async function loadCapacities(eventId) {
 
 // --- Capacities --------------------------------------------------------------
 
-export function capacityPanel(eventId, rows) {
-  const note = el('p', { className: 'form-status', role: 'status' });
+// The caps themselves, without a form around them, so the same fields can sit
+// inside the create form and inside the edit panel. Capacity used to exist only
+// on an event that already existed, which meant creating one, finding it again
+// and expanding it before it could be capped -- a cap you have to remember to go
+// back for is a cap that does not get set.
+function capacityFields(rows) {
   const inputs = new Map();
 
-  const fields = DIVISIONS.map(([key, label]) => {
+  const nodes = DIVISIONS.map(([key, label]) => {
     const existing = rows.find((r) => r.division === key);
     const input = el('input', {
       type: 'number', step: '1', min: '0',
@@ -104,14 +108,59 @@ export function capacityPanel(eventId, rows) {
     return el('p', { className: 'field' }, [el('label', { text: label }, [input])]);
   });
 
+  const help = el('p', { className: 'field-help',
+    text: 'Leave a division blank for no limit of its own. Everyone is the '
+        + 'fallback, not a total: registration uses it when a player’s own '
+        + 'division has no number of its own. All four blank means the event is '
+        + 'uncapped.' });
+
+  // Reads the fields and refuses anything that is not a whole count, so a
+  // half-typed cap cannot be written as a limit somebody is then held to.
+  function collect() {
+    const wanted = [];
+    for (const [key, input] of inputs) {
+      const raw = input.value.trim();
+      if (raw === '') continue;
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 0) {
+        throw new Error(`The ${key} capacity must be a whole number, zero or more.`);
+      }
+      wanted.push({ division: key, capacity: n });
+    }
+    return wanted;
+  }
+
+  return { nodes: [help, ...nodes], collect };
+}
+
+// Writes exactly what is on screen: every division present is upserted, and
+// every division absent loses its row. A cleared field has to delete, or an old
+// number keeps capping an event the professor believes is now open.
+async function saveCapacities(eventId, wanted) {
+  const gone = DIVISIONS.map(([k]) => k)
+    .filter((k) => !wanted.some((w) => w.division === k));
+
+  if (gone.length) {
+    const { error } = await supabase.from('event_capacities')
+      .delete().eq('event_id', eventId).in('division', gone);
+    if (error) throw error;
+  }
+
+  if (wanted.length) {
+    const { error } = await supabase.from('event_capacities')
+      .upsert(wanted.map((w) => ({ ...w, event_id: eventId })),
+              { onConflict: 'event_id,division' });
+    if (error) throw error;
+  }
+}
+
+export function capacityPanel(eventId, rows) {
+  const note = el('p', { className: 'form-status', role: 'status' });
+  const caps = capacityFields(rows);
   const go = el('button', { type: 'submit', className: 'button button-quiet', text: 'Save capacities' });
 
   const form = el('form', {}, [
-    el('p', { className: 'field-help',
-      text: 'Leave a division blank for no limit of its own. Everyone is the '
-          + 'fallback: registration uses it when a player’s own division has '
-          + 'no number. All four blank means the event is uncapped.' }),
-    ...fields,
+    ...caps.nodes,
     el('p', {}, [go]),
     note
   ]);
@@ -120,35 +169,8 @@ export function capacityPanel(eventId, rows) {
     e.preventDefault();
     go.disabled = true;
     status(note, 'Saving.');
-
     try {
-      const wanted = [];
-      for (const [key, input] of inputs) {
-        const raw = input.value.trim();
-        if (raw === '') continue;
-        const n = Number(raw);
-        if (!Number.isInteger(n) || n < 0) {
-          throw new Error(`The ${key} capacity must be a whole number, zero or more.`);
-        }
-        wanted.push({ event_id: eventId, division: key, capacity: n });
-      }
-
-      // A division cleared on screen has to lose its row, or the old number
-      // keeps capping an event the professor believes is now open.
-      const gone = DIVISIONS.map(([k]) => k)
-        .filter((k) => !wanted.some((w) => w.division === k));
-      if (gone.length) {
-        const { error } = await supabase.from('event_capacities')
-          .delete().eq('event_id', eventId).in('division', gone);
-        if (error) throw error;
-      }
-
-      if (wanted.length) {
-        const { error } = await supabase.from('event_capacities')
-          .upsert(wanted, { onConflict: 'event_id,division' });
-        if (error) throw error;
-      }
-
+      await saveCapacities(eventId, caps.collect());
       go.disabled = false;
       status(note, 'Saved.', 'good');
     } catch (err) {
@@ -191,6 +213,11 @@ export function eventForm(event, { onSaved }) {
   const note = el('p', { className: 'form-status', role: 'status' });
   const go = el('button', { type: 'submit', className: 'button',
     text: isNew ? 'Create the event' : 'Save changes' });
+
+  // Only on the create form. An event that already exists has its own capacity
+  // panel below, which can read what is stored; repeating the fields here would
+  // give two places to set one number.
+  const caps = isNew ? capacityFields([]) : null;
 
   const form = el('form', {}, [
     el('p', { className: 'field' }, [el('label', { text: 'Name' }, [name])]),
@@ -236,6 +263,9 @@ export function eventForm(event, { onSaved }) {
       ])
     ]),
 
+    caps ? el('h4', { text: 'Capacity' }) : null,
+    ...(caps ? caps.nodes : []),
+
     el('p', {}, [go]),
     note
   ]);
@@ -250,6 +280,10 @@ export function eventForm(event, { onSaved }) {
     status(note, isNew ? 'Creating.' : 'Saving.');
 
     try {
+      // Read before the insert, so a capacity typed wrong stops the whole thing
+      // rather than leaving an event created with no cap on it.
+      const wanted = caps ? caps.collect() : null;
+
       const row = {
         name: name.value.trim(),
         event_type: type.value,
@@ -261,12 +295,30 @@ export function eventForm(event, { onSaved }) {
         linked_group_id: linked.value.trim() || null
       };
 
-      const { error } = isNew
-        ? await supabase.from('events').insert(row)
-        : await supabase.from('events').update(row).eq('id', event.id);
-      if (error) throw error;
+      if (isNew) {
+        const { data, error } = await supabase.from('events').insert(row).select('id').single();
+        if (error) throw error;
+        if (wanted && wanted.length) {
+          try {
+            await saveCapacities(data.id, wanted);
+          } catch (capErr) {
+            // The event exists; only the caps failed. Say which, because
+            // creating it again would make a duplicate.
+            console.error(capErr);
+            go.disabled = false;
+            status(note, `The event was created, but its capacity was not saved: `
+              + `${capErr.message}. Open it below and set the capacity there. Do `
+              + 'not create it again.', 'error');
+            await onSaved();
+            return;
+          }
+        }
+        form.reset();
+      } else {
+        const { error } = await supabase.from('events').update(row).eq('id', event.id);
+        if (error) throw error;
+      }
 
-      if (isNew) form.reset();
       go.disabled = false;
       status(note, isNew ? 'Created.' : 'Saved.', 'good');
       await onSaved();

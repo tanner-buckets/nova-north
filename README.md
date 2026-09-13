@@ -43,7 +43,7 @@ again and fail. Let the integration apply it.
 ## Build phases
 
 Schema comes before pages. Building UI against mocked data means rebuilding it
-against real functions and policies later. Current phase: **6**.
+against real functions and policies later. All seven phases are built.
 
 | Phase | Work | State |
 |---|---|---|
@@ -52,8 +52,8 @@ against real functions and policies later. Current phase: **6**.
 | 3 | Points and attendance: `attendance`, `point_ledger`, consent expiry | done |
 | 4 | Events and registration | done |
 | 5 | Public pages, built against the real tables | done |
-| 6 | Professor screens, including TDF upload | in progress |
-| 7 | Printable lists for the store and the desk | |
+| 6 | Professor screens, including TDF upload | done |
+| 7 | Printable lists for the store and the desk | done |
 
 Running alongside phase 1: a minimal static shell on GitHub Pages — one page and a
 nav — to prove the deploy chain works while nothing is at stake. It does not grow
@@ -587,6 +587,31 @@ Two rules the database does not hold, which the interface therefore does:
 - **A name is never shown without the Player ID.** The database holds this one —
   `name_visible()` is false whenever `id_visible()` is — but recording a switch
   that silently does nothing misleads the professor, so the form says so.
+
+### Printable lists
+
+`admin/print.html`. Loyalty tiers to hand to the store, and pre-registration to
+work from at the desk. Both are `@media print` stylesheets on a professor-only
+page — there is no PDF library and no generated file.
+
+Both sheets carry full names and Player IDs. That is a **disclosure to the venue
+and to whoever runs the desk, not publication**: nothing on them is ever rendered
+on a public page. Most of these players are children, so each sheet is footed
+with what it contains and the instruction to hand it to a person rather than
+leave it out.
+
+The loyalty sheet asks `loyalty_weeks()` once per player rather than counting
+attendance in the browser. The rule — distinct days inside the window plus the
+carryover bridge — lives in the database, and a second copy here would be a
+second answer that could disagree with the player's own card. It is a handful of
+calls for a sheet printed once a release, and only for players with attendance in
+the window at all. If the league outgrows that, the fix is a view, not a copy of
+the rule.
+
+Players below every threshold are listed under "Not yet at a tier" rather than
+dropped, so the store is told who is close and not only who has arrived. The
+waiting list prints in **queue order, not alphabetically** — the order is the
+only information a waiting list carries, and sorting it by name would destroy it.
 
 ### Known gaps, carried forward
 

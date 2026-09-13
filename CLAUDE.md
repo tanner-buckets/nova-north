@@ -203,7 +203,10 @@ is applied to the production database.** There is no confirmation step.
 - A TDF import **never** sets a visibility flag. Appearing in a tournament file is
   not consent.
 - After parsing, prompt the professor for the event type so point values can be
-  applied, and offer to add other attendees present but not in the file.
+  applied, and **prompt** for other attendees present but not in the file. A
+  collapsed disclosure is not a prompt: anyone who turned up without entering the
+  tournament earns the same loyalty week, and the upload is the only moment they
+  are still standing there to be remembered.
 
 ---
 
@@ -241,7 +244,8 @@ supabase/migrations/  schema, one file per change
 Schema comes before pages. Building UI against mocked data means rebuilding it
 against real functions and policies later.
 
-Current phase: **6**.
+Current phase: **all seven are built**. New work extends them rather
+than skipping ahead.
 
 1. **Reference tables.** `earning_actions`, `prize_items`, `releases`,
    `loyalty_tiers`. Seeded from the spreadsheet exports. No personal data — this

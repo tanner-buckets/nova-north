@@ -1587,3 +1587,148 @@ a.player-button:hover .player-label {
   font-family: var(--font-head);
   font-size: 1rem;
 }
+
+/* --- Printable sheets ------------------------------------------------------- */
+
+.sheet {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+.sheet-head {
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 0.6rem;
+  margin-bottom: 1rem;
+}
+.sheet-head h2 {
+  margin: 0 0 0.2rem;
+}
+.sheet-head p {
+  margin: 0;
+  color: var(--muted);
+}
+.sheet-sub {
+  font-size: 0.9rem;
+}
+.sheet-section {
+  margin-top: 1.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--line);
+}
+.sheet-group {
+  margin-bottom: 1.25rem;
+}
+.sheet-group h3 {
+  margin: 0.75rem 0 0.4rem;
+  font-size: 1.05rem;
+}
+
+/* Tables are the one thing allowed to be wider than the page body, each in its
+   own scroller, so a narrow phone never scrolls the whole document sideways. */
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  display: block;
+  overflow-x: auto;
+}
+.sheet-table th,
+.sheet-table td {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.sheet-table th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  border-bottom-width: 2px;
+}
+/* An empty box to tick with a pen. It has to survive printing, so it is a border
+   rather than a background colour that a printer may drop. */
+.sheet-table .sheet-tick {
+  width: 3rem;
+}
+.sheet-table tbody .sheet-tick::before {
+  content: "";
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+}
+.sheet-foot {
+  margin-top: 1.5rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.print-hint {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+@media print {
+  /* Everything that is not the sheet goes, so the paper carries the list and
+     nothing else. No PDF library: this is the whole mechanism. */
+  .no-print,
+  .prof-bar,
+  .skip-link {
+    display: none !important;
+  }
+
+  body,
+  .print-page {
+    background: #ffffff;
+    color: #000000;
+    margin: 0;
+    padding: 0;
+  }
+
+  .sheet {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    background: #ffffff;
+  }
+
+  .sheet-table {
+    display: table;
+    overflow: visible;
+    font-size: 10pt;
+  }
+  .sheet-table th,
+  .sheet-table td {
+    border-bottom: 1px solid #999999;
+    white-space: normal;
+  }
+
+  /* A division or tier should not be split across a page break if it fits, and a
+     header must never be the last thing on a page. */
+  .sheet-group {
+    break-inside: avoid;
+  }
+  .sheet-head,
+  .sheet-section,
+  .sheet-group h3 {
+    break-after: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tr {
+    break-inside: avoid;
+  }
+
+  a {
+    color: #000000;
+    text-decoration: none;
+  }
+}

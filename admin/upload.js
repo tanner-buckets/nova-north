@@ -113,7 +113,46 @@ function add(player, note) {
   redraw();
 }
 
-function renderReview() {
+// Three steps, in the order a professor works: read the file, remember anyone
+// it missed, then record.
+function rosterCard() {
+  const attendees = allAttendees();
+  const unknown = attendees.filter((p) => !known.has(p.player_id));
+
+  return el('section', { className: 'card' }, [
+    el('h2', { text: 'Check the file' }),
+    el('dl', { className: 'summary-list' }, [
+      el('dt', { text: 'Event in the file' }), el('dd', { text: parsed.eventName }),
+      el('dt', { text: 'Attendees' }),
+      el('dd', { text: `${attendees.length} — ${attendees.length - unknown.length} known, `
+        + `${unknown.length} new` })
+    ]),
+    attendeeList()
+  ]);
+}
+
+// A step of its own, open, between the roster and the button. It was a collapsed
+// accordion, which is the same as not asking: a professor working through a
+// queue closes the file and never sees it. Anyone who turned up without entering
+// the tournament earns the same loyalty week as everybody else, and this is the
+// only moment somebody is standing there to be remembered.
+function othersCard() {
+  return el('section', { className: 'card' }, [
+    el('h2', { text: 'Was anyone else here?' }),
+    el('p', { text: 'A tournament file lists who played, not who turned up. '
+      + 'Anyone who came along without entering still earns the day: the same '
+      + 'loyalty week, and the point for attending.' }),
+    playerPicker({ onPick: add, allowCreate: true }),
+    extras.length
+      ? el('p', { className: 'form-status is-good',
+          text: `${extras.length} added by hand. They are in the list above and `
+              + 'will be recorded with everyone else.' })
+      : el('p', { className: 'muted-note',
+          text: 'Nobody added yet. Carry on if the file is the whole room.' })
+  ]);
+}
+
+function recordCard() {
   const attendees = allAttendees();
   const unknown = attendees.filter((p) => !known.has(p.player_id));
 
@@ -130,19 +169,22 @@ function renderReview() {
   const createMissing = el('input', { type: 'checkbox', id: 'create-missing', checked: 'checked' });
   const result = el('div', { id: 'result' });
   const go = el('button', {
-    type: 'submit', className: 'button', text: 'Record attendance and award points'
+    type: 'submit', className: 'button', text: `Record ${attendees.length} attending`
   });
 
   const form = el('form', {}, [
     el('p', { className: 'field' }, [
       el('label', { for: 'attended-on', text: 'Date attended' }), dateInput
     ]),
+    el('p', { className: 'field-help',
+      text: 'Everyone listed above gets a loyalty week for this day. One calendar '
+          + 'day is one week however many events they played.' }),
     el('p', { className: 'field field-inline' }, [
       premier, el('label', { for: 'premier', text: 'This was a premier event' })
     ]),
     el('p', { className: 'field-help',
-      text: 'Premier play is worth an extra point. Everyone in the file gets both '
-          + 'the attendance award and the play award.' }),
+      text: 'Premier play is worth an extra point. Everyone gets both the '
+          + 'attendance award and the play award.' }),
     attendField,
     playField,
     unknown.length ? el('div', { className: 'warn-block' }, [
@@ -181,18 +223,7 @@ function renderReview() {
   });
 
   return el('section', { className: 'card' }, [
-    el('h2', { text: 'Check, then record' }),
-    el('dl', { className: 'summary-list' }, [
-      el('dt', { text: 'Event in the file' }), el('dd', { text: parsed.eventName }),
-      el('dt', { text: 'Attendees' }),
-      el('dd', { text: `${attendees.length} — ${attendees.length - unknown.length} known, `
-        + `${unknown.length} new` })
-    ]),
-    attendeeList(),
-    el('details', { className: 'disclosure' }, [
-      el('summary', { text: 'Add someone who played but is not in the file' }),
-      el('div', { className: 'disclosure-body' }, [playerPicker({ onPick: add })])
-    ]),
+    el('h2', { text: 'What they earn' }),
     form
   ]);
 }
@@ -239,7 +270,7 @@ function renderPicker() {
 }
 
 function redraw() {
-  app.replaceChildren(renderReview());
+  app.replaceChildren(rosterCard(), othersCard(), recordCard());
 }
 
 // --- Writing -----------------------------------------------------------------

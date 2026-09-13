@@ -73,7 +73,7 @@ const TOOLS = [
   { href: 'reference.html', name: 'Reference data',
     note: 'Badges, Trainer Card ranks, and releases with their loyalty tiers.' },
   { href: 'print.html', name: 'Printable lists',
-    note: 'Loyalty tiers for the store, and pre-registration lists for the desk.' }
+    note: 'Loyalty tiers for the store and pre-registration for the desk. Print stylesheets, never public.' }
 ];
 
 async function render() {
