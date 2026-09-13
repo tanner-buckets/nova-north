@@ -43,15 +43,15 @@ again and fail. Let the integration apply it.
 ## Build phases
 
 Schema comes before pages. Building UI against mocked data means rebuilding it
-against real functions and policies later. Current phase: **4**.
+against real functions and policies later. Current phase: **5**.
 
 | Phase | Work | State |
 |---|---|---|
 | 1 | Reference tables: `earning_actions`, `prize_items`, `releases`, `loyalty_tiers` | done |
 | 2 | People and consent: `players`, `professors`, `consent_log`, visibility helpers | done |
 | 3 | Points and attendance: `attendance`, `point_ledger`, consent expiry | done |
-| 4 | Events and registration | in progress |
-| 5 | Public pages, built against the real tables | |
+| 4 | Events and registration | done |
+| 5 | Public pages, built against the real tables | in progress |
 | 6 | Professor screens | |
 | 7 | TDF upload and parsing | |
 
@@ -231,6 +231,26 @@ count rows the caller cannot read; these two must not.
 If abuse ever does appear, the better lever is a *rate* rather than a total — say
 five submissions from one address within a minute, which a script trips instantly
 and a room full of people never does.
+
+**Phase 5, in progress** — the public pages.
+
+Built so far:
+
+| File | In the nav | Reads from |
+|---|---|---|
+| `index.html` | Home | nothing — static copy |
+| `id_help.html` | no | nothing — static copy |
+
+Planned: `schedule.html` (with the registration form), `league_programs.html`,
+`prize-items.html` (linked from league programs, not in the nav), `players.html`.
+
+Nav entries for pages that do not exist yet render as `.nav-soon` spans rather
+than links, so the live site never serves a 404 while the set is filled in. Swap
+the span for an anchor as each page lands.
+
+Pages are served from a project subpath, `tanner-buckets.github.io/nova-north/`,
+so every internal link is relative. An absolute `/styles.css` would resolve to the
+domain root and break.
 
 ### Known gaps, carried forward
 
