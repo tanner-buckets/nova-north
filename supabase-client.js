@@ -40,6 +40,16 @@ export function formatEventTime(startsAt) {
   return TIME_FORMAT.format(new Date(startsAt));
 }
 
+// A YYYY-MM-DD key in league time, for grouping. Using the visitor's day would
+// slide an 11:00 AM event onto a different date for someone reading abroad.
+const DAY_KEY_FORMAT = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric', month: '2-digit', day: '2-digit', timeZone: LEAGUE_TIME_ZONE
+});
+
+export function leagueDayKey(startsAt) {
+  return DAY_KEY_FORMAT.format(new Date(startsAt));
+}
+
 // --- Small DOM helpers -------------------------------------------------------
 
 export function el(tag, options = {}, children = []) {

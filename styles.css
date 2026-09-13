@@ -359,7 +359,58 @@ main {
   padding: 0.2rem 0.6rem;
 }
 
-.badge-note { background: var(--ink-soft, #16233a); }
+.badge-note { background: var(--ink-soft); }
+
+/* One colour per kind of event, so a Challenge is never mistaken for the weekly
+   casual tournament at a glance. Casual is the quietest because it is the norm;
+   the sanctioned and one-off events are the ones that need to stand out.
+   Every pairing below clears 4.5:1 against its text colour. */
+.badge-casual,
+.badge-league   { background: var(--muted); }
+.badge-challenge { background: var(--teal); }
+.badge-cup       { background: #a8641a; }
+.badge-prerelease { background: #6b4fa0; }
+.badge-special   { background: var(--amber); color: var(--ink); }
+
+/* --- Day groups ------------------------------------------------------------ */
+
+.day-group {
+  margin-bottom: 1.5rem;
+}
+
+.day-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  margin: 0 0 0.6rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid var(--line);
+}
+
+/* A day carrying more than one event is boxed, so a double-header reads as one
+   day rather than as two unrelated cards that happen to sit together. */
+.day-group-multi {
+  background: #eef1f5;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.9rem;
+}
+
+.day-group-multi .day-heading {
+  border-bottom-color: #d3d9e2;
+}
+
+.day-count {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
 
 .event-when {
   display: flex;
