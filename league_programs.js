@@ -41,13 +41,22 @@ fill('#ranks', async () => {
 });
 
 fill('#badges', async () => {
-  const { data, error } = await supabase
-    .from('badges').select('*').eq('is_active', true).order('sort_order');
-  if (error) throw error;
+  const [{ data, error }, { data: ranks, error: rankError }] = await Promise.all([
+    supabase.from('badges').select('*').eq('is_active', true).order('sort_order'),
+    supabase.from('trainer_card_ranks').select('badges_required')
+  ]);
+  if (error || rankError) throw error || rankError;
+
+  // Read the threshold rather than repeating it. The highest badge-earned rank
+  // is the one that unlocks an Elite 4 challenge, so if that number is ever
+  // changed in the table, this sentence follows it instead of contradicting it.
+  const needed = Math.max(0, ...ranks.map((r) => r.badges_required || 0));
 
   return [
-    el('p', { text: `There are ${data.length} badges. You need 8 to be eligible to `
-      + 'challenge the Elite 4 and go for League Champion.' }),
+    el('p', { text: needed
+      ? `There are ${data.length} badges. You need ${needed} to be eligible to `
+        + 'challenge the Elite 4 and go for League Champion.'
+      : `There are ${data.length} badges to earn.` }),
     table(['Badge', 'How to earn it'],
       data.map((b) => el('tr', {}, [
         el('th', { scope: 'row', className: 'badge-name', text: b.name }),
