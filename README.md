@@ -355,20 +355,54 @@ plainly so the ledger can be checked before a retry. Moving both into one
 
 ### Manual attendance
 
-`admin/attendance.html`, for a day the file will not export, a player who played
-but never got entered, and the casual session that was never a tournament. It
-grants exactly what an upload grants, because the write itself lives in
-`admin/attendance-core.js` and both screens call it. Duplicating that logic would
-let the two drift, and the one that drifted would be the rarely used one,
-discovered only when somebody's points were wrong.
+`admin/attendance.html`, for a day the file will not export and for a player who
+comes along before they ever enter a tournament. The write is shared with the
+upload in `admin/attendance-core.js`; duplicating it would let the two drift, and
+the one that drifted would be the rarely used one, discovered only when
+somebody's points were wrong.
 
-One deliberate difference: **manual entry never creates a player.** Every
-attendee is picked from a search, so a typed ID that matched nobody is refused at
-the picker rather than quietly becoming a new person. Uploads create players
-because a tournament file is evidence someone exists; a typed number is not.
+**It records turning up and nothing else: one point and one loyalty week.** No
+play award, because nothing here claims a tournament was played — a tournament
+file *is* that claim, which is why the upload adds the play point and this screen
+does not. The award is stated rather than offered as a dropdown, so the screen
+cannot be talked into paying for something else. Everything else a player earns
+or spends goes through the points screen, where it can be described and reversed.
+
+It does create players. Somebody often turns up for a few Sundays before their
+first event, and those Sundays count. Nothing is written when they are typed in:
+the new player joins the pending list and is created when the attendance is
+recorded, so an abandoned form leaves nothing behind. A typed ID that already
+belongs to somebody is refused as a typo rather than accepted as a new person.
 
 The date defaults to today in league time, not the browser's, so a professor
 entering Sunday's attendance from a laptop set to another zone still gets Sunday.
+
+### Points
+
+`admin/points.html`. Everything a player earns beyond turning up, and everything
+they spend at the prize wall.
+
+Append only, and not by convention: professors hold `INSERT` on `point_ledger`
+and no `UPDATE` or `DELETE` at all, with no policy for either, so a row cannot be
+altered or removed through the API. A mistake is corrected by writing a reversing
+entry that points at the original with `voids_id`. Both stay visible, which is
+the point — a balance nobody can quietly rewrite is worth more than a tidy one.
+An entry that has already been reversed cannot be reversed again, or the
+correction would cancel the correction and the balance would drift back.
+
+Balance is the sum of the deltas. There is no total column and there must never
+be one.
+
+Spending is a negative delta carrying `prize_item_id`, so it is a transaction
+like any other. A spend that would take somebody below zero is **warned about,
+not blocked** — a professor may knowingly hand something over on credit, and
+refusing would make the screen lie about who decides. The resulting balance is
+stated before the button is pressed, and a negative balance is coloured so
+somebody notices it.
+
+Point values are defaults. Each is prefilled from the action or item and stays
+editable, and an action worth zero plus a note is how a one-off award is
+recorded.
 
 ### Players
 

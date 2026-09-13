@@ -1,14 +1,20 @@
-// Manual attendance: the same grants as a tournament file, entered by hand.
+// Manual attendance: turning up, and nothing more.
 //
-// For the day the file will not export, the player who played but never got
-// entered, and the casual league session that was never a tournament at all.
-// The write is the shared one in attendance-core.js, so a manually recorded
-// Sunday is worth exactly what an uploaded one is.
-import { supabase, el } from '../supabase-client.js';
+// One point and one loyalty week for the day. No play award, because nothing
+// here claims a tournament was played -- a tournament file is that claim, so the
+// upload screen adds the play point and this one does not. Anything else a
+// player earns or spends goes through the points screen, where it can be
+// described and, if it was wrong, reversed.
+//
+// New players can be added here. Somebody often comes along for a few Sundays
+// before they ever enter a tournament, and those Sundays count. They are created
+// when the attendance is recorded, not when they are typed in, so an abandoned
+// form leaves nothing behind.
+import { el } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import {
-  ATTEND_LABEL, CASUAL_LABEL, PREMIER_LABEL,
-  loadActions, actionField, status, playerPicker, recordAttendance, outcomeNodes
+  ATTEND_LABEL, loadActions, actionField, status, playerPicker,
+  recordAttendance, outcomeNodes
 } from './attendance-core.js';
 
 const gate = document.querySelector('#gate');
@@ -17,7 +23,7 @@ const app = document.querySelector('#app');
 let professor = null;
 let actions = [];
 let attendees = [];
-let known = new Set();
+let known = new Set();   // those who already exist; the rest are created on record
 
 // League time, not the browser's. A professor entering Sunday's attendance late
 // on Sunday night from a laptop set to another zone should still get Sunday.
@@ -35,13 +41,16 @@ function add(player, note) {
     return;
   }
   attendees.push(player);
-  known.add(player.player_id);
+  // Only existing players go in `known`. Leaving the new ones out is what tells
+  // the shared write to create them.
+  if (!player.isNew) known.add(player.player_id);
   redraw();
   status(note, `Added ${player.first_name}.`, 'good');
 }
 
 function remove(playerId) {
   attendees = attendees.filter((p) => p.player_id !== playerId);
+  known.delete(playerId);
   redraw();
 }
 
@@ -49,7 +58,7 @@ export function attendeeList(attendees, onRemove) {
   if (!attendees.length) {
     return el('p', { className: 'muted-note',
       text: 'Nobody added yet. Everyone here gets a loyalty week for the day and '
-          + 'points for attending and playing.' });
+          + 'a point for attending.' });
   }
 
   return el('ul', { className: 'player-list attendee-list' }, attendees.map((p) => {
@@ -58,26 +67,47 @@ export function attendeeList(attendees, onRemove) {
     return el('li', { className: 'attendee' }, [
       el('span', { className: 'player-label', text: `${p.first_name} ${p.last_name}`.trim() }),
       el('span', { className: 'player-id count', text: p.player_id }),
+      p.isNew ? el('span', { className: 'tag tag-new', text: 'new' }) : null,
       drop
     ]);
   }));
 }
 
+// The award is stated rather than chosen. Manual entry pays for attending, once,
+// and a dropdown would invite it to pay for something else. The fallback exists
+// only for a league that has renamed the action out from under this screen.
+function awardField() {
+  const expected = actions.find((a) => a.label === ATTEND_LABEL);
+  if (expected) {
+    return {
+      node: el('p', { className: 'stated-award' }, [
+        el('span', { className: 'count', text: `${expected.default_points} point` }),
+        el('span', { text: ` each, for ${expected.label.toLowerCase()}.` })
+      ]),
+      value: () => expected.id
+    };
+  }
+
+  const field = actionField(actions, 'attend-action', 'Award for attending', ATTEND_LABEL);
+  return {
+    node: el('div', {}, [
+      el('p', { className: 'field-help is-warning',
+        text: `No earning action is called “${ATTEND_LABEL}” any more, so `
+            + 'pick the one that replaced it. Only this single award is given.' }),
+      field
+    ]),
+    value: () => field.querySelector('select').value
+  };
+}
+
 function render() {
   const dateInput = el('input', { type: 'date', id: 'attended-on', value: today() });
-  const premier = el('input', { type: 'checkbox', id: 'premier' });
-  const attendField = actionField(actions, 'attend-action', 'Award for attending', ATTEND_LABEL);
-  const playField = actionField(actions, 'play-action', 'Award for playing', CASUAL_LABEL);
-
-  premier.addEventListener('change', () => {
-    const match = actions.find((a) => a.label === (premier.checked ? PREMIER_LABEL : CASUAL_LABEL));
-    if (match) playField.querySelector('select').value = match.id;
-  });
-
-  const eventName = el('input', { id: 'event-name', placeholder: 'Sunday league' });
+  const award = awardField();
   const result = el('div', { id: 'result' });
-  const go = el('button', { type: 'submit', className: 'button', text: 'Record attendance and award points' });
+  const go = el('button', { type: 'submit', className: 'button', text: 'Record attendance' });
   go.disabled = attendees.length === 0;
+
+  const newCount = attendees.filter((p) => p.isNew).length;
 
   const form = el('form', {}, [
     el('p', { className: 'field' }, [
@@ -85,18 +115,19 @@ function render() {
     ]),
     el('p', { className: 'field-help',
       text: 'Defaults to today in league time. One calendar day is one loyalty '
-          + 'week, however many events someone played.' }),
-    el('p', { className: 'field field-inline' }, [
-      premier, el('label', { for: 'premier', text: 'This was a premier event' })
+          + 'week, however many times someone turned up.' }),
+    award.node,
+    el('p', { className: 'field-help' }, [
+      el('span', { text: 'Attending is all this records. For anything else they '
+        + 'earned, or points they spent at the prize wall, use ' }),
+      el('a', { href: 'points.html', text: 'points' }),
+      el('span', { text: '.' })
     ]),
-    attendField,
-    playField,
-    el('p', { className: 'field' }, [
-      el('label', { for: 'event-name', text: 'What they played, optional' }), eventName
-    ]),
-    el('p', { className: 'field-help',
-      text: 'Appears on the player’s own points history, which is public for '
-          + 'anyone whose Player ID is visible. Nothing private belongs here.' }),
+    newCount ? el('div', { className: 'warn-block' }, [
+      el('p', { text: `${newCount} of them ${newCount === 1 ? 'is' : 'are'} new and `
+        + `will be created when you record this. They are not listed publicly, and `
+        + 'stay that way until consent is recorded.' })
+    ]) : null,
     el('p', {}, [go]),
     result
   ]);
@@ -105,9 +136,7 @@ function render() {
     e.preventDefault();
     commit({
       attendedOn: dateInput.value,
-      attendActionId: attendField.querySelector('select').value,
-      playActionId: playField.querySelector('select').value,
-      eventName: eventName.value.trim(),
+      attendActionId: award.value(),
       resultNode: result,
       button: go
     });
@@ -116,13 +145,7 @@ function render() {
   return [
     el('section', { className: 'card' }, [
       el('h2', { text: 'Who attended' }),
-      playerPicker({ onPick: add }),
-      el('p', { className: 'muted-note' }, [
-        el('span', { text: 'Someone with no record yet? ' }),
-        el('a', { href: 'players.html', text: 'Add them as a player first' }),
-        el('span', { text: '. Manual entry never creates a player, so a typed ID '
-          + 'cannot quietly become a new person.' })
-      ]),
+      playerPicker({ onPick: add, allowCreate: true }),
       el('h3', { text: `Attending (${attendees.length})` }),
       attendeeList(attendees, remove)
     ]),
@@ -137,7 +160,7 @@ function redraw() {
   app.replaceChildren(...render());
 }
 
-async function commit({ attendedOn, attendActionId, playActionId, eventName, resultNode, button }) {
+async function commit({ attendedOn, attendActionId, resultNode, button }) {
   button.disabled = true;
   status(resultNode, 'Recording.');
 
@@ -147,20 +170,18 @@ async function commit({ attendedOn, attendActionId, playActionId, eventName, res
       known,
       attendedOn,
       attendActionId,
-      playActionId,
-      // Manual entry never creates a player. Every attendee here was picked from
-      // a search, so they already exist; a typed ID that matched nobody was
-      // refused at the picker rather than turned into a new person.
-      createMissing: false,
+      // No play award. Turning up is the whole of what this screen records.
+      playActionId: null,
+      createMissing: true,
       professor,
       actions,
-      source: 'manual',
-      reason: eventName ? `Played in ${eventName}` : null
+      source: 'manual'
     });
 
     resultNode.className = 'form-status is-good';
     resultNode.replaceChildren(...outcomeNodes(outcome, attendedOn));
     attendees = [];
+    known = new Set();
     button.remove();
   } catch (err) {
     console.error(err);

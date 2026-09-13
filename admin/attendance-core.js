@@ -48,7 +48,10 @@ export function status(node, message, kind) {
 
 // Find a player by ID or by name. Used wherever a professor has to name someone
 // who is not already on the screen in front of them.
-export function playerPicker({ onPick, idLabel = 'Player ID', nameLabel = 'Or look up an ID by name' }) {
+export function playerPicker({
+  onPick, allowCreate = false,
+  idLabel = 'Player ID', nameLabel = 'Or look up an ID by name'
+}) {
   const idInput = el('input', { inputmode: 'numeric', placeholder: '1234567' });
   const addById = el('button', { type: 'button', className: 'button button-quiet', text: 'Add by ID' });
   const nameInput = el('input', { placeholder: 'Start typing a name' });
@@ -70,8 +73,11 @@ export function playerPicker({ onPick, idLabel = 'Player ID', nameLabel = 'Or lo
       return;
     }
     if (!data) {
-      status(note, 'No player has that ID. Check the digits, search by name, or '
-        + 'add them on the players screen.', 'error');
+      status(note, allowCreate
+        ? 'No player has that ID yet. Check the digits, search by name, or add '
+          + 'them as someone new below.'
+        : 'No player has that ID. Check the digits, search by name, or add them '
+          + 'on the players screen.', 'error');
       return;
     }
     idInput.value = '';
@@ -106,7 +112,84 @@ export function playerPicker({ onPick, idLabel = 'Player ID', nameLabel = 'Or lo
     el('p', {}, [addById]),
     el('p', { className: 'field' }, [el('label', { for: nameFieldId, text: nameLabel }), nameInput]),
     found,
-    note
+    note,
+    allowCreate ? newPlayerForm(onPick) : null
+  ]);
+}
+
+// Someone who has turned up but never played in a tournament, and so has never
+// appeared in a file. They come a few times before their first event, and those
+// visits count.
+//
+// Nothing is written here. The new player joins the pending list and is created
+// when the attendance is recorded, so a form that gets abandoned leaves no
+// half-made player behind.
+function newPlayerForm(onPick) {
+  const suffix = Math.random().toString(36).slice(2, 8);
+  const id = el('input', { id: `new-id-${suffix}`, inputmode: 'numeric', placeholder: '1234567' });
+  const first = el('input', { id: `new-first-${suffix}` });
+  const last = el('input', { id: `new-last-${suffix}` });
+  const year = el('input', {
+    id: `new-year-${suffix}`, type: 'number', min: '1900', max: '2100', placeholder: '2014'
+  });
+  const note = el('p', { className: 'form-status', role: 'status' });
+  const go = el('button', { type: 'button', className: 'button button-quiet', text: 'Add as someone new' });
+
+  go.addEventListener('click', async () => {
+    const playerId = id.value.trim();
+    if (!playerId || !first.value.trim() || !last.value.trim()) {
+      status(note, 'Player ID, first name and last name are all needed.', 'error');
+      return;
+    }
+
+    go.disabled = true;
+    // Checked against the table rather than against the list on screen: an ID
+    // that already belongs to somebody is a typo, not a new person, and adding
+    // them would attach this attendance to the wrong player.
+    const { data, error } = await supabase.from('players')
+      .select('player_id, first_name, last_name').eq('player_id', playerId).maybeSingle();
+    go.disabled = false;
+
+    if (error) {
+      status(note, `That check failed: ${error.message}. Try again.`, 'error');
+      return;
+    }
+    if (data) {
+      status(note, `${playerId} already belongs to ${data.first_name} `
+        + `${data.last_name}. Add them with the search above instead.`, 'error');
+      return;
+    }
+
+    onPick({
+      player_id: playerId,
+      first_name: first.value.trim(),
+      last_name: last.value.trim(),
+      birth_year: year.value ? Number(year.value) : null,
+      isNew: true
+    }, note);
+
+    id.value = '';
+    first.value = '';
+    last.value = '';
+    year.value = '';
+  });
+
+  return el('details', { className: 'disclosure' }, [
+    el('summary', { text: 'Not on the list yet? Add someone new' }),
+    el('div', { className: 'disclosure-body' }, [
+      el('p', { className: 'field-help',
+        text: 'For a player who has come along before ever entering a tournament. '
+            + 'They are created when you record the attendance, not now.' }),
+      el('p', { className: 'field' }, [el('label', { for: id.id, text: 'Player ID' }), id]),
+      el('p', { className: 'field' }, [el('label', { for: first.id, text: 'First name' }), first]),
+      el('p', { className: 'field' }, [el('label', { for: last.id, text: 'Last name' }), last]),
+      el('p', { className: 'field' }, [el('label', { for: year.id, text: 'Birth year' }), year]),
+      el('p', { className: 'field-help',
+        text: 'Sets their division. Leave it blank if you do not know: they count '
+            + 'as a minor until it is filled in, which is the safe way round.' }),
+      el('p', {}, [go]),
+      note
+    ])
   ]);
 }
 
@@ -173,12 +256,28 @@ export async function recordAttendance({
         earning_action_id: attendActionId, created_by: professor.userId
       });
     }
-    ledger.push({
-      player_id: p.player_id, delta: pointsFor(actions, playActionId),
-      earning_action_id: playActionId, created_by: professor.userId,
-      // Public through get_player_summary(). Never write anything private here.
-      reason: reason || null
-    });
+
+    // Optional. Manual entry pays for turning up and nothing else, because
+    // nobody is claiming from it that a tournament was played. A file is that
+    // claim, so an upload adds the play award as well.
+    if (playActionId) {
+      ledger.push({
+        player_id: p.player_id, delta: pointsFor(actions, playActionId),
+        earning_action_id: playActionId, created_by: professor.userId,
+        // Public through get_player_summary(). Never write anything private here.
+        reason: reason || null
+      });
+    }
+  }
+
+  // Every attendee already had the day recorded, and there is no play award to
+  // pay twice. Nothing to write, and saying so beats an empty insert.
+  if (!ledger.length) {
+    return {
+      created, eligibleCount: eligible.length, newCount: newlyPresent.size,
+      repeatCount: eligible.length - newlyPresent.size, ledgerCount: 0,
+      playAwarded: false
+    };
   }
 
   const { error: ledErr } = await supabase.from('point_ledger').insert(ledger);
@@ -189,7 +288,8 @@ export async function recordAttendance({
     eligibleCount: eligible.length,
     newCount: newlyPresent.size,
     repeatCount: eligible.length - newlyPresent.size,
-    ledgerCount: ledger.length
+    ledgerCount: ledger.length,
+    playAwarded: !!playActionId
   };
 }
 
@@ -203,7 +303,10 @@ export function outcomeNodes(outcome, attendedOn, { fileNote = false } = {}) {
 
     outcome.repeatCount ? el('p', { className: 'muted-note',
       text: `${outcome.repeatCount} already had attendance for that day, so that `
-          + 'day was not counted twice. They still received points for playing.' }) : null,
+          + 'day was not counted twice'
+          + (outcome.playAwarded
+              ? '. They still received points for playing.'
+              : ' and they earned nothing further.') }) : null,
 
     fileNote ? el('p', { className: 'muted-note',
       text: 'The file itself was read in your browser and has not been stored anywhere.' }) : null,

@@ -1302,3 +1302,74 @@ a.player-button:hover .player-label {
 .demo-link {
   margin-right: 0.75rem;
 }
+
+/* --- Points ----------------------------------------------------------------- */
+
+.stated-award {
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.8rem;
+  background: var(--paper);
+  border-left: 4px solid var(--teal);
+  border-radius: 0 6px 6px 0;
+}
+
+.balance {
+  margin: 0.5rem 0 0.25rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.balance-number {
+  font-family: var(--font-head);
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--teal);
+  line-height: 1;
+}
+
+.ledger-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.ledger-row {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr auto;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--paper);
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+/* A reversed entry stays on the record and stays legible; it is struck through
+   rather than removed, because the balance is the sum of what is still here. */
+.ledger-row.is-voided .ledger-delta,
+.ledger-row.is-voided .ledger-what > span:first-child {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.ledger-delta {
+  font-family: var(--font-head);
+  font-weight: 700;
+  text-align: right;
+}
+.ledger-delta.is-up { color: var(--teal); }
+.ledger-delta.is-down { color: var(--muted); }
+.ledger-what {
+  display: grid;
+  gap: 0.1rem;
+}
+.ledger-row .form-status {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.tag-voided {
+  background: var(--line);
+  color: var(--muted);
+}
+.balance-number.is-negative {
+  color: var(--amber);
+}
