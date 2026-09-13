@@ -50,7 +50,7 @@ against real functions and policies later. Current phase: **4**.
 | 1 | Reference tables: `earning_actions`, `prize_items`, `releases`, `loyalty_tiers` | done |
 | 2 | People and consent: `players`, `professors`, `consent_log`, visibility helpers | done |
 | 3 | Points and attendance: `attendance`, `point_ledger`, consent expiry | done |
-| 4 | Events and registration | |
+| 4 | Events and registration | in progress |
 | 5 | Public pages, built against the real tables | |
 | 6 | Professor screens | |
 | 7 | TDF upload and parsing | |
@@ -174,6 +174,47 @@ should never gain another row.
 **`point_ledger.reason` is publicly visible** for a player whose ID visibility is
 in force, because it appears in their transaction history. It is for "Bring a
 friend bonus", never for anything about a person.
+
+**Phase 4** — `supabase/migrations/20260913001725_events_and_registration.sql`
+
+`events`, `event_capacities`, `registrations`, the `public_event_counts` view,
+and the three registration functions.
+
+**The first phase with public write.** A stranger with the anon key can now create
+a registration — but only by calling `register_for_event()`. `registrations` has
+no anon grant and **no INSERT policy at all**, so even a professor registers
+someone through the function. A direct insert would let a caller write their own
+`status` and take a confirmed spot past a full division.
+
+- **A Player ID is required for every registration**, prereleases included. This
+  departs from the earlier design, which allowed a blank ID for prereleases.
+  Requiring it makes duplicate detection work everywhere and gives every
+  registrant a way to drop. Someone without one goes to a help page.
+- **Division is derived from the event's date, not today's.** Seasons roll over
+  on 1 September, so registering in August for a September event must use the
+  season the event falls in.
+- **One queue per event, promotion by division.** `waitlist_position` is global
+  for the event; `confirm_drop()` then promotes the first person whose division
+  has room and who is not already confirmed on another flight.
+- **`request_drop()` returns the same result whether or not anything matched**,
+  so it cannot be used to discover which Player IDs are registered.
+- **`public_event_counts` emits integers only** — capacity, confirmed, waitlist,
+  per event and division. No names, no IDs, at any consent level.
+
+### Rate limiting, if it is ever wanted
+
+Registration is deliberately open: no login, no captcha. Supabase's configurable
+rate limits cover Auth endpoints only and do not apply to the Data API.
+
+If abuse appears, a throttle can live in `register_for_event()` itself, since
+PostgREST exposes the caller's headers to Postgres:
+
+```sql
+current_setting('request.headers', true)::json ->> 'x-forwarded-for'
+```
+
+`registrations` carries a `created_at` index so this can be added without
+reshaping the table.
 
 ### Known gaps, carried forward
 
