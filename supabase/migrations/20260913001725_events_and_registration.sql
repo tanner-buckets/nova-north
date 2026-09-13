@@ -132,6 +132,53 @@ comment on view public.public_event_counts is
   'Per event and division: capacity, confirmed count, waitlist length. Numbers only.';
 
 -- ---------------------------------------------------------------------------
+-- Professor-facing views
+-- ---------------------------------------------------------------------------
+-- These are the opposite of public_event_counts: they exist to show a professor
+-- who registered, which the public may never see. security_invoker is ON, so RLS
+-- on registrations applies and a caller who is not a professor gets nothing.
+-- That is the reverse of the public view's arrangement, and it is deliberate.
+
+-- What a professor sees on logging in: every upcoming event with its numbers.
+create view public.event_registration_summary
+with (security_invoker = true) as
+select
+  e.id as event_id,
+  e.name,
+  e.starts_at,
+  e.registration_open,
+  count(r.id) filter (where r.status = 'confirmed')      as confirmed_count,
+  count(r.id) filter (where r.status = 'waitlist')       as waitlist_count,
+  count(r.id) filter (where r.status = 'drop_requested') as drop_requested_count,
+  count(distinct r.source_ip)                            as distinct_addresses
+from public.events e
+left join public.registrations r on r.event_id = e.id
+group by e.id, e.name, e.starts_at, e.registration_open;
+
+comment on view public.event_registration_summary is
+  'Professor dashboard counts, including drops awaiting confirmation. Not public: RLS on registrations applies.';
+
+-- The surge signal. A shared address is normal -- a family, or the store wifi --
+-- so this reports rather than judges. A professor decides whether twelve
+-- registrations from one address is a scout troop or a script.
+create view public.registration_ip_activity
+with (security_invoker = true) as
+select
+  r.event_id,
+  r.source_ip,
+  count(*) as registration_count,
+  min(r.created_at) as first_seen,
+  max(r.created_at) as last_seen
+from public.registrations r
+where r.source_ip is not null
+group by r.event_id, r.source_ip
+having count(*) > 1
+order by count(*) desc;
+
+comment on view public.registration_ip_activity is
+  'Addresses submitting more than one registration for an event. Informational: nothing is blocked on this basis.';
+
+-- ---------------------------------------------------------------------------
 -- register_for_event
 -- ---------------------------------------------------------------------------
 -- Returns a jsonb result rather than raising, so a form can show a useful
@@ -159,37 +206,22 @@ declare
   v_position integer;
   v_existing text;
   v_ip inet;
-  v_from_ip integer;
 begin
-  -- Throttle, for anonymous callers only.
+  -- The caller's address is recorded, but nothing is refused on the strength of
+  -- it. Everyone on the store's wifi shares one public address, so a per-address
+  -- cap would turn a busy prerelease sign-up into a wall of rejections for
+  -- legitimate players. Detection is the right tool here, not prevention:
+  -- registration_ip_activity below shows professors where a surge came from, and
+  -- they can judge it.
   --
-  -- PostgREST passes the request headers through to Postgres, so the caller's
-  -- address is readable here. A missing or unparseable header means no throttle
-  -- rather than a refusal: this exists to make bulk submission tedious, not to
-  -- be a security control, and it must never block a legitimate registration.
-  --
-  -- A signed-in professor is exempt. They register people at the desk from one
-  -- address all afternoon, which is exactly the pattern this would otherwise
-  -- mistake for abuse.
-  if not public.is_professor() then
-    begin
-      v_ip := split_part(
-                coalesce(current_setting('request.headers', true)::json ->> 'x-forwarded-for', ''),
-                ',', 1)::inet;
-    exception when others then
-      v_ip := null;
-    end;
-
-    if v_ip is not null then
-      select count(*) into v_from_ip
-      from public.registrations
-      where event_id = p_event_id and source_ip = v_ip;
-
-      if v_from_ip >= 10 then
-        return jsonb_build_object('ok', false, 'code', 'too_many_from_this_address');
-      end if;
-    end if;
-  end if;
+  -- A missing or unparseable header is fine; the column is simply left null.
+  begin
+    v_ip := split_part(
+              coalesce(current_setting('request.headers', true)::json ->> 'x-forwarded-for', ''),
+              ',', 1)::inet;
+  exception when others then
+    v_ip := null;
+  end;
   -- Every registrant needs a Player ID. Someone without one is sent to the help
   -- page rather than given an anonymous registration.
   if p_player_id is null or btrim(p_player_id) = '' then
@@ -452,6 +484,11 @@ grant insert, update, delete on public.event_capacities to authenticated;
 grant select, update, delete on public.registrations to authenticated;
 
 grant select on public.public_event_counts to anon, authenticated;
+
+-- Professor views: authenticated only, and security_invoker means RLS still
+-- decides. A signed-in non-professor sees zero rows.
+grant select on public.event_registration_summary to authenticated;
+grant select on public.registration_ip_activity to authenticated;
 
 grant execute on function
   public.register_for_event(uuid, text, text, text, integer, text) to anon, authenticated;

@@ -201,34 +201,36 @@ someone through the function. A direct insert would let a caller write their own
 - **`public_event_counts` emits integers only** — capacity, confirmed, waitlist,
   per event and division. No names, no IDs, at any consent level.
 
-### The registration throttle
+### Registration abuse: detection, not prevention
 
-Registration is deliberately open: no login, no captcha. Supabase's configurable
-rate limits cover Auth endpoints only and do not apply to the Data API, so the
-throttle lives inside `register_for_event()` instead.
+Registration is deliberately open — no login, no captcha. Supabase's configurable
+rate limits cover Auth endpoints only and do not apply to the Data API.
 
-PostgREST passes the request headers to Postgres, so the function reads
-`x-forwarded-for` and refuses an eleventh registration for the same event from
-the same address. The address is stored in `registrations.source_ip`, which is
-protected: no public grant, absent from `public_event_counts`, and returned by no
-function.
+A per-address cap was written and then removed, for a concrete reason worth
+remembering: **everyone on the store's wifi shares one public address.** Capping
+registrations per address would turn a busy prerelease sign-up into a wall of
+rejections for real players, which is a worse outcome than the abuse it prevents.
 
-Two deliberate choices:
+So the address is recorded and nothing is refused on the strength of it:
 
-- **A signed-in professor is exempt.** They register people at the desk from one
-  address all afternoon, which is precisely the pattern this would otherwise
-  mistake for abuse.
-- **A missing or unparseable header means no throttle**, not a refusal. This
-  exists to make bulk submission tedious, not to be a security control, and it
-  must never block a legitimate registration.
+- `registrations.source_ip` is protected — no public grant, absent from
+  `public_event_counts`, returned by no function. Safe to clear once an event has
+  passed.
+- **`registration_ip_activity`** shows professors any address with more than one
+  registration for an event, with first and last seen. A shared address is
+  normal; a professor decides whether twelve from one address is a family, a
+  scout troop, or a script.
+- **`event_registration_summary`** gives the counts a professor sees on logging
+  in: confirmed, waitlisted, and drops awaiting confirmation, per event.
 
-Households share an address, and so does a game store's wifi. Ten per event is
-generous for a family but reachable if many players register on site at a busy
-prerelease. If that happens, raise the number or scope it to a time window rather
-than the life of the event.
+Both professor views use `security_invoker = true`, the opposite of
+`public_event_counts`. RLS on `registrations` therefore applies, so a signed-in
+non-professor sees zero rows. The public view has it off precisely so it can
+count rows the caller cannot read; these two must not.
 
-`source_ip` is safe to clear once an event has passed.
-
+If abuse ever does appear, the better lever is a *rate* rather than a total — say
+five submissions from one address within a minute, which a script trips instantly
+and a room full of people never does.
 
 ### Known gaps, carried forward
 
