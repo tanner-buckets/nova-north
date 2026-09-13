@@ -121,10 +121,23 @@ a:hover {
   line-height: 1;
 }
 
+/* The full league name is long, so the venue sits beneath it rather than beside. */
 .brand-name {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.brand-league {
   font-family: var(--font-head);
-  font-size: 1.15rem;
+  font-size: 1rem;
   font-weight: 700;
+}
+
+.brand-venue {
+  font-size: 0.78rem;
+  color: #c3cad6;
+  letter-spacing: 0.02em;
 }
 
 .site-nav {
@@ -289,6 +302,25 @@ main {
   font-size: 0.95rem;
 }
 
+.screenshot {
+  margin: 0.75rem 0;
+}
+
+.screenshot img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+}
+
+.screenshot figcaption {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.35rem;
+}
+
 @media (min-width: 34rem) {
   h1 {
     font-size: 2.1rem;
@@ -296,6 +328,14 @@ main {
 }
 
 @media (min-width: 52rem) {
+  .brand-league {
+    font-size: 1.15rem;
+  }
+
+  .brand-venue {
+    font-size: 0.85rem;
+  }
+
   .site-header {
     display: flex;
     align-items: center;
