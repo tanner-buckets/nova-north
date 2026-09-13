@@ -239,10 +239,16 @@ Built so far:
 | File | In the nav | Reads from |
 |---|---|---|
 | `index.html` | Home | nothing — static copy |
+| `schedule.html` | Schedule | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
+| `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers` |
+| `prize-items.html` | no | `prize_items` |
 | `id_help.html` | no | nothing — static copy |
 
-Planned: `schedule.html` (with the registration form), `league_programs.html`,
-`prize-items.html` (linked from league programs, not in the nav), `players.html`.
+Planned: `players.html`.
+
+`supabase-client.js` holds the client, league-time formatting and the DOM
+helpers. Times are pinned to `America/New_York`: "2:00 PM" must mean the same
+thing to every reader, wherever they are.
 
 Nav entries for pages that do not exist yet render as `.nav-soon` spans rather
 than links, so the live site never serves a 404 while the set is filled in. Swap
@@ -251,6 +257,26 @@ the span for an anchor as each page lands.
 Pages are served from a project subpath, `tanner-buckets.github.io/nova-north/`,
 so every internal link is relative. An absolute `/styles.css` would resolve to the
 domain root and break.
+
+### The Trainer Card Program
+
+`trainer_card_ranks`, `badges` and `player_badges`, set up so the badge list can
+change without breaking anything:
+
+- An award references `badges.id`, never a name or a position. Rewording a badge
+  changes nothing about who earned it.
+- Retiring a badge sets `is_active = false`. The row stays, so a player who
+  earned it keeps it.
+- The number of badges a rank needs is a column, not prose and not page code. If
+  the list grows and Ace Trainer should need twelve, that is an `UPDATE`.
+
+**No rank is stored.** It derives from badges earned and league visits, plus the
+one fact that cannot be counted: `players.champion_awarded_on`, set when a
+professor witnesses someone beat the Elite 4.
+
+`player_badges` has no `UPDATE` grant. An award is either right, or it is deleted
+and re-recorded — editing in place would let the player or the date drift
+silently.
 
 ### Known gaps, carried forward
 

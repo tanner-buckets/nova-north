@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Schedule — NoVa North League</title>
-    <meta name="description" content="Upcoming league days, tournaments and prereleases, with entry costs, places left, and registration.">
+    <title>Prize wall items — NoVa North League</title>
+    <meta name="description" content="Everything on the prize wall and what it costs in prize points.">
     <link rel="stylesheet" href="styles.css">
-    <script type="module" src="schedule.js"></script>
+    <script type="module" src="prize-items.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -22,7 +22,7 @@
       <nav class="site-nav" aria-label="Main">
         <ul>
           <li><a href="index.html">Home</a></li>
-          <li><a href="schedule.html" aria-current="page">Schedule</a></li>
+          <li><a href="schedule.html">Schedule</a></li>
           <li><a href="league_programs.html">League programs</a></li>
           <li><span class="nav-soon">Players</span></li>
         </ul>
@@ -30,21 +30,23 @@
     </header>
 
     <main id="main">
-      <h1>Schedule</h1>
+      <p><a class="back-link" href="league_programs.html">Back to league programs</a></p>
+
+      <h1>Prize wall items</h1>
 
       <p class="lede">
-        Everything coming up. Times are when play starts, so arrive a little early.
-        Sign-in closes at 2:30 PM on league Sundays.
+        Everything on the prize wall and what it costs in prize points. Ask a
+        professor to check your balance and hand over your prize.
       </p>
 
-      <p>
-        All times are league time, in Ashburn. You do not need to register for
-        casual league play — just turn up.
-      </p>
-
-      <div id="event-list" aria-busy="true">
-        <p class="notice">Loading the schedule.</p>
+      <div id="item-list" aria-busy="true" data-content-name="The prize wall items">
+        <p class="notice">Loading the prize wall.</p>
       </div>
+
+      <p class="section-note">
+        Costs are the standard price; a professor may set a different one. Stock
+        changes, so ask what is on the wall today. Prize points never reset.
+      </p>
     </main>
 
     <footer class="site-footer">

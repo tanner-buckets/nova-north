@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>League programs — NoVa North League</title>
+    <meta name="description" content="The Trainer Card Program, the prize wall, and the loyalty program: how to earn ranks, badges, prize points and the right to buy new sets at MSRP.">
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="league_programs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <a class="brand" href="index.html">
+        <span class="brand-mark" aria-hidden="true">NVN</span>
+        <span class="brand-name">
+          <span class="brand-league">Northern Virginia North League</span>
+          <span class="brand-venue">@ Continental Cards</span>
+        </span>
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="schedule.html">Schedule</a></li>
+          <li><a href="league_programs.html" aria-current="page">League programs</a></li>
+          <li><span class="nav-soon">Players</span></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main id="main">
+      <h1>League programs</h1>
+
+      <p class="lede">
+        Three things run alongside ordinary league play, and you can take part in
+        all of them at once. Turning up is what starts every one.
+      </p>
+
+      <nav class="jump-nav" aria-label="On this page">
+        <ul>
+          <li><a href="#trainer-card">Trainer Card Program</a></li>
+          <li><a href="#prize-wall">Prize wall</a></li>
+          <li><a href="#loyalty">Loyalty program</a></li>
+        </ul>
+      </nav>
+
+      <!-- Trainer Card Program -->
+      <section class="panel" id="trainer-card" aria-labelledby="trainer-card-heading">
+        <h2 id="trainer-card-heading">Trainer Card Program</h2>
+
+        <p>
+          Our flagship programme. It is a way to build your skills and prove them,
+          climbing through four ranks by earning badges — and, if you get far
+          enough, challenging the Elite 4 to become a League Champion.
+        </p>
+
+        <h3>The four ranks</h3>
+        <div id="ranks" aria-busy="true" data-content-name="The ranks">
+          <p class="notice">Loading the ranks.</p>
+        </div>
+
+        <h3>Badges</h3>
+        <div id="badges" aria-busy="true" data-content-name="The badges">
+          <p class="notice">Loading the badges.</p>
+        </div>
+
+        <p class="section-note">
+          Ask a professor to record a badge once you have earned it. They keep the
+          record, so nothing is lost if you forget.
+        </p>
+      </section>
+
+      <!-- Prize wall -->
+      <section class="panel" id="prize-wall" aria-labelledby="prize-wall-heading">
+        <h2 id="prize-wall-heading">Prize wall</h2>
+
+        <ol class="steps">
+          <li class="step">
+            <p>
+              You earn prize points by taking part in league activities. Every way
+              to earn is listed below.
+            </p>
+          </li>
+          <li class="step">
+            <p>Ask a professor for your point total.</p>
+          </li>
+          <li class="step">
+            <p>Spend your prize points at the prize wall by trading points for items.</p>
+          </li>
+          <li class="step">
+            <p>Suggest new activities and earn even more.</p>
+          </li>
+        </ol>
+
+        <p class="callout">
+          <a href="prize-items.html">See the prize wall items and what they cost</a>
+        </p>
+
+        <h3>Ways to earn prize points</h3>
+        <div id="earning-actions" aria-busy="true" data-content-name="The list of ways to earn">
+          <p class="notice">Loading the point grants.</p>
+        </div>
+
+        <p class="section-note">
+          Point values are the standard award; a professor may award more for a
+          bonus or a one-off. An entry marked with a question mark means the
+          professor decides the amount. Prize points never reset, so it is fine to
+          save up for something larger.
+        </p>
+      </section>
+
+      <!-- Loyalty -->
+      <section class="panel" id="loyalty" aria-labelledby="loyalty-heading">
+        <h2 id="loyalty-heading">Loyalty program</h2>
+
+        <p>
+          Continental Cards runs this one. Come to league consistently across a set
+          release window, and you earn the right to buy that new set's products at
+          MSRP.
+        </p>
+
+        <p>
+          Attendance is counted in Sundays. Playing in the tournament or just
+          playing casually both count, and a professor records it for you. Reach a
+          threshold and you may buy that tier's product, or any tier below it.
+        </p>
+
+        <div id="loyalty-tiers" aria-busy="true" data-content-name="The loyalty thresholds">
+          <p class="notice">Loading the current thresholds.</p>
+        </div>
+
+        <p class="section-note">
+          Thresholds and products change from one release to the next, so check
+          back here rather than relying on last time. Once a set is out you have
+          three Sundays to buy, at the tournament space.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        Northern Virginia North League meets at Continental Cards and is run by
+        volunteer professors.
+      </p>
+      <p>
+        This site is made and maintained by those volunteers. It is not an
+        official publisher website.
+      </p>
+    </footer>
+  </body>
+</html>
