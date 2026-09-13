@@ -1732,3 +1732,18 @@ a.player-button:hover .player-label {
     text-decoration: none;
   }
 }
+
+.caps-block {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  background: var(--paper);
+  border-radius: 6px;
+}
+.caps-block h4 {
+  margin: 0 0 0.4rem;
+}
+/* Same trap as .confirm-row: a display declaration would beat the browser's own
+   [hidden] rule and leave the block on screen. */
+.caps-block[hidden] {
+  display: none;
+}

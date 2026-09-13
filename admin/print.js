@@ -81,8 +81,9 @@ async function loyaltyRows(release) {
 
 export function loyaltySheet(release, tiers, rows) {
   // Highest threshold first, so a player lands in the best tier they reached and
-  // appears once. Anyone below every threshold is listed separately rather than
-  // dropped: the store is told who is close, not only who has arrived.
+  // appears once. Anyone below every threshold is left off entirely: the sheet is
+  // what the store hands out against, and a name on it that earns nothing is a
+  // name somebody has to check and then ignore.
   const ordered = [...tiers].sort((a, b) => b.weeks_required - a.weeks_required);
   const placed = new Set();
 
@@ -93,8 +94,6 @@ export function loyaltySheet(release, tiers, rows) {
     members.forEach((m) => placed.add(m.player_id));
     return { tier, members };
   });
-
-  const rest = rows.filter((r) => !placed.has(r.player_id)).sort(byFirstName);
 
   return el('article', { className: 'sheet' }, [
     el('header', { className: 'sheet-head' }, [
@@ -124,24 +123,6 @@ export function loyaltySheet(release, tiers, rows) {
           ])
         : el('p', { className: 'muted-note', text: 'Nobody has reached this tier.' })
     ])),
-
-    rest.length
-      ? el('section', { className: 'sheet-group' }, [
-          el('h3', { text: 'Not yet at a tier' }),
-          el('table', { className: 'sheet-table' }, [
-            el('thead', {}, [el('tr', {}, [
-              el('th', { text: 'Name' }),
-              el('th', { text: 'Player ID' }),
-              el('th', { text: 'Sundays' })
-            ])]),
-            el('tbody', {}, rest.map((m) => el('tr', {}, [
-              el('td', { text: `${m.first_name} ${m.last_name}`.trim() }),
-              el('td', { className: 'count', text: m.player_id }),
-              el('td', { className: 'count', text: m.weeks })
-            ])))
-          ])
-        ])
-      : null,
 
     printedAt()
   ]);
@@ -178,14 +159,14 @@ export function registrationSheet(event, rows) {
       el('h2', { text: event.name }),
       el('p', { text: `${formatEventDay(event.starts_at)}, ${formatEventTime(event.starts_at)}` }),
       el('p', { className: 'sheet-sub',
-        text: `${confirmed.length} registered, ${waiting.length} waiting` })
+        text: `${confirmed.length} registered, ${waiting.length} on the wait list` })
     ]),
 
     el('h3', { className: 'sheet-section', text: 'Registered' }),
     ...DIVISIONS.map(([key, label]) =>
       divisionBlock(label, confirmed.filter((r) => r.division === key))),
 
-    el('h3', { className: 'sheet-section', text: 'Waiting list' }),
+    el('h3', { className: 'sheet-section', text: 'Wait list' }),
     waiting.length
       ? el('table', { className: 'sheet-table' }, [
           el('thead', {}, [el('tr', {}, [
@@ -195,7 +176,7 @@ export function registrationSheet(event, rows) {
             el('th', { text: 'Division' })
           ])]),
           // In queue order, not alphabetical. The order is the whole point of a
-          // waiting list, and sorting it by name would destroy the only piece of
+          // wait list, and sorting it by name would destroy the only piece of
           // information it carries.
           el('tbody', {}, waiting.map((m) => el('tr', {}, [
             el('td', { className: 'count', text: m.waitlist_position ?? '' }),
@@ -204,7 +185,7 @@ export function registrationSheet(event, rows) {
             el('td', { text: DIVISION_LABEL[m.division] || m.division })
           ])))
         ])
-      : el('p', { className: 'muted-note', text: 'Nobody is waiting.' }),
+      : el('p', { className: 'muted-note', text: 'Nobody on the wait list.' }),
 
     asked.length
       ? el('section', { className: 'sheet-group' }, [
@@ -225,6 +206,11 @@ export function registrationSheet(event, rows) {
 function show(node) {
   sheet.replaceChildren(node);
   sheet.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Building a sheet and printing it are one action: nobody builds one to look
+  // at it on screen. Two frames, so the browser has laid the new rows out before
+  // the dialog freezes the page -- printing mid-layout gives a blank first page.
+  requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
 }
 
 async function loyaltyPanel(releases) {
@@ -239,7 +225,8 @@ async function loyaltyPanel(releases) {
     ]),
     el('p', { className: 'field-help',
       text: 'For the store. Who reached which tier, with a column to tick as each '
-          + 'is handed over.' }),
+          + 'is handed over. Anyone short of every tier is left off. Building it '
+          + 'opens the print dialog.' }),
     el('p', {}, [go]),
     note
   ]);
@@ -287,8 +274,9 @@ function registrationPanel(events) {
       el('label', { for: 'event', text: 'Event' }), select
     ]),
     el('p', { className: 'field-help',
-      text: 'For the desk. Registered players by division and the waiting list in '
-          + 'order, with a column to tick people off as they arrive.' }),
+      text: 'For the desk. Registered players by division and the wait list in '
+          + 'order, with a column to tick people off as they arrive. Building it '
+          + 'opens the print dialog.' }),
     el('p', {}, [go]),
     note
   ]);

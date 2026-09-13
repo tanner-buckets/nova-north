@@ -219,6 +219,18 @@ export function eventForm(event, { onSaved }) {
   // give two places to set one number.
   const caps = isNew ? capacityFields([]) : null;
 
+  // A cap on an event that refuses registration outright caps nothing, so the
+  // fields are not offered. Hidden rather than disabled: an input nobody can use
+  // is still a question the professor has to read and dismiss.
+  const capsBlock = caps
+    ? el('div', { className: 'caps-block' }, [el('h4', { text: 'Capacity' }), ...caps.nodes])
+    : null;
+
+  function syncCaps() {
+    if (capsBlock) capsBlock.hidden = !open.checked;
+  }
+  open.addEventListener('change', syncCaps);
+
   const form = el('form', {}, [
     el('p', { className: 'field' }, [el('label', { text: 'Name' }, [name])]),
     el('p', { className: 'field' }, [el('label', { text: 'Kind' }, [type])]),
@@ -263,12 +275,13 @@ export function eventForm(event, { onSaved }) {
       ])
     ]),
 
-    caps ? el('h4', { text: 'Capacity' }) : null,
-    ...(caps ? caps.nodes : []),
+    capsBlock,
 
     el('p', {}, [go]),
     note
   ]);
+
+  syncCaps();
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -281,8 +294,10 @@ export function eventForm(event, { onSaved }) {
 
     try {
       // Read before the insert, so a capacity typed wrong stops the whole thing
-      // rather than leaving an event created with no cap on it.
-      const wanted = caps ? caps.collect() : null;
+      // rather than leaving an event created with no cap on it. Skipped entirely
+      // when registration is off: a number typed and then hidden is not a number
+      // the professor meant to set.
+      const wanted = (caps && open.checked) ? caps.collect() : null;
 
       const row = {
         name: name.value.trim(),
@@ -358,7 +373,11 @@ async function eventRow(event) {
     const caps = await loadCapacities(event.id);
     body.replaceChildren(
       eventForm(event, { onSaved: refresh }),
-      capacityPanel(event.id, caps)
+      event.registration_open
+        ? capacityPanel(event.id, caps)
+        : el('p', { className: 'field-help',
+            text: 'This event does not take registration, so a capacity would cap '
+                + 'nothing. Turn registration on above and save to set one.' })
     );
   });
 
