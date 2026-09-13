@@ -4,6 +4,7 @@
 :root {
   --ink: #0e1726;
   --teal: #1f7f76;
+  --ink-soft: #16233a;
   --teal-lift: #2fa89b;
   --amber: #e8a33d;
   --paper: #f7f8fa;
@@ -321,9 +322,217 @@ main {
   margin-top: 0.35rem;
 }
 
+/* --- Cards and events ------------------------------------------------------ */
+
+.card-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.badges {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.6rem;
+  padding: 0;
+}
+
+.badge {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--card);
+  background: var(--teal);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+}
+
+.badge-note { background: var(--ink-soft, #16233a); }
+
+.event-when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0 0 0.2rem;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.event-time {
+  color: var(--text);
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.event-name { margin-bottom: 0.5rem; }
+
+.event-fee,
+.event-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.event-spots { margin-top: 0.75rem; }
+
+.division-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 20rem;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.division-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.division-list li:last-child { border-bottom: 0; }
+
+/* --- Disclosures and forms -------------------------------------------------- */
+
+.disclosure {
+  margin-top: 0.85rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.75rem;
+}
+
+.disclosure summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--teal);
+  padding: 0.25rem 0;
+}
+
+.disclosure summary:hover { color: var(--teal-lift); }
+
+.register-form,
+.cancel-form {
+  margin-top: 0.5rem;
+}
+
+.field {
+  margin: 0 0 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.field label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.field input {
+  font: inherit;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--text);
+  /* Keeps iOS from zooming in when a field is focused. */
+  font-size: 1rem;
+  max-width: 22rem;
+}
+
+.field-help {
+  margin: -0.3rem 0 0.8rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  max-width: 22rem;
+}
+
+.button {
+  font: inherit;
+  font-weight: 600;
+  color: var(--card);
+  background: var(--teal);
+  border: 0;
+  border-radius: 6px;
+  padding: 0.6rem 1.1rem;
+  cursor: pointer;
+}
+
+.button:hover { background: var(--teal-lift); }
+.button:disabled { opacity: 0.6; cursor: default; }
+
+.button-quiet {
+  background: transparent;
+  color: var(--teal);
+  border: 1px solid var(--teal);
+}
+
+.button-quiet:hover { background: var(--paper); color: var(--teal-lift); }
+
+.form-status {
+  margin: 0.6rem 0 0;
+  font-size: 0.95rem;
+  max-width: 26rem;
+}
+
+.form-status.is-error {
+  color: var(--text);
+  border-left: 4px solid var(--amber);
+  padding-left: 0.7rem;
+}
+
+.form-status.is-good {
+  color: var(--text);
+  border-left: 4px solid var(--teal);
+  padding-left: 0.7rem;
+}
+
+/* --- Notices ---------------------------------------------------------------- */
+
+.notice { color: var(--muted); margin: 0; }
+
+.notice-problem {
+  background: var(--card);
+  border-left: 4px solid var(--amber);
+  border-radius: 0 8px 8px 0;
+  padding: 0.75rem 1rem;
+  color: var(--text);
+  max-width: 36rem;
+}
+
+.notice-quiet { padding: 0.75rem 0; }
+
 @media (min-width: 34rem) {
   h1 {
     font-size: 2.1rem;
+  }
+
+  .card-list {
+    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+    align-items: start;
   }
 }
 
