@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Players — NoVa North League</title>
+    <meta name="description" content="Look up a Player ID to see rank, badges, prize points and loyalty progress.">
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="players.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <a class="brand" href="index.html">
+        <span class="brand-mark" aria-hidden="true">NVN</span>
+        <span class="brand-name">
+          <span class="brand-league">Northern Virginia North League</span>
+          <span class="brand-venue">@ Continental Cards</span>
+        </span>
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="schedule.html">Schedule</a></li>
+          <li><a href="league_programs.html">League programs</a></li>
+          <li><a href="players.html" aria-current="page">Players</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main id="main">
+      <h1>Players</h1>
+
+      <p class="lede">
+        Look up a Player ID to see rank, badges, prize points and loyalty
+        progress.
+      </p>
+
+      <form id="lookup-form" class="lookup-form">
+        <p class="field">
+          <label for="player-id">Player ID</label>
+          <input id="player-id" name="player_id" inputmode="numeric"
+                 autocomplete="off" required placeholder="e.g. 1234567">
+        </p>
+        <p><button type="submit" class="button">Look up</button></p>
+      </form>
+
+      <div id="result" aria-live="polite"></div>
+
+      <section class="panel panel-quiet" aria-labelledby="listed-heading">
+        <h2 id="listed-heading">Listed players</h2>
+        <p>
+          Being listed here is a choice. A professor turns it on with your
+          consent, and for anyone under 18 only with a parent’s. It switches
+          itself off after three months without attending.
+        </p>
+        <div id="visible-players" aria-busy="true" data-content-name="The player list">
+          <p class="notice">Loading the list.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        Northern Virginia North League meets at Continental Cards and is run by
+        volunteer professors.
+      </p>
+      <p>
+        This site is made and maintained by those volunteers. It is not an
+        official publisher website.
+      </p>
+    </footer>
+  </body>
+</html>

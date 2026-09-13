@@ -242,9 +242,10 @@ Built so far:
 | `schedule.html` | Schedule | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
 | `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers` |
 | `prize-items.html` | no | `prize_items` |
+| `players.html` | Players | `get_player_summary()`, `public_players` |
 | `id_help.html` | no | nothing — static copy |
 
-Planned: `players.html`.
+All five public pages are built.
 
 `supabase-client.js` holds the client, league-time formatting and the DOM
 helpers. Times are pinned to `America/New_York`: "2:00 PM" must mean the same
@@ -277,6 +278,28 @@ professor witnesses someone beat the Elite 4.
 `player_badges` has no `UPDATE` grant. An award is either right, or it is deleted
 and re-recorded — editing in place would let the player or the date drift
 silently.
+
+### Badges are seasonal
+
+Each season has its own badge list. Names may repeat year to year, and rank is
+judged on the most recent season's badges.
+
+- **The badge carries the season, not the award.** That is what makes the
+  September–October overlap work: a 2026 badge earned in October 2026 still
+  counts toward 2026.
+- **`current_badge_season()` is the latest season present in `badges`.** Adding
+  next year's list is what advances it — no flag to flip, and the autumn overlap
+  needs no special case.
+- **Rank is never stored, for any season.** Badges persist and carry their
+  season, so 2026's rank is still derivable in 2030. A badge corrected years
+  later corrects the history with it.
+- **Champion is a table**, one row per season won, which is what lets a two-time
+  Champion show two stars.
+- **`elite_four_wins` records wins only.** A lost attempt leaves no trace and can
+  be retried; rows are season-scoped, so progress resets each year.
+
+The thirteen seeded badges are the 2025–26 list, so they belong to season 2026.
+There is no 2027 list yet.
 
 ### Known gaps, carried forward
 

@@ -234,7 +234,7 @@ supabase/migrations/  schema, one file per change
 Schema comes before pages. Building UI against mocked data means rebuilding it
 against real functions and policies later.
 
-Current phase: **1**.
+Current phase: **5**.
 
 1. **Reference tables.** `earning_actions`, `prize_items`, `releases`,
    `loyalty_tiers`. Seeded from the spreadsheet exports. No personal data — this

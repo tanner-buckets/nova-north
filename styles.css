@@ -709,6 +709,159 @@ h3 {
   margin-top: 0;
 }
 
+/* --- Player lookup ---------------------------------------------------------- */
+
+.lookup-form {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.summary {
+  margin-bottom: 1rem;
+}
+
+.summary-name {
+  font-size: 1.4rem;
+  margin-bottom: 0.35rem;
+}
+
+/* A star per season won. The year is written out beside it, so the meaning does
+   not depend on recognising the symbol. */
+.champion-stars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.85rem;
+}
+
+.champion-star {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--ink);
+  color: var(--amber);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.star { font-size: 0.95rem; line-height: 1; }
+.star-year { font-variant-numeric: tabular-nums; }
+
+.stat-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  border-left: 3px solid var(--line);
+  padding-left: 0.75rem;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.stat-value {
+  font-family: var(--font-head);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-extra {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.badge-count { margin-bottom: 0.5rem; }
+
+.badge-chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+}
+
+.badge-chip {
+  background: var(--teal);
+  color: var(--card);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.past-seasons { margin-top: 1.25rem; }
+
+.season-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 26rem;
+}
+
+.season-list li {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.95rem;
+}
+
+.season-list li:last-child { border-bottom: 0; }
+.season-year { min-width: 3rem; }
+
+.muted-note {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.player-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.player-button {
+  font: inherit;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.player-button:hover {
+  border-color: var(--teal-lift);
+}
+
+.player-label { font-weight: 600; }
+.player-id { color: var(--muted); font-weight: 400; }
+
 @media (min-width: 34rem) {
   h1 {
     font-size: 2.1rem;
@@ -717,6 +870,10 @@ h3 {
   .card-list {
     grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
     align-items: start;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
   }
 }
 
