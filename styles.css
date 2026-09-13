@@ -862,6 +862,34 @@ h3 {
 .player-label { font-weight: 600; }
 .player-id { color: var(--muted); font-weight: 400; }
 
+/* The summary sits above the list, so a long list never pushes it out of sight.
+   On a wide screen the two sit side by side and the summary sticks while the
+   list scrolls. On a phone it stays at the top and selecting a player scrolls
+   back to it -- a card this tall cannot usefully be pinned to a small screen. */
+.player-layout {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+.result-col:empty { display: none; }
+
+/* One colour per badge, assigned by position in the season's list. Each clears
+   4.5:1 against white. */
+.badge-c0  { background: #1f7f76; }
+.badge-c1  { background: #6b4fa0; }
+.badge-c2  { background: #a8641a; }
+.badge-c3  { background: #2b6cb0; }
+.badge-c4  { background: #9b2c52; }
+.badge-c5  { background: #2f7a3f; }
+.badge-c6  { background: #7a5c1e; }
+.badge-c7  { background: #3f5f8a; }
+.badge-c8  { background: #8a3f6b; }
+.badge-c9  { background: #1f6f8f; }
+.badge-c10 { background: #b3452a; }
+.badge-c11 { background: #4a6b1f; }
+.badge-c12 { background: #7d2f3f; }
+
 @media (min-width: 34rem) {
   h1 {
     font-size: 2.1rem;
@@ -878,6 +906,20 @@ h3 {
 }
 
 @media (min-width: 52rem) {
+  .player-layout {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  }
+
+  .result-col {
+    position: sticky;
+    top: 1rem;
+  }
+
+  .list-col {
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+
   .brand-league {
     font-size: 1.15rem;
   }

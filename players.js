@@ -32,6 +32,20 @@ function championStars(seasons) {
   ]);
 }
 
+// code -> position in this season's badge list, filled once on load. Colouring by
+// position rather than by name means next season's badges are covered without
+// anyone assigning them a colour.
+const badgeOrder = new Map();
+
+function chipClass(code) {
+  const n = badgeOrder.has(code)
+    ? badgeOrder.get(code)
+    // Fallback for a badge not in the current season's list: a stable hash, so
+    // the same badge always gets the same colour.
+    : [...String(code)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 0);
+  return `badge-chip badge-c${n % 13}`;
+}
+
 function badgeList(summary) {
   const held = summary.badges || [];
   const available = summary.badges_available || 0;
@@ -48,7 +62,7 @@ function badgeList(summary) {
     ]),
     held.length
       ? el('ul', { className: 'badge-chips' },
-          held.map((b) => el('li', { className: 'badge-chip', text: b.name })))
+          held.map((b) => el('li', { className: chipClass(b.code), text: b.name })))
       : el('p', { className: 'muted-note', text: 'No badges yet this season.' })
   ]);
 }
@@ -71,7 +85,7 @@ function pastSeasons(summary) {
   ]);
 }
 
-function summaryCard(summary) {
+export function summaryCard(summary) {
   const champions = summary.champion_seasons || [];
   const elite = summary.elite_four_wins || 0;
 
@@ -104,6 +118,8 @@ async function lookUp(playerId) {
   const id = String(playerId || '').trim();
   if (!id) return;
 
+  if (!badgeOrder.size) await loadBadgeOrder();
+
   result.replaceChildren(el('p', { className: 'notice', text: 'Looking that up.' }));
 
   try {
@@ -122,22 +138,36 @@ async function lookUp(playerId) {
   }
 }
 
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
-  lookUp(input.value);
-});
+export async function loadBadgeOrder() {
+  const { data, error } = await supabase
+    .from('badges').select('code, sort_order, season_year')
+    .order('season_year', { ascending: false }).order('sort_order');
+  if (error || !data) return;
+  const season = data.length ? data[0].season_year : null;
+  data.filter((b) => b.season_year === season)
+      .forEach((b, i) => badgeOrder.set(b.code, i));
+}
 
-// A link can carry an ID, so a professor can hand someone a direct link.
-const fromUrl = new URLSearchParams(location.search).get('id');
-if (fromUrl) {
-  input.value = fromUrl;
-  lookUp(fromUrl);
+// Guarded, so this module can be imported by a page that has no lookup form.
+if (form) {
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    lookUp(input.value);
+  });
+
+  // A link can carry an ID, so a professor can hand someone a direct link.
+  const fromUrl = new URLSearchParams(location.search).get('id');
+  if (fromUrl) {
+    input.value = fromUrl;
+    lookUp(fromUrl);
+  }
 }
 
 // The browse list. Only players whose visibility is in force appear here at all
 // -- non-consented players are absent rather than anonymised, because this is a
 // browse list rather than a set that has to be complete.
 (async () => {
+  if (!listHost) return;
   try {
     const { data, error } = await supabase
       .from('public_players').select('*').order('display_label');
