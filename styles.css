@@ -1747,3 +1747,34 @@ a.player-button:hover .player-label {
 .caps-block[hidden] {
   display: none;
 }
+
+/* Flight PIN, on the professor event list only. It groups flights for the desk
+   and means nothing to a player, so it never appears on the public schedule. */
+.tag-flight {
+  background: var(--paper);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+/* The way in for a professor, in the footer of every public page. Quiet on
+   purpose: a player has no use for it. Not hidden, though -- the admin pages are
+   static files anyone can fetch, and row level security is what actually refuses
+   them. */
+.prof-signin {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 0.85rem;
+}
+.prof-signin a {
+  color: rgba(255, 255, 255, 0.6);
+}
+.prof-signin a:hover,
+.prof-signin a:focus {
+  color: var(--card);
+}
+
+/* Demo only: lets the fixed bar be shown inline for a look. */
+.bar-sample .prof-bar {
+  position: static;
+}

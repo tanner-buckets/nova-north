@@ -309,9 +309,21 @@ boundary. The admin HTML is a static file anyone can fetch, so hiding a button
 protects nothing — row level security refuses every professor query without a
 real session, and that is what actually holds.
 
-Once signed in, a bar appears at the foot of the public pages. Its links are
-contextual: the way back to the tools is everywhere, and the upload shortcut only
-on the home page, where a professor lands after an event.
+**The way in is a "Professor sign in" link in the footer of every public page.**
+Without it the site was a closed loop: the bar below only appears once you are
+signed in, and nothing pointed at the sign-in page, so the only route was knowing
+the URL by heart. It is quiet, because a player has no use for it — quiet is the
+whole of the intent. It is not hidden and not a secret: the admin pages are
+static files anyone can fetch, an unlinked page is no safer than a linked one,
+and what protects the data is row level security.
+
+Once signed in, that link is replaced by a bar at the foot of the public pages.
+Its links are contextual: the way back to the tools is everywhere, and the upload
+shortcut only on the home page, where a professor lands after an event.
+
+Building the bar is separate from deciding to show it, so it can be rendered and
+looked at without a session. A thing only visible after signing in is a thing
+nobody checks.
 
 ### TDF upload
 
@@ -463,11 +475,21 @@ one window at a time would be blocked halfway — but it is named in the result.
 `admin/events.html` creates and edits events, sets what they cost, and decides
 which take pre-registration. Everything on it reaches the public schedule.
 
-Capacity is per division. **`all` is a fallback, not a total**: registration uses
-it only when a player's own division has no row of its own. An event with no
-capacity rows is uncapped, and clearing a division on screen deletes its row
-rather than leaving an old number quietly capping an event a professor believes
-is now open.
+Capacity is per division plus an optional event total. **Everyone is a ceiling on
+the whole event**, applied on top of any division limit: a place needs room in
+the division *and* room in the event. Set either, both, or neither; neither is
+uncapped. Clearing a division on screen deletes its row rather than leaving an
+old number quietly capping an event a professor believes is now open.
+
+Flights of one event share a **four digit PIN**, chosen by a professor. It is
+typed at a desk, which a UUID is not. The form lists the PINs already in use so
+"pick one not in use" is answerable, and the check constraint refuses anything
+that is not exactly four digits — a typo that quietly makes a group of one is
+worse than a refusal. The PIN appears on the professor event list and never on
+the public schedule: it groups flights for the desk and means nothing to a
+player.
+
+New events prefill to the next Sunday at 2:00, which is when league meets.
 
 Times are league time, not the browser's. A `datetime-local` input carries no
 zone, so the value is composed and parsed against `America/New_York` explicitly,
@@ -587,6 +609,41 @@ Two rules the database does not hold, which the interface therefore does:
 - **A name is never shown without the Player ID.** The database holds this one —
   `name_visible()` is false whenever `id_visible()` is — but recording a switch
   that silently does nothing misleads the professor, so the form says so.
+
+### Passwords
+
+`admin/password.html`. Supabase Auth could always do this; nothing on the site
+used it, so a professor who forgot a password had no route back in and the
+sign-in screen told them to ask somebody who had no way to help.
+
+One page, three states, because they are the same conversation from different
+starting points:
+
+- arriving from a reset link, with a token to exchange
+- already signed in, changing a password that is known
+- neither, asking for a link
+
+A reset link is answered **identically whether or not the address has an
+account**. Otherwise the form becomes a way to find out who the professors are.
+
+Eight characters minimum, which is more than Supabase's own floor: these
+accounts can read every player's full name and birth year.
+
+#### Supabase configuration this depends on
+
+The reset email's link goes wherever **Authentication → URL Configuration** says,
+not wherever the page asks. `redirectTo` is only a request, and an address that
+is not allow-listed is ignored — which is why an earlier reset attempt landed on
+`localhost:3000`. Both of these have to be set:
+
+- **Site URL** — `https://tanner-buckets.github.io/nova-north/`
+- **Redirect URLs** — add `https://tanner-buckets.github.io/nova-north/admin/password.html`,
+  and `http://localhost:8000/admin/password.html` to test locally
+
+The built-in email sender is rate limited and meant for development. For four
+professors resetting a password once in a while it is enough; if links start
+failing to arrive, the fix is SMTP under **Authentication → Emails**, not a
+change here.
 
 ### Printable lists
 
