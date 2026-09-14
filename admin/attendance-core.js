@@ -202,7 +202,7 @@ function newPlayerForm(onPick) {
 // two differ in the ordinary case and the screen has to report the difference.
 export async function recordAttendance({
   attendees, known, attendedOn, attendActionId, playActionId,
-  createMissing, professor, actions, source, reason
+  createMissing, professor, actions, source, reason, skipPlayFor
 }) {
   const missing = attendees.filter((p) => !known.has(p.player_id));
   let created = [];
@@ -277,7 +277,7 @@ export async function recordAttendance({
     //
     // Manual entry passes no play award at all, so this is also what keeps the
     // two routes agreeing.
-    if (playActionId && p.played) {
+    if (playActionId && p.played && !(skipPlayFor && skipPlayFor.has(p.player_id))) {
       ledger.push({
         player_id: p.player_id, delta: pointsFor(actions, playActionId),
         earning_action_id: playActionId, created_by: professor.userId,
@@ -307,9 +307,39 @@ export async function recordAttendance({
     repeatCount: eligible.length - newlyPresent.size,
     ledgerCount: ledger.length,
     playAwarded: !!playActionId,
-    playedCount: playActionId ? eligible.filter((p) => p.played).length : 0,
-    attendOnlyCount: playActionId ? eligible.filter((p) => !p.played).length : eligible.length
+    playedCount: playActionId
+      ? eligible.filter((p) => p.played && !(skipPlayFor && skipPlayFor.has(p.player_id))).length
+      : 0,
+    attendOnlyCount: playActionId ? eligible.filter((p) => !p.played).length : eligible.length,
+    skippedPlayCount: playActionId && skipPlayFor
+      ? eligible.filter((p) => p.played && skipPlayFor.has(p.player_id)).length
+      : 0
   };
+}
+
+// Who has already been paid for this tournament.
+//
+// The attendance row and the attendance point are both protected by the unique
+// constraint on (player, day). The play point is not, and must not be: two
+// tournaments on one Sunday are two things played, so a second award on the same
+// day is usually correct. What is never correct is being paid twice for the same
+// tournament, which is exactly what uploading a file again would do.
+//
+// Matched on the reason already written, which names the tournament. It is the
+// only record of which tournament a point came from, since nothing links a
+// ledger row to a TDF.
+export async function alreadyPaidFor(reason, playerIds) {
+  if (!reason || !playerIds.length) return new Set();
+
+  const { data, error } = await supabase
+    .from('point_ledger').select('player_id')
+    .eq('reason', reason).in('player_id', playerIds);
+
+  // A failed check must not silently become "nobody has been paid". Better to
+  // let the caller decide than to quietly pay everyone twice.
+  if (error) throw Object.assign(error, { stage: 'duplicate-check' });
+
+  return new Set((data || []).map((r) => r.player_id));
 }
 
 // What a failure actually left behind.
@@ -329,6 +359,11 @@ export function describeFailure(err) {
       return `That did not go through: ${why}. No attendance and no points were `
            + 'recorded. Any player who was new has been created, which is '
            + 'harmless and will be reused when you try again.';
+    case 'duplicate-check':
+      return `That did not go through: ${why}. Nothing was recorded. This failed `
+           + 'while checking whether anyone had already been paid for this '
+           + 'tournament, and recording without that check could pay somebody '
+           + 'twice.';
     case 'points':
       return `Attendance was recorded, but the points were not: ${why}. Do not `
            + 'run the whole thing again, or the day will be counted twice. Award '
@@ -352,6 +387,10 @@ export function outcomeNodes(outcome, attendedOn, { fileNote = false } = {}) {
       text: `${outcome.playedCount} were in the file and earned the day plus the `
           + `point for playing. ${outcome.attendOnlyCount} added by hand earned `
           + 'the day only: the file is what says somebody played.' }) : null,
+
+    outcome.skippedPlayCount ? el('p', { className: 'muted-note',
+      text: `${outcome.skippedPlayCount} had already been paid for this tournament `
+          + 'and were not paid again. Their attendance still stands.' }) : null,
 
     outcome.repeatCount ? el('p', { className: 'muted-note',
       text: `${outcome.repeatCount} already had attendance for that day, so that `

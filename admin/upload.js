@@ -17,7 +17,7 @@ import { currentProfessor } from '../auth.js';
 import {
   ATTEND_LABEL, CASUAL_LABEL, PREMIER_LABEL,
   loadActions, actionField, status, playerPicker, recordAttendance, outcomeNodes,
-  describeFailure
+  describeFailure, alreadyPaidFor
 } from './attendance-core.js';
 
 const gate = document.querySelector('#gate');
@@ -28,6 +28,7 @@ let parsed = null;      // { eventName, attendedOn, players: [...] }
 let known = new Set();  // player_ids already in the players table
 let extras = [];        // attendees added by hand
 let actions = [];       // earning_actions rows
+let alreadyPaid = new Set();   // already have the play point for this tournament
 
 // --- Parsing -----------------------------------------------------------------
 
@@ -73,6 +74,10 @@ function parseTdf(text) {
 }
 
 // --- Helpers -----------------------------------------------------------------
+
+function playReason() {
+  return `Played in ${parsed.eventName}`;
+}
 
 function allAttendees() {
   const seen = new Set();
@@ -180,6 +185,7 @@ function recordCard() {
   });
 
   const createMissing = el('input', { type: 'checkbox', id: 'create-missing', checked: 'checked' });
+  const payAnyway = el('input', { type: 'checkbox', id: 'pay-anyway' });
   const result = el('div', { id: 'result' });
   const go = el('button', {
     type: 'submit', className: 'button', text: `Record ${attendees.length} attending`
@@ -201,6 +207,27 @@ function recordCard() {
           + 'attendance point only — the file is what says somebody played.' }),
     attendField,
     playField,
+
+    alreadyPaid.size ? el('div', { className: 'warn-block' }, [
+      el('p', {}, [
+        el('strong', { text: `${alreadyPaid.size} of these players ` }),
+        el('span', { text: 'already hold points for a tournament with this name.' })
+      ]),
+      el('p', { className: 'field-help',
+        text: 'By default they are not paid again, in case this file has been '
+            + 'uploaded before. Their attendance counts either way and everyone '
+            + 'else is unaffected.' }),
+      el('p', { className: 'field field-inline' }, [
+        payAnyway,
+        el('label', { for: 'pay-anyway', text: 'Pay them anyway: this is a different tournament' })
+      ]),
+      el('p', { className: 'field-help',
+        text: 'Tick this if they really did play in two tournaments. Playing twice '
+            + 'earns twice — only the day itself is counted once. The check goes '
+            + 'on the tournament’s name, which is all the ledger records, so two '
+            + 'flights exported under one name look identical to it.' })
+    ]) : null,
+
     unknown.length ? el('div', { className: 'warn-block' }, [
       el('p', {}, [
         el('strong', { text: `${unknown.length} attendee${unknown.length === 1 ? '' : 's'}` }),
@@ -231,6 +258,7 @@ function recordCard() {
       attendActionId: attendField.querySelector('select').value,
       playActionId: playField.querySelector('select').value,
       createMissing: createMissing.checked,
+      payAnyway: payAnyway.checked,
       resultNode: result,
       button: go
     });
@@ -260,6 +288,12 @@ function renderPicker() {
       }
       extras = [];
       await refreshKnown();
+
+      // Asked before anything is shown, so the warning is on screen while the
+      // professor is still deciding rather than in the receipt afterwards.
+      alreadyPaid = await alreadyPaidFor(
+        playReason(), parsed.players.map((p) => p.player_id));
+
       redraw();
     } catch (err) {
       console.error(err);
@@ -289,7 +323,7 @@ function redraw() {
 
 // --- Writing -----------------------------------------------------------------
 
-async function commit({ attendedOn, attendActionId, playActionId, createMissing, resultNode, button }) {
+async function commit({ attendedOn, attendActionId, playActionId, createMissing, payAnyway, resultNode, button }) {
   button.disabled = true;
   status(resultNode, 'Recording.');
 
@@ -304,7 +338,11 @@ async function commit({ attendedOn, attendActionId, playActionId, createMissing,
       professor,
       actions,
       source: 'tdf',
-      reason: `Played in ${parsed.eventName}`
+      reason: playReason(),
+      // Detection is worth having; refusing is not the professor's decision to
+      // lose. Playing in two tournaments earns two lots of points, and only the
+      // day itself is counted once.
+      skipPlayFor: payAnyway ? new Set() : alreadyPaid
     });
 
     resultNode.className = 'form-status is-good';

@@ -1778,3 +1778,18 @@ a.player-button:hover .player-label {
 .bar-sample .prof-bar {
   position: static;
 }
+
+/* A player the public cannot see, shown to a professor browsing the player page. */
+.tag-hidden {
+  background: var(--line);
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+.not-public {
+  margin: 0.4rem 0;
+  padding: 0.45rem 0.7rem;
+  background: var(--paper);
+  border-left: 4px solid var(--amber);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.9rem;
+}
