@@ -6,6 +6,17 @@ const input = document.querySelector('#player-id');
 const result = document.querySelector('#result');
 const listHost = document.querySelector('#visible-players');
 
+// Resolved once. The lookup and the browse list both need the answer, and asking
+// twice is two round trips for one fact.
+let professor = null;
+const professorReady = currentProfessor().then((p) => { professor = p; return p; });
+
+// Set once a professor is signed in, and read by the one submit handler rather
+// than by a second listener racing the first: two listeners on the same form
+// fire in registration order at the target, so a later one cannot pre-empt an
+// earlier one and the plain ID lookup would always win.
+let searchFilter = null;
+
 const NOT_FOUND =
   'No public record for that Player ID. If it is yours, ask a professor to turn '
   + 'on visibility — it is off by default, and always off for players under 18 '
@@ -86,6 +97,18 @@ function pastSeasons(summary) {
   ]);
 }
 
+// A professor looking somebody up is usually about to do one of three things.
+// Each link carries the player, so none of the three screens has to be told who
+// it is a second time.
+export function adminLinks(playerId) {
+  const id = encodeURIComponent(playerId);
+  return el('nav', { className: 'admin-links', 'aria-label': 'Professor actions' }, [
+    el('a', { href: `admin/points.html?id=${id}`, text: 'Prize points' }),
+    el('a', { href: `admin/trainer-card.html?id=${id}`, text: 'Trainer Card' }),
+    el('a', { href: `admin/consent.html?id=${id}`, text: 'Visibility and consent' })
+  ]);
+}
+
 export function summaryCard(summary) {
   const champions = summary.champion_seasons || [];
   const elite = summary.elite_four_wins || 0;
@@ -104,12 +127,12 @@ export function summaryCard(summary) {
     // Only ever present for a professor: a public caller receives nothing at all
     // for a player who is not visible, so this cannot appear to a player.
     summary.visible_publicly === false
-      ? el('p', { className: 'not-public' }, [
-          el('span', { text: 'Not on the public site. ' }),
-          el('a', { href: `admin/consent.html?id=${encodeURIComponent(summary.player_id)}`,
-                    text: 'Visibility and consent' })
-        ])
+      ? el('p', { className: 'not-public',
+                  text: 'Not on the public site. Nobody has recorded consent for '
+                      + 'this player, or it has lapsed.' })
       : null,
+
+    professor ? adminLinks(summary.player_id) : null,
 
     championStars(champions),
 
@@ -131,6 +154,10 @@ async function lookUp(playerId) {
   if (!id) return;
 
   if (!badgeOrder.size) await loadBadgeOrder();
+
+  // Settled before the card is built, so the professor links are there on the
+  // first render rather than appearing a moment later.
+  await professorReady;
 
   result.replaceChildren(el('p', { className: 'notice', text: 'Looking that up.' }));
 
@@ -164,6 +191,24 @@ export async function loadBadgeOrder() {
 if (form) {
   form.addEventListener('submit', (e) => {
     e.preventDefault();
+    const typed = input.value.trim();
+
+    // A professor typing a name is the obvious thing to try, so it has to work.
+    // Digits are always an ID lookup; a name that matches one player opens them,
+    // and a name that matches several leaves the list filtered so they can pick.
+    if (searchFilter && typed && !/^[0-9]+$/.test(typed)) {
+      const shown = searchFilter(typed);
+      if (shown.length === 1) {
+        lookUp(shown[0].player_id);
+        return;
+      }
+      result.replaceChildren(el('p', { className: 'notice',
+        text: shown.length
+          ? `${shown.length} players match. Pick one from the list.`
+          : 'Nobody matches that name or ID.' }));
+      return;
+    }
+
     lookUp(input.value);
   });
 
@@ -212,15 +257,15 @@ async function professorList() {
     recorded: p.show_player_id === true
   }));
 
-  const search = el('input', {
-    id: 'name-search', type: 'search', placeholder: 'Start typing a name or ID',
-    autocomplete: 'off'
-  });
   const listEl = el('ul', { className: 'player-list' });
   const count = el('p', { className: 'muted-note' });
 
+  // No search box of its own. The page already has one field asking for a Player
+  // ID, and two boxes doing the same job a few centimetres apart is the kind of
+  // thing that makes a professor hesitate at the desk. The lookup field becomes
+  // the search field instead.
   function draw(filter) {
-    const q = filter.trim().toLowerCase();
+    const q = String(filter || '').trim().toLowerCase();
     const shown = q
       ? rows.filter((r) => r.name.toLowerCase().includes(q) || r.player_id.includes(q))
       : rows;
@@ -234,19 +279,27 @@ async function professorList() {
       r.name,
       r.recorded ? null : el('span', { className: 'tag tag-hidden', text: 'not public' })
     )));
+
+    return shown;
   }
 
-  search.addEventListener('input', () => draw(search.value));
   draw('');
+  listHost.replaceChildren(count, listEl);
 
-  listHost.replaceChildren(
-    el('p', { className: 'field' }, [
-      el('label', { for: 'name-search', text: 'Search by name or Player ID' }),
-      search
-    ]),
-    count,
-    listEl
-  );
+  return draw;
+}
+
+function wireSearch(filter) {
+  searchFilter = filter;
+
+  const label = document.querySelector('label[for="player-id"]');
+  if (label) label.textContent = 'Player ID or name';
+  input.placeholder = 'e.g. 1234567 or Maya';
+  input.removeAttribute('inputmode');
+  input.removeAttribute('required');
+  input.type = 'search';
+
+  input.addEventListener('input', () => filter(input.value));
 }
 
 async function publicList() {
@@ -274,8 +327,12 @@ async function publicList() {
 (async () => {
   if (!listHost) return;
   try {
-    const professor = await currentProfessor();
-    await (professor ? professorList() : publicList());
+    const signedIn = await professorReady;
+    if (signedIn) {
+      wireSearch(await professorList());
+    } else {
+      await publicList();
+    }
 
     listHost.addEventListener('click', (e) => {
       const button = e.target.closest('.player-button');

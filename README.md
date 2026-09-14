@@ -684,7 +684,21 @@ sees. It was never meant to decide what a professor can look up.**
 For an anonymous caller nothing changed: the gate still applies, the label still
 comes from `display_label()`, and `public_players` is untouched. A professor sees
 the real full name and a `visible_publicly` flag, so the card can say plainly
-that this player is not on the public site and link to the consent screen.
+that this player is not on the public site.
+
+The card also carries three links for a signed-in professor — **prize points,
+Trainer Card, visibility and consent** — each already pointing at that player. A
+professor looking somebody up is usually about to do one of those three, and none
+of the screens should have to be told who it is a second time.
+
+**One search field, not two.** The page already asks for a Player ID, so a second
+box doing the same job a few centimetres away is the kind of thing that makes
+somebody hesitate at the desk. Signed in, that field becomes "Player ID or name":
+typing filters the list live, digits still look up an ID, a name matching one
+player opens them, and a name matching several leaves the list filtered to pick
+from. It is read by the single existing submit handler rather than by a second
+listener — two listeners on one form fire in registration order at the target, so
+a later one cannot pre-empt an earlier one.
 
 One consequence worth knowing: the visibility gate used to double as an existence
 check, since an unknown ID is never visible. A professor passes that gate, so an
