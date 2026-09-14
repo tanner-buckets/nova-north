@@ -598,6 +598,41 @@ Two rules the database does not hold, which the interface therefore does:
   `name_visible()` is false whenever `id_visible()` is — but recording a switch
   that silently does nothing misleads the professor, so the form says so.
 
+### Passwords
+
+`admin/password.html`. Supabase Auth could always do this; nothing on the site
+used it, so a professor who forgot a password had no route back in and the
+sign-in screen told them to ask somebody who had no way to help.
+
+One page, three states, because they are the same conversation from different
+starting points:
+
+- arriving from a reset link, with a token to exchange
+- already signed in, changing a password that is known
+- neither, asking for a link
+
+A reset link is answered **identically whether or not the address has an
+account**. Otherwise the form becomes a way to find out who the professors are.
+
+Eight characters minimum, which is more than Supabase's own floor: these
+accounts can read every player's full name and birth year.
+
+#### Supabase configuration this depends on
+
+The reset email's link goes wherever **Authentication → URL Configuration** says,
+not wherever the page asks. `redirectTo` is only a request, and an address that
+is not allow-listed is ignored — which is why an earlier reset attempt landed on
+`localhost:3000`. Both of these have to be set:
+
+- **Site URL** — `https://tanner-buckets.github.io/nova-north/`
+- **Redirect URLs** — add `https://tanner-buckets.github.io/nova-north/admin/password.html`,
+  and `http://localhost:8000/admin/password.html` to test locally
+
+The built-in email sender is rate limited and meant for development. For four
+professors resetting a password once in a while it is enough; if links start
+failing to arrive, the fix is SMTP under **Authentication → Emails**, not a
+change here.
+
 ### Printable lists
 
 `admin/print.html`. Loyalty tiers to hand to the store, and pre-registration to

@@ -21,7 +21,9 @@ export async function currentProfessor() {
 
 export async function signIn(email, password) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { ok: false, message: 'That email and password did not match. Try again, or ask another professor to reset it.' };
+  // The old wording sent people to another professor, who had no way to help.
+  // The reset link is the actual route back in.
+  if (error) return { ok: false, message: 'That email and password did not match. Try again, or use the reset link below.' };
 
   const professor = await currentProfessor();
   if (!professor) {

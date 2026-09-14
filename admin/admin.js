@@ -19,7 +19,10 @@ function showSignIn(message) {
       el('input', { id: 'password', name: 'password', type: 'password', required: 'required', autocomplete: 'current-password' })
     ]),
     el('p', {}, [el('button', { type: 'submit', className: 'button', text: 'Sign in' })]),
-    status
+    status,
+    el('p', { className: 'muted-note' }, [
+      el('a', { href: 'password.html', text: 'Forgotten your password?' })
+    ])
   ]);
 
   form.addEventListener('submit', async (e) => {
@@ -86,6 +89,8 @@ async function render() {
   whoami.replaceChildren(
     el('p', { className: 'muted-note' }, [
       el('span', { text: `Signed in as ${professor.email}. ` }),
+      el('a', { href: 'password.html', text: 'Change password' }),
+      el('span', { text: ' · ' }),
       el('button', { type: 'button', className: 'link-button', id: 'signout', text: 'Sign out' })
     ])
   );
