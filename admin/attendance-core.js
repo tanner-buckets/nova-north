@@ -208,19 +208,31 @@ export async function recordAttendance({
   let created = [];
 
   if (missing.length && createMissing) {
-    // Only players being created. An import never overwrites an existing birth
-    // year: division drives registration caps, and a professor who corrected one
-    // by hand outranks a file.
-    const { error } = await supabase.from('players').insert(missing.map((p) => ({
-      player_id: p.player_id,
-      first_name: p.first_name || 'Unknown',
-      last_name: p.last_name || 'Unknown',
-      birth_year: p.birth_year ?? null
-      // Every consent column is deliberately omitted, and the grant would refuse
-      // them anyway.
-    })));
-    if (error) throw error;
-    created = missing;
+    // DO NOTHING on conflict rather than a plain insert. Whether somebody
+    // already exists was decided when the screen loaded, and it can stop being
+    // true before the button is pressed: another professor adds them, or the
+    // screen simply had them wrong. A player who turns out to exist is not an
+    // error worth losing the whole upload over -- they are already a player,
+    // which is all this step wanted.
+    //
+    // It also refuses to overwrite. An existing name and birth year stay as they
+    // are: a professor who corrected one by hand outranks a file.
+    const { data: inserted, error } = await supabase.from('players')
+      .upsert(missing.map((p) => ({
+        player_id: p.player_id,
+        first_name: p.first_name || 'Unknown',
+        last_name: p.last_name || 'Unknown',
+        birth_year: p.birth_year ?? null
+        // Every consent column is deliberately omitted, and the grant would
+        // refuse them anyway.
+      })), { onConflict: 'player_id', ignoreDuplicates: true })
+      .select('player_id');
+    if (error) { error.stage = 'players'; throw error; }
+
+    // Only the rows actually created, so the "ask them for consent" list does
+    // not name players who were already on the books.
+    const newIds = new Set((inserted || []).map((r) => r.player_id));
+    created = missing.filter((p) => newIds.has(p.player_id));
     missing.forEach((p) => known.add(p.player_id));
   }
 
@@ -241,7 +253,7 @@ export async function recordAttendance({
       created_by: professor.userId
     })), { onConflict: 'player_id,attended_on', ignoreDuplicates: true })
     .select('player_id');
-  if (attErr) throw attErr;
+  if (attErr) { attErr.stage = 'attendance'; throw attErr; }
 
   // Attendance points go only to those whose attendance row is new. Play points
   // go to everyone who played, because two events in a day are two things played
@@ -281,7 +293,7 @@ export async function recordAttendance({
   }
 
   const { error: ledErr } = await supabase.from('point_ledger').insert(ledger);
-  if (ledErr) throw ledErr;
+  if (ledErr) { ledErr.stage = 'points'; throw ledErr; }
 
   return {
     created,
@@ -291,6 +303,34 @@ export async function recordAttendance({
     ledgerCount: ledger.length,
     playAwarded: !!playActionId
   };
+}
+
+// What a failure actually left behind.
+//
+// The three writes happen in order, so where it stopped decides what exists. The
+// old message sent a professor to check the ledger whatever went wrong, which
+// was wrong advice in every case but the last one and alarming in all of them.
+export function describeFailure(err) {
+  const why = err && err.message ? err.message : 'unknown error';
+
+  switch (err && err.stage) {
+    case 'players':
+      return `That did not go through: ${why}. This failed while adding players, `
+           + 'before anything else ran, so no attendance and no points were '
+           + 'recorded. Nothing needs undoing.';
+    case 'attendance':
+      return `That did not go through: ${why}. No attendance and no points were `
+           + 'recorded. Any player who was new has been created, which is '
+           + 'harmless and will be reused when you try again.';
+    case 'points':
+      return `Attendance was recorded, but the points were not: ${why}. Do not `
+           + 'run the whole thing again, or the day will be counted twice. Award '
+           + 'the missing points on the points screen, or reverse the attendance '
+           + 'and start over.';
+    default:
+      return `That did not go through: ${why}. Nothing is certain to have been `
+           + 'recorded, so check the player before trying again.';
+  }
 }
 
 // The same summary wording for both routes, so a professor reads one thing
