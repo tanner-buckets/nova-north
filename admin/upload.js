@@ -16,7 +16,8 @@ import { supabase, el } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import {
   ATTEND_LABEL, CASUAL_LABEL, PREMIER_LABEL,
-  loadActions, actionField, status, playerPicker, recordAttendance, outcomeNodes
+  loadActions, actionField, status, playerPicker, recordAttendance, outcomeNodes,
+  describeFailure
 } from './attendance-core.js';
 
 const gate = document.querySelector('#gate');
@@ -110,7 +111,15 @@ function add(player, note) {
     return;
   }
   extras.push({ ...player, added: true });
+
+  // Someone picked from the search already exists, so they must go into `known`
+  // or the write below will try to create them again and collide with their own
+  // row. Only a player entered as new is left out, which is what asks for them
+  // to be created.
+  if (!player.isNew) known.add(player.player_id);
+
   redraw();
+  status(note, `Added ${player.first_name}.`, 'good');
 }
 
 // Three steps, in the order a professor works: read the file, remember anyone
@@ -302,9 +311,7 @@ async function commit({ attendedOn, attendActionId, playActionId, createMissing,
   } catch (err) {
     console.error(err);
     button.disabled = false;
-    status(resultNode, `That did not go through: ${err.message || 'unknown error'}. `
-        + 'Attendance and points are written separately, so check the ledger for '
-        + 'partial entries before you try again.', 'error');
+    status(resultNode, describeFailure(err), 'error');
   }
 }
 

@@ -14,7 +14,7 @@ import { el } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import {
   ATTEND_LABEL, loadActions, actionField, status, playerPicker,
-  recordAttendance, outcomeNodes
+  recordAttendance, outcomeNodes, describeFailure
 } from './attendance-core.js';
 
 const gate = document.querySelector('#gate');
@@ -186,9 +186,7 @@ async function commit({ attendedOn, attendActionId, resultNode, button }) {
   } catch (err) {
     console.error(err);
     button.disabled = false;
-    status(resultNode, `That did not go through: ${err.message || 'unknown error'}. `
-        + 'Attendance and points are written separately, so check the ledger for '
-        + 'partial entries before you try again.', 'error');
+    status(resultNode, describeFailure(err), 'error');
   }
 }
 
