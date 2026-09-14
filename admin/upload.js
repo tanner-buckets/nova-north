@@ -17,7 +17,7 @@ import { currentProfessor } from '../auth.js';
 import {
   ATTEND_LABEL, CASUAL_LABEL, PREMIER_LABEL,
   loadActions, actionField, status, playerPicker, recordAttendance, outcomeNodes,
-  describeFailure
+  describeFailure, alreadyPaidFor
 } from './attendance-core.js';
 
 const gate = document.querySelector('#gate');
@@ -28,6 +28,7 @@ let parsed = null;      // { eventName, attendedOn, players: [...] }
 let known = new Set();  // player_ids already in the players table
 let extras = [];        // attendees added by hand
 let actions = [];       // earning_actions rows
+let alreadyPaid = new Set();   // already have the play point for this tournament
 
 // --- Parsing -----------------------------------------------------------------
 
@@ -73,6 +74,10 @@ function parseTdf(text) {
 }
 
 // --- Helpers -----------------------------------------------------------------
+
+function playReason() {
+  return `Played in ${parsed.eventName}`;
+}
 
 function allAttendees() {
   const seen = new Set();
@@ -201,6 +206,18 @@ function recordCard() {
           + 'attendance point only — the file is what says somebody played.' }),
     attendField,
     playField,
+
+    alreadyPaid.size ? el('div', { className: 'warn-block' }, [
+      el('p', {}, [
+        el('strong', { text: `${alreadyPaid.size} of these players ` }),
+        el('span', { text: 'have already been paid for this tournament.' })
+      ]),
+      el('p', { className: 'field-help',
+        text: 'This file, or one naming the same tournament, has been recorded '
+            + 'before. They will not be paid twice: their attendance still counts '
+            + 'and everyone else is unaffected, so it is safe to carry on.' })
+    ]) : null,
+
     unknown.length ? el('div', { className: 'warn-block' }, [
       el('p', {}, [
         el('strong', { text: `${unknown.length} attendee${unknown.length === 1 ? '' : 's'}` }),
@@ -260,6 +277,12 @@ function renderPicker() {
       }
       extras = [];
       await refreshKnown();
+
+      // Asked before anything is shown, so the warning is on screen while the
+      // professor is still deciding rather than in the receipt afterwards.
+      alreadyPaid = await alreadyPaidFor(
+        playReason(), parsed.players.map((p) => p.player_id));
+
       redraw();
     } catch (err) {
       console.error(err);
@@ -304,7 +327,8 @@ async function commit({ attendedOn, attendActionId, playActionId, createMissing,
       professor,
       actions,
       source: 'tdf',
-      reason: `Played in ${parsed.eventName}`
+      reason: playReason(),
+      skipPlayFor: alreadyPaid
     });
 
     resultNode.className = 'form-status is-good';

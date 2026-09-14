@@ -351,6 +351,19 @@ errors:
   constraint on (player, date) is the one-loyalty-week-per-day rule working.
   Those players still receive the play points, because two events are two things
   played.
+- **The same tournament is never paid twice.** That last rule makes a plain
+  re-upload dangerous: the attendance row and the attendance point are protected
+  by the constraint, but the play point is deliberately not, so uploading a file
+  again would pay it a second time. Before recording, the screen asks which of
+  these players already hold a ledger entry naming this tournament, warns if any
+  do, and leaves them out of the play award. Their attendance still stands and
+  everyone else is unaffected.
+
+  Matched on the reason text, which names the tournament, because nothing links a
+  ledger row to a TDF — there is no tournament identifier stored anywhere. Two
+  genuinely different events would have to share a name to be confused, and this
+  league's names carry their date. If that check itself fails, nothing is
+  recorded: recording without it could pay somebody twice.
 - **A player in the file who is not in `players` yet is created on the spot**,
   with the birth year from the file. One whose date of birth is missing or
   unreadable gets a null year and counts as a minor until a professor records
