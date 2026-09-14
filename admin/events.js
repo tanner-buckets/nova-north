@@ -57,6 +57,27 @@ function offsetFor(date) {
   return asUtc - date.getTime();
 }
 
+// A datetime-local needs a whole value or it shows nothing, so a default time
+// means picking a default day too. League is Sunday at 2:00, so that is the one
+// worth prefilling: the common event needs no typing, and anything else is one
+// edit away.
+function nextLeagueSunday() {
+  const now = new Date();
+  const parts = Object.fromEntries(PARTS.formatToParts(now)
+    .filter((x) => x.type !== 'literal').map((x) => [x.type, x.value]));
+
+  // Built as a plain calendar date in league time, so a professor working late
+  // on Saturday night from another zone does not get last Sunday.
+  const d = new Date(Date.UTC(+parts.year, +parts.month - 1, +parts.day));
+  const daysAhead = (7 - d.getUTCDay()) % 7;
+  d.setUTCDate(d.getUTCDate() + daysAhead);
+
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}T14:00`;
+}
+
 function fromLocalInput(value) {
   if (!value) return null;
   const [d, t] = value.split('T');
@@ -107,10 +128,10 @@ function capacityFields(rows) {
   });
 
   const help = el('p', { className: 'field-help',
-    text: 'Leave a division blank for no limit of its own. Everyone is the '
-        + 'fallback, not a total: registration uses it when a player’s own '
-        + 'division has no number of its own. All four blank means the event is '
-        + 'uncapped.' });
+    text: 'Everyone is the total for the whole event, and no more than that many '
+        + 'can register whatever their age. A division number limits that '
+        + 'division inside the total. Set either, both, or neither: a place needs '
+        + 'room in both, and all four blank means the event is uncapped.' });
 
   // Reads the fields and refuses anything that is not a whole count, so a
   // half-typed cap cannot be written as a limit somebody is then held to.
@@ -196,7 +217,10 @@ export function eventForm(event, { onSaved }) {
     el('option', { value: v, text: t })));
   type.value = event.event_type || 'casual';
 
-  const starts = el('input', { type: 'datetime-local', value: toLocalInput(event.starts_at) });
+  const starts = el('input', {
+    type: 'datetime-local',
+    value: isNew ? nextLeagueSunday() : toLocalInput(event.starts_at)
+  });
   const fee = el('input', { value: event.entry_fee ?? '' });
   const description = el('input', { value: event.description ?? '' });
 
@@ -206,7 +230,10 @@ export function eventForm(event, { onSaved }) {
   const open = el('input', { type: 'checkbox', id: `open-${uid}` });
   open.checked = !!event.registration_open;
 
-  const linked = el('input', { value: event.linked_group_id ?? '' });
+  const linked = el('input', {
+    value: event.linked_group_id ?? '',
+    inputmode: 'numeric', maxlength: '4', placeholder: '1234'
+  });
 
   const note = el('p', { className: 'form-status', role: 'status' });
   const go = el('button', { type: 'submit', className: 'button',
@@ -233,7 +260,12 @@ export function eventForm(event, { onSaved }) {
     el('p', { className: 'field' }, [el('label', { text: 'Name' }, [name])]),
     el('p', { className: 'field' }, [el('label', { text: 'Kind' }, [type])]),
     el('p', { className: 'field' }, [el('label', { text: 'Starts' }, [starts])]),
-    el('p', { className: 'field-help', text: 'League time. Shown on the public schedule.' }),
+    el('p', { className: 'field-help',
+      text: isNew
+        ? 'League time, shown on the public schedule. Prefilled with the next '
+          + 'Sunday at 2:00, which is when league meets; change it for anything '
+          + 'else.'
+        : 'League time. Shown on the public schedule.' }),
 
     el('p', { className: 'field' }, [el('label', { text: 'Entry fee' }, [fee])]),
     el('p', { className: 'field-help',
@@ -263,13 +295,15 @@ export function eventForm(event, { onSaved }) {
     el('details', { className: 'disclosure' }, [
       el('summary', { text: 'Part of a group of flights' }),
       el('div', { className: 'disclosure-body' }, [
-        el('p', { className: 'field' }, [el('label', { text: 'Linked group' }, [linked])]),
+        el('p', { className: 'field' }, [el('label', { text: 'Flight PIN' }, [linked])]),
         el('p', { className: 'field-help',
-          text: 'Flights of the same event share one value, any text you like as '
-              + 'long as it is a UUID. A player may hold one confirmed place '
-              + 'across the group and wait on the others, and a drop skips anyone '
-              + 'who already has a place elsewhere in it. Leave blank for a '
-              + 'standalone event.' })
+          text: 'Four digits. Every flight of the same event gets the same PIN, '
+              + 'and it is yours to choose: any four digits not already in use by '
+              + 'a different event. A player may hold one confirmed place across '
+              + 'the group and wait on the others, and a drop skips anyone who '
+              + 'already has a place elsewhere in it. Leave it blank for a '
+              + 'standalone event.' }),
+        el('p', { className: 'field-help', id: `pins-${uid}` })
       ])
     ]),
 
@@ -281,11 +315,30 @@ export function eventForm(event, { onSaved }) {
 
   syncCaps();
 
+  // Which PINs are taken, and by what. A professor told to pick an unused PIN
+  // needs to be able to see the used ones without leaving the form.
+  const pinsNote = form.querySelector(`#pins-${uid}`);
+  if (pinsNote) {
+    const used = [...new Set(events
+      .filter((e) => e.linked_group_id && e.id !== event.id)
+      .map((e) => e.linked_group_id))].sort();
+    pinsNote.textContent = used.length
+      ? `Already in use: ${used.join(', ')}. Reuse one only to join that group.`
+      : 'No flight PINs are in use yet.';
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     if (!name.value.trim()) { status(note, 'An event needs a name.', 'error'); return; }
     if (!starts.value) { status(note, 'An event needs a start time.', 'error'); return; }
+
+    const pin = linked.value.trim();
+    if (pin && !/^[0-9]{4}$/.test(pin)) {
+      status(note, 'A flight PIN is exactly four digits, or blank for a standalone '
+        + 'event.', 'error');
+      return;
+    }
 
     go.disabled = true;
     status(note, isNew ? 'Creating.' : 'Saving.');
@@ -305,7 +358,7 @@ export function eventForm(event, { onSaved }) {
         description: description.value.trim() || null,
         is_premier: premier.checked,
         registration_open: open.checked,
-        linked_group_id: linked.value.trim() || null
+        linked_group_id: pin || null
       };
 
       if (isNew) {
@@ -355,7 +408,12 @@ async function eventRow(event) {
       event.registration_open
         ? el('span', { className: 'tag tag-division', text: 'registration' })
         : null,
-      event.is_premier ? el('span', { className: 'tag tag-new', text: 'premier' }) : null
+      event.is_premier ? el('span', { className: 'tag tag-new', text: 'premier' }) : null,
+      // Professor-facing only. The PIN groups flights for the desk and means
+      // nothing to a player, so it is not on the public schedule.
+      event.linked_group_id
+        ? el('span', { className: 'tag tag-flight', text: `flight ${event.linked_group_id}` })
+        : null
     ]),
     body
   ]);

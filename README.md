@@ -463,11 +463,21 @@ one window at a time would be blocked halfway — but it is named in the result.
 `admin/events.html` creates and edits events, sets what they cost, and decides
 which take pre-registration. Everything on it reaches the public schedule.
 
-Capacity is per division. **`all` is a fallback, not a total**: registration uses
-it only when a player's own division has no row of its own. An event with no
-capacity rows is uncapped, and clearing a division on screen deletes its row
-rather than leaving an old number quietly capping an event a professor believes
-is now open.
+Capacity is per division plus an optional event total. **Everyone is a ceiling on
+the whole event**, applied on top of any division limit: a place needs room in
+the division *and* room in the event. Set either, both, or neither; neither is
+uncapped. Clearing a division on screen deletes its row rather than leaving an
+old number quietly capping an event a professor believes is now open.
+
+Flights of one event share a **four digit PIN**, chosen by a professor. It is
+typed at a desk, which a UUID is not. The form lists the PINs already in use so
+"pick one not in use" is answerable, and the check constraint refuses anything
+that is not exactly four digits — a typo that quietly makes a group of one is
+worse than a refusal. The PIN appears on the professor event list and never on
+the public schedule: it groups flights for the desk and means nothing to a
+player.
+
+New events prefill to the next Sunday at 2:00, which is when league meets.
 
 Times are league time, not the browser's. A `datetime-local` input carries no
 zone, so the value is composed and parsed against `America/New_York` explicitly,
