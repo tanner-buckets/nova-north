@@ -309,9 +309,21 @@ boundary. The admin HTML is a static file anyone can fetch, so hiding a button
 protects nothing — row level security refuses every professor query without a
 real session, and that is what actually holds.
 
-Once signed in, a bar appears at the foot of the public pages. Its links are
-contextual: the way back to the tools is everywhere, and the upload shortcut only
-on the home page, where a professor lands after an event.
+**The way in is a "Professor sign in" link in the footer of every public page.**
+Without it the site was a closed loop: the bar below only appears once you are
+signed in, and nothing pointed at the sign-in page, so the only route was knowing
+the URL by heart. It is quiet, because a player has no use for it — quiet is the
+whole of the intent. It is not hidden and not a secret: the admin pages are
+static files anyone can fetch, an unlinked page is no safer than a linked one,
+and what protects the data is row level security.
+
+Once signed in, that link is replaced by a bar at the foot of the public pages.
+Its links are contextual: the way back to the tools is everywhere, and the upload
+shortcut only on the home page, where a professor lands after an event.
+
+Building the bar is separate from deciding to show it, so it can be rendered and
+looked at without a session. A thing only visible after signing in is a thing
+nobody checks.
 
 ### TDF upload
 

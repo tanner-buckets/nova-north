@@ -44,13 +44,13 @@ export async function signOut() {
 // shortcut only appears where it belongs. Upload is on the home page, because
 // that is where a professor lands after an event, and inside the tools. Putting
 // it on the prize wall would be a button nobody is looking for there.
-export async function mountProfessorBar({ prefix = '', tdf = false } = {}) {
-  const professor = await currentProfessor();
-  if (!professor) return;
-
+// Building the bar is separate from deciding to show it, so it can be rendered
+// and looked at without a session. A thing only visible after signing in is a
+// thing nobody checks.
+export function professorBar({ email, prefix = '', tdf = false }) {
   const bar = el('div', { className: 'prof-bar', role: 'region', 'aria-label': 'Professor tools' }, [
     el('div', { className: 'prof-bar-inner' }, [
-      el('span', { className: 'prof-who', text: professor.email }),
+      el('span', { className: 'prof-who', text: email }),
       el('nav', { className: 'prof-links', 'aria-label': 'Professor tools' }, [
         el('a', { href: `${prefix}admin/index.html`, text: 'Professor tools' }),
         tdf
@@ -66,6 +66,40 @@ export async function mountProfessorBar({ prefix = '', tdf = false } = {}) {
     location.reload();
   });
 
-  document.body.append(bar);
+  return bar;
+}
+
+export async function mountProfessorBar({ prefix = '', tdf = false } = {}) {
+  const professor = await currentProfessor();
+  if (!professor) {
+    mountSignInLink(prefix);
+    return;
+  }
+
+  document.body.append(professorBar({ email: professor.email, prefix, tdf }));
   document.body.classList.add('has-prof-bar');
+}
+
+// The way in, for a professor who is not signed in yet.
+//
+// Without this the site is a closed loop: the bar above only appears once you
+// are signed in, and nothing anywhere pointed at the sign-in page, so the only
+// route was knowing the URL by heart.
+//
+// It goes in the footer and stays quiet, because a player has no use for it.
+// Quiet is the whole of the intent -- it is not hidden and it is not a secret.
+// The admin pages are static files anyone can fetch, and an unlinked page is no
+// safer than a linked one; what protects the data is row level security, which
+// refuses every professor query without a real session.
+function mountSignInLink(prefix) {
+  const footer = document.querySelector('.site-footer');
+  if (!footer || footer.querySelector('.prof-signin-link')) return;
+
+  footer.append(el('p', { className: 'prof-signin' }, [
+    el('a', {
+      className: 'prof-signin-link',
+      href: `${prefix}admin/index.html`,
+      text: 'Professor sign in'
+    })
+  ]));
 }
