@@ -1793,3 +1793,16 @@ a.player-button:hover .player-label {
   border-radius: 0 6px 6px 0;
   font-size: 0.9rem;
 }
+
+/* The three screens a professor usually wants next, carrying the player with
+   them. Only rendered when signed in. */
+.admin-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 0.5rem 0 0.75rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
