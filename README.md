@@ -357,8 +357,12 @@ errors:
   one. Either way they stay hidden — appearing in a tournament file is not
   consent, and nothing in this path touches a visibility flag.
 
-Anyone who played but is missing from the file is added by hand, by Player ID or
-by searching for the ID by name.
+Anyone who turned up but is missing from the file is added by hand, by Player ID
+or by searching for the ID by name. **They earn the day and the attendance point,
+not the play point.** A tournament file is the claim that somebody played; being
+remembered at the desk is not, and that step exists for people who came along
+without entering. Somebody who did play but is missing from the file is the rare
+case, and the points screen is where that one point goes.
 
 Attendance and points are two statements, not one transaction. A failure between
 them leaves attendance written and points not, which the error message says
