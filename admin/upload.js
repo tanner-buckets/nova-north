@@ -63,7 +63,9 @@ function parseTdf(text) {
       player_id: (p.getAttribute('userid') || '').trim(),
       first_name: p.querySelector('firstname')?.textContent?.trim() || '',
       last_name: p.querySelector('lastname')?.textContent?.trim() || '',
-      birth_year: birthYear(p.querySelector('birthdate')?.textContent)
+      birth_year: birthYear(p.querySelector('birthdate')?.textContent),
+      // In the file means they played. Anyone added by hand later is not.
+      played: true
     }))
     .filter((p) => p.player_id);
 
@@ -110,6 +112,8 @@ function add(player, note) {
     status(note, `${player.first_name} is already on the list.`);
     return;
   }
+  // No `played` flag: someone remembered at the desk turned up, which is not the
+  // same as having been in the tournament.
   extras.push({ ...player, added: true });
 
   // Someone picked from the search already exists, so they must go into `known`
@@ -192,8 +196,9 @@ function recordCard() {
       premier, el('label', { for: 'premier', text: 'This was a premier event' })
     ]),
     el('p', { className: 'field-help',
-      text: 'Premier play is worth an extra point. Everyone gets both the '
-          + 'attendance award and the play award.' }),
+      text: 'Premier play is worth an extra point. The play award goes to the '
+          + 'players in the file. Anyone added by hand earns the day and the '
+          + 'attendance point only — the file is what says somebody played.' }),
     attendField,
     playField,
     unknown.length ? el('div', { className: 'warn-block' }, [

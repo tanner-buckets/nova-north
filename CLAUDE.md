@@ -207,6 +207,9 @@ is applied to the production database.** There is no confirmation step.
   collapsed disclosure is not a prompt: anyone who turned up without entering the
   tournament earns the same loyalty week, and the upload is the only moment they
   are still standing there to be remembered.
+- **Only players the file lists earn the play award.** Someone added by hand
+  earns the loyalty week and the attendance point and nothing more. The file is
+  the claim that a tournament was played; a name typed at the desk is not.
 
 ---
 

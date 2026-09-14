@@ -269,10 +269,15 @@ export async function recordAttendance({
       });
     }
 
-    // Optional. Manual entry pays for turning up and nothing else, because
-    // nobody is claiming from it that a tournament was played. A file is that
-    // claim, so an upload adds the play award as well.
-    if (playActionId) {
+    // The play award goes only to players the file lists. A tournament file is
+    // the claim that somebody played; being remembered at the desk is not, and
+    // the "was anyone else here?" step exists for people who turned up without
+    // entering. They earn the day -- a loyalty week and the attendance point --
+    // and nothing for a tournament they were not in.
+    //
+    // Manual entry passes no play award at all, so this is also what keeps the
+    // two routes agreeing.
+    if (playActionId && p.played) {
       ledger.push({
         player_id: p.player_id, delta: pointsFor(actions, playActionId),
         earning_action_id: playActionId, created_by: professor.userId,
@@ -301,7 +306,9 @@ export async function recordAttendance({
     newCount: newlyPresent.size,
     repeatCount: eligible.length - newlyPresent.size,
     ledgerCount: ledger.length,
-    playAwarded: !!playActionId
+    playAwarded: !!playActionId,
+    playedCount: playActionId ? eligible.filter((p) => p.played).length : 0,
+    attendOnlyCount: playActionId ? eligible.filter((p) => !p.played).length : eligible.length
   };
 }
 
@@ -340,6 +347,11 @@ export function outcomeNodes(outcome, attendedOn, { fileNote = false } = {}) {
     el('p', { text: `Recorded. ${outcome.newCount} attendance row`
       + `${outcome.newCount === 1 ? '' : 's'} for ${attendedOn}, and `
       + `${outcome.ledgerCount} point entries across ${outcome.eligibleCount} players.` }),
+
+    (outcome.playAwarded && outcome.attendOnlyCount) ? el('p', { className: 'muted-note',
+      text: `${outcome.playedCount} were in the file and earned the day plus the `
+          + `point for playing. ${outcome.attendOnlyCount} added by hand earned `
+          + 'the day only: the file is what says somebody played.' }) : null,
 
     outcome.repeatCount ? el('p', { className: 'muted-note',
       text: `${outcome.repeatCount} already had attendance for that day, so that `
