@@ -1,4 +1,5 @@
 import { supabase, el, problem } from './supabase-client.js';
+import { currentProfessor } from './auth.js';
 
 const form = document.querySelector('#lookup-form');
 const input = document.querySelector('#player-id');
@@ -99,6 +100,17 @@ export function summaryCard(summary) {
 
   return el('section', { className: 'card summary', 'aria-label': 'Player summary' }, [
     el('h2', { className: 'summary-name', text: summary.display_label }),
+
+    // Only ever present for a professor: a public caller receives nothing at all
+    // for a player who is not visible, so this cannot appear to a player.
+    summary.visible_publicly === false
+      ? el('p', { className: 'not-public' }, [
+          el('span', { text: 'Not on the public site. ' }),
+          el('a', { href: `admin/consent.html?id=${encodeURIComponent(summary.player_id)}`,
+                    text: 'Visibility and consent' })
+        ])
+      : null,
+
     championStars(champions),
 
     el('div', { className: 'stat-grid' }, [
@@ -163,38 +175,107 @@ if (form) {
   }
 }
 
-// The browse list. Only players whose visibility is in force appear here at all
-// -- non-consented players are absent rather than anonymised, because this is a
-// browse list rather than a set that has to be complete.
+// The browse list, in two versions.
+//
+// For the public it is consent-gated: non-consented players are absent rather
+// than anonymised, because this is a browse list rather than a set that has to
+// be complete.
+//
+// For a signed-in professor it is everybody, with a name search. Consent decides
+// what the public sees; it was never meant to decide what the people running the
+// league can look up, and a professor who cannot find a player on the player
+// page just goes and finds them on an admin screen anyway.
+
+function playerButton(id, label, extra) {
+  return el('li', {}, [
+    el('button', { type: 'button', className: 'player-button', 'data-id': id }, [
+      el('span', { className: 'player-label', text: label }),
+      el('span', { className: 'player-id count', text: id }),
+      extra || null
+    ])
+  ]);
+}
+
+async function professorList() {
+  const { data, error } = await supabase
+    .from('players')
+    .select('player_id, first_name, last_name, show_player_id, show_name')
+    .order('first_name');
+  if (error) throw error;
+
+  const rows = (data || []).map((p) => ({
+    player_id: p.player_id,
+    name: `${p.first_name} ${p.last_name}`.trim(),
+    // Whether they are actually public also depends on recent attendance, which
+    // this list does not ask about per player. The flag alone is enough to mark
+    // the ones nobody has been asked about; the card says what is truly in force.
+    recorded: p.show_player_id === true
+  }));
+
+  const search = el('input', {
+    id: 'name-search', type: 'search', placeholder: 'Start typing a name or ID',
+    autocomplete: 'off'
+  });
+  const listEl = el('ul', { className: 'player-list' });
+  const count = el('p', { className: 'muted-note' });
+
+  function draw(filter) {
+    const q = filter.trim().toLowerCase();
+    const shown = q
+      ? rows.filter((r) => r.name.toLowerCase().includes(q) || r.player_id.includes(q))
+      : rows;
+
+    count.textContent = q
+      ? `${shown.length} of ${rows.length} players match.`
+      : `${rows.length} players. You are signed in, so you can see everybody.`;
+
+    listEl.replaceChildren(...shown.map((r) => playerButton(
+      r.player_id,
+      r.name,
+      r.recorded ? null : el('span', { className: 'tag tag-hidden', text: 'not public' })
+    )));
+  }
+
+  search.addEventListener('input', () => draw(search.value));
+  draw('');
+
+  listHost.replaceChildren(
+    el('p', { className: 'field' }, [
+      el('label', { for: 'name-search', text: 'Search by name or Player ID' }),
+      search
+    ]),
+    count,
+    listEl
+  );
+}
+
+async function publicList() {
+  const { data, error } = await supabase
+    .from('public_players').select('*').order('display_label');
+  if (error) throw error;
+
+  if (!data.length) {
+    listHost.replaceChildren(el('p', { className: 'notice notice-quiet',
+      text: 'No players are listed yet. Visibility is off by default, and a '
+          + 'professor turns it on only with the player’s consent, or a '
+          + 'parent’s for anyone under 18.' }));
+    return;
+  }
+
+  listHost.replaceChildren(
+    el('p', { className: 'muted-note',
+      text: `${data.length} player` + (data.length === 1 ? '' : 's')
+          + ' have chosen to be listed.' }),
+    el('ul', { className: 'player-list' },
+      data.map((p) => playerButton(p.player_id, p.display_label)))
+  );
+}
+
 (async () => {
   if (!listHost) return;
   try {
-    const { data, error } = await supabase
-      .from('public_players').select('*').order('display_label');
-    if (error) throw error;
-
-    if (!data.length) {
-      listHost.replaceChildren(el('p', { className: 'notice notice-quiet',
-        text: 'No players are listed yet. Visibility is off by default, and a '
-            + 'professor turns it on only with the player’s consent, or a '
-            + 'parent’s for anyone under 18.' }));
-      return;
-    }
-
-    listHost.replaceChildren(
-      el('p', { className: 'muted-note',
-        text: `${data.length} player` + (data.length === 1 ? '' : 's')
-            + ' have chosen to be listed.' }),
-      el('ul', { className: 'player-list' }, data.map((p) =>
-        el('li', {}, [
-          el('button', {
-            type: 'button', className: 'player-button', 'data-id': p.player_id
-          }, [
-            el('span', { className: 'player-label', text: p.display_label }),
-            el('span', { className: 'player-id count', text: p.player_id })
-          ])
-        ])))
-    );
+    const professor = await currentProfessor();
+    await (professor ? professorList() : publicList());
 
     listHost.addEventListener('click', (e) => {
       const button = e.target.closest('.player-button');

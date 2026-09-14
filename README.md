@@ -359,11 +359,14 @@ errors:
   do, and leaves them out of the play award. Their attendance still stands and
   everyone else is unaffected.
 
-  Matched on the reason text, which names the tournament, because nothing links a
-  ledger row to a TDF — there is no tournament identifier stored anywhere. Two
-  genuinely different events would have to share a name to be confused, and this
-  league's names carry their date. If that check itself fails, nothing is
-  recorded: recording without it could pay somebody twice.
+  **Detection, not refusal.** Playing in two tournaments earns two lots of points
+  — only the day itself is counted once — so the professor can tick "pay them
+  anyway" and override it. The check goes on the reason text, which names the
+  tournament, because nothing links a ledger row to a TDF and there is no
+  tournament identifier stored anywhere. Two flights exported under one name look
+  identical to it, which is exactly the case the override exists for. If the
+  check itself fails, nothing is recorded: recording without it could pay
+  somebody twice.
 - **A player in the file who is not in `players` yet is created on the spot**,
   with the birth year from the file. One whose date of birth is missing or
   unreadable gets a null year and counts as a minor until a professor records
@@ -661,6 +664,31 @@ The built-in email sender is rate limited and meant for development. For four
 professors resetting a password once in a while it is enough; if links start
 failing to arrive, the fix is SMTP under **Authentication → Emails**, not a
 change here.
+
+### The player page, signed in
+
+`players.html` is public, and shows a professor everything.
+
+The browse list is consent-gated for the public: a player without consent is
+absent rather than anonymised, because this is a browse list rather than a set
+that has to be complete. For a signed-in professor it is every player, with a
+name and ID search, and the ones the public cannot see are marked.
+
+`get_player_summary()` used to return null for anyone whose visibility was not in
+force, which is right for the public and wrong for the people running the league.
+A professor already reads every name on the admin screens; having the player
+lookup answer "no such player" for a child is not a privacy measure, it is a
+professor being lied to about their own league. **Consent decides what the public
+sees. It was never meant to decide what a professor can look up.**
+
+For an anonymous caller nothing changed: the gate still applies, the label still
+comes from `display_label()`, and `public_players` is untouched. A professor sees
+the real full name and a `visible_publicly` flag, so the card can say plainly
+that this player is not on the public site and link to the consent screen.
+
+One consequence worth knowing: the visibility gate used to double as an existence
+check, since an unknown ID is never visible. A professor passes that gate, so an
+unknown ID is now refused on its own.
 
 ### Printable lists
 

@@ -185,6 +185,7 @@ function recordCard() {
   });
 
   const createMissing = el('input', { type: 'checkbox', id: 'create-missing', checked: 'checked' });
+  const payAnyway = el('input', { type: 'checkbox', id: 'pay-anyway' });
   const result = el('div', { id: 'result' });
   const go = el('button', {
     type: 'submit', className: 'button', text: `Record ${attendees.length} attending`
@@ -210,12 +211,21 @@ function recordCard() {
     alreadyPaid.size ? el('div', { className: 'warn-block' }, [
       el('p', {}, [
         el('strong', { text: `${alreadyPaid.size} of these players ` }),
-        el('span', { text: 'have already been paid for this tournament.' })
+        el('span', { text: 'already hold points for a tournament with this name.' })
       ]),
       el('p', { className: 'field-help',
-        text: 'This file, or one naming the same tournament, has been recorded '
-            + 'before. They will not be paid twice: their attendance still counts '
-            + 'and everyone else is unaffected, so it is safe to carry on.' })
+        text: 'By default they are not paid again, in case this file has been '
+            + 'uploaded before. Their attendance counts either way and everyone '
+            + 'else is unaffected.' }),
+      el('p', { className: 'field field-inline' }, [
+        payAnyway,
+        el('label', { for: 'pay-anyway', text: 'Pay them anyway: this is a different tournament' })
+      ]),
+      el('p', { className: 'field-help',
+        text: 'Tick this if they really did play in two tournaments. Playing twice '
+            + 'earns twice — only the day itself is counted once. The check goes '
+            + 'on the tournament’s name, which is all the ledger records, so two '
+            + 'flights exported under one name look identical to it.' })
     ]) : null,
 
     unknown.length ? el('div', { className: 'warn-block' }, [
@@ -248,6 +258,7 @@ function recordCard() {
       attendActionId: attendField.querySelector('select').value,
       playActionId: playField.querySelector('select').value,
       createMissing: createMissing.checked,
+      payAnyway: payAnyway.checked,
       resultNode: result,
       button: go
     });
@@ -312,7 +323,7 @@ function redraw() {
 
 // --- Writing -----------------------------------------------------------------
 
-async function commit({ attendedOn, attendActionId, playActionId, createMissing, resultNode, button }) {
+async function commit({ attendedOn, attendActionId, playActionId, createMissing, payAnyway, resultNode, button }) {
   button.disabled = true;
   status(resultNode, 'Recording.');
 
@@ -328,7 +339,10 @@ async function commit({ attendedOn, attendActionId, playActionId, createMissing,
       actions,
       source: 'tdf',
       reason: playReason(),
-      skipPlayFor: alreadyPaid
+      // Detection is worth having; refusing is not the professor's decision to
+      // lose. Playing in two tournaments earns two lots of points, and only the
+      // day itself is counted once.
+      skipPlayFor: payAnyway ? new Set() : alreadyPaid
     });
 
     resultNode.className = 'form-status is-good';
