@@ -235,7 +235,22 @@ function eventCard(event, counts) {
     }));
   }
 
-  return el('li', { className: 'card event' }, body);
+  // A League Cup or Challenge is a sanctioned premier event, which is a
+  // different kind of afternoon from a casual Sunday. is_premier is the flag
+  // that says so, and it is set on exactly those two.
+  if (event.is_premier) {
+    body.unshift(el('img', {
+      className: 'event-premier-mark',
+      src: 'images/worlds.png',
+      width: '48', height: '49',
+      alt: 'Premier event',
+      loading: 'lazy', decoding: 'async'
+    }));
+  }
+
+  return el('li', {
+    className: 'card event' + (event.is_premier ? ' event-premier' : '')
+  }, body);
 }
 
 // Days carrying more than one event get the same treatment as any other day: the

@@ -165,13 +165,23 @@ a:hover {
   flex: none;
 }
 
+/* The name carries the gold now that the mark beside it has gone. A gradient
+   rather than a flat fill, so it reads as the same metal as the rule below it. */
 .masthead-name {
   font-family: var(--font-head);
   font-size: 1.7rem;
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.015em;
-  color: #fff;
+  background: var(--gold-metal);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* A browser that cannot clip a background to text gets solid gold instead of
+   nothing, which is the failure worth designing for. */
+@supports not (background-clip: text) {
+  .masthead-name { background: none; color: var(--gold-line); }
 }
 
 .masthead-strap {
@@ -2023,11 +2033,34 @@ a.player-button:hover .player-label {
   background: repeating-linear-gradient(45deg,
     rgba(0, 0, 0, 0.012) 0 6px, transparent 6px 12px);
 }
-.badge-tile img {
-  width: 100%;
-  height: 100%;
+/* The venue mark, filling the tile top to bottom behind the badge. It is a
+   background, not an <img>: it is decoration, and a screen reader has no use
+   for it. */
+.badge-tile.has-backdrop {
+  position: relative;
+  overflow: hidden;
+}
+.badge-tile.has-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("images/cc-logo.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  /* Contain, so the building keeps its shape: it is much taller than it is
+     wide, so filling the height is as far as it goes. */
+  background-size: auto 100%;
+  opacity: 0.5;
+}
+
+.badge-art {
+  position: relative;      /* above the backdrop */
+  width: 90%;
+  height: 90%;
   object-fit: contain;
   display: block;
+  /* A little lift, so the art separates from the mark behind it. */
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 .badge-name {
   font-size: 0.72rem;
@@ -2084,3 +2117,51 @@ a.player-button:hover .player-label {
 .badge-button:hover .badge-tile { filter: brightness(1.05); }
 .badge-button:focus-visible { outline: 3px solid var(--gold-line); outline-offset: 2px; }
 .badge-button .badge-toggle-date { font-size: 0.68rem; color: var(--muted); }
+
+/* --- The Play! Pokemon mark ------------------------------------------------- */
+/* Bottom right of every page. Under the footer text on a phone, beside it once
+   there is room. */
+.footer-mark {
+  margin: 1rem 0 0;
+  text-align: right;
+}
+/* The mark is black and red on transparent and would vanish into the dark
+   footer. It sits on a light chip instead of being recoloured: inverting it
+   turned the red cyan, and a brand mark in the wrong colours is worse than one
+   that needed a background. */
+.footer-mark img {
+  width: 150px;
+  height: auto;
+  display: inline-block;
+  background: #ffffff;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+}
+
+@media (min-width: 42rem) {
+  .site-footer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .site-footer > p:not(.footer-mark) { flex: 1 1 22rem; margin-right: 0; }
+  .footer-mark { margin-top: 0; flex: none; }
+}
+
+/* --- Premier events --------------------------------------------------------- */
+/* A League Cup or Challenge is a sanctioned event and reads differently from a
+   casual Sunday, so it is marked rather than only labelled. */
+.event-premier {
+  position: relative;
+  padding-right: 3.4rem;
+}
+.event-premier-mark {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  width: 2.1rem;
+  height: auto;
+  display: block;
+}

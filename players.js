@@ -56,24 +56,31 @@ function badgeList(summary) {
   const held = summary.badges || [];
   const heldCodes = new Set(held.map((b) => b.code));
 
-  // The fetched list is the set to draw. If it has not arrived, fall back to
-  // what the player holds so the card still says something true.
-  const all = seasonBadges.length
-    ? seasonBadges
-    : held.map((b) => ({ code: b.code, name: b.name }));
+  // Only what this player has earned. The count still says how many are out
+  // there, so the set is not a mystery, but an empty slot per unearned badge
+  // made a card mostly made of gaps.
+  const total = seasonBadges.length || summary.badges_available || held.length;
 
-  if (!all.length) {
+  if (!total) {
     return el('p', { className: 'muted-note',
       text: 'No badge list has been set for this season yet.' });
   }
 
+  // Drawn in the season's order rather than the order they happened to be
+  // awarded, so two players' cards are comparable at a glance.
+  const earned = seasonBadges.length
+    ? seasonBadges.filter((b) => heldCodes.has(b.code))
+    : held.map((b) => ({ code: b.code, name: b.name }));
+
   return el('div', {}, [
     el('p', { className: 'badge-count' }, [
-      el('span', { className: 'count', text: `${held.length} of ${all.length}` }),
+      el('span', { className: 'count', text: `${held.length} of ${total}` }),
       el('span', { text: ` badges earned in ${summary.season_year}` })
     ]),
-    el('ul', { className: 'badge-grid' }, all.map((b) =>
-      el('li', {}, [badgeTile(b, { earned: heldCodes.has(b.code) })])))
+    earned.length
+      ? el('ul', { className: 'badge-grid' }, earned.map((b) =>
+          el('li', {}, [badgeTile(b, { earned: true })])))
+      : el('p', { className: 'muted-note', text: 'No badges yet this season.' })
   ]);
 }
 

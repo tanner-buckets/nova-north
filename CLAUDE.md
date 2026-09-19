@@ -48,12 +48,16 @@ If a task seems to need a framework or a build step, stop and ask. Do not add on
 
 - Branding and wording are original. The league name, the mark, the palette and
   every phrase on the site are ours.
-- **Badge artwork is official Pokémon character art**, supplied by the league
-  organiser and stored in `images/badges/`. This was a deliberate decision by the
-  league organiser, who holds the relationship with TPCi, taken after the risk
-  was raised: the repository is public, the site is deployed, and git history is
-  permanent. Do not extend this to other artwork, and do not remove it on the
-  grounds of the earlier rule — it is here on purpose.
+- **Official Pokémon artwork and marks are used deliberately**, supplied by the
+  league organiser, who holds the relationship with TPCi. The risk was raised
+  before any of it was committed: the repository is public, the site is deployed,
+  and git history is permanent. Do not remove any of it on the grounds of the
+  earlier rule — it is here on purpose. What is here:
+  - `images/badges/*.png` — character art, one per badge
+  - `images/play-pokemon.png` — the Play! Pokémon mark, footer of every page
+  - `images/worlds.png` — the World Championships mark, on premier events
+  - `images/cc-logo.png` — the venue's own mark, behind every earned badge
+- Do not add further official artwork without asking.
 - Do not copy text from official sources.
 - Describe the league; do not represent it as official.
 - **Never put "Pokémon" or "Pokemon" in the domain name**, a social account
@@ -306,6 +310,16 @@ Gold and graphite. Tokens live at the top of `styles.css`.
   not what the token means.
 
 The masthead is one dark band carrying the name, the strapline and the menu. The
+name itself is gold, using `--gold-metal` clipped to the text, with a solid
+fallback for browsers that cannot clip a background to text.
+
+The Play! Pokémon mark sits bottom right of every footer, on a white chip. It is
+black and red on transparent and would vanish into the dark footer; inverting it
+turned the red cyan, and a brand mark in the wrong colours is worse than one that
+needed a background.
+
+A premier event carries the World Championships mark in its top right corner.
+`is_premier` is the flag, and it is set on exactly the League Cups and Challenges. The
 site used to have a bar and a separate nav strip, which was two pieces of
 furniture doing one job. An inner page drops the meeting details and keeps the
 rest, so a header does not eat a phone screen on the way somewhere else.
@@ -322,9 +336,18 @@ Tile classes are `bdg-<code>`, **not** `badge-<code>`: event types on the schedu
 already use `.badge-<type>` and "prerelease" is both an event type and a badge
 code.
 
-The player card draws the whole season's set, with unearned badges as empty
-slots. A set only reads as a set when the gaps are visible, and it tells a player
-what is left to earn.
+Each earned tile has three layers: the colour from the artwork, the venue mark
+filling the tile behind it, and the badge art on top at 90%. The backdrop is a
+CSS background rather than an `<img>` — it is decoration, and a screen reader has
+no use for it. Because it is set in `styles.css`, which lives at the root, the
+`url()` resolves the same from an admin page as from a public one.
+
+**The player page shows only earned badges.** The count still says how many exist
+("5 of 13"), so the set is not a mystery, but a card mostly made of empty slots
+was not worth the space.
+
+**The Trainer Card screen keeps the empty slots.** They are the buttons a
+professor clicks to award a badge, so removing them would remove awarding.
 
 ## Conventions
 

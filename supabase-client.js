@@ -135,14 +135,19 @@ export function playerLinks(playerId, { prefix = '', current = null } = {}) {
 // badge code, extracted from the image once rather than sampled in the browser
 // on every load.
 export function badgeTile(badge, { earned, prefix = '' } = {}) {
+  // Three layers: the colour from the artwork, the venue mark filling the tile
+  // behind, and the badge art on top. The backdrop is a background rather than
+  // an <img> so it cannot be mistaken for content by a screen reader.
   const tile = el('span', { className: 'badge-tile' },
     earned
       ? [el('img', {
+          className: 'badge-art',
           src: `${prefix}images/badges/${badge.code}.png`,
           alt: '',                       // the name is right below it
           loading: 'lazy', decoding: 'async'
         })]
       : []);
+  if (earned) tile.classList.add('has-backdrop');
 
   return el('span', {
     // bdg-, not badge-: event types on the schedule already use .badge-<type>
