@@ -1,4 +1,4 @@
-import { supabase, el, problem, playerLinks } from './supabase-client.js';
+import { supabase, el, problem, playerLinks, badgeTile } from './supabase-client.js';
 import { currentProfessor } from './auth.js';
 
 const form = document.querySelector('#lookup-form');
@@ -47,34 +47,39 @@ function championStars(seasons) {
 // code -> position in this season's badge list, filled once on load. Colouring by
 // position rather than by name means next season's badges are covered without
 // anyone assigning them a colour.
-const badgeOrder = new Map();
-
-function chipClass(code) {
-  const n = badgeOrder.has(code)
-    ? badgeOrder.get(code)
-    // Fallback for a badge not in the current season's list: a stable hash, so
-    // the same badge always gets the same colour.
-    : [...String(code)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 0);
-  return `badge-chip badge-c${n % 13}`;
-}
+// This season's badges, in order, fetched once. The card needs the whole set
+// rather than only what a player holds: an empty slot is how somebody sees what
+// is left to earn.
+let seasonBadges = [];
 
 function badgeList(summary) {
   const held = summary.badges || [];
-  const available = summary.badges_available || 0;
+  const heldCodes = new Set(held.map((b) => b.code));
 
-  if (!available) {
+  // Only what this player has earned. The count still says how many are out
+  // there, so the set is not a mystery, but an empty slot per unearned badge
+  // made a card mostly made of gaps.
+  const total = seasonBadges.length || summary.badges_available || held.length;
+
+  if (!total) {
     return el('p', { className: 'muted-note',
       text: 'No badge list has been set for this season yet.' });
   }
 
+  // Drawn in the season's order rather than the order they happened to be
+  // awarded, so two players' cards are comparable at a glance.
+  const earned = seasonBadges.length
+    ? seasonBadges.filter((b) => heldCodes.has(b.code))
+    : held.map((b) => ({ code: b.code, name: b.name }));
+
   return el('div', {}, [
     el('p', { className: 'badge-count' }, [
-      el('span', { className: 'count', text: `${held.length} of ${available}` }),
+      el('span', { className: 'count', text: `${held.length} of ${total}` }),
       el('span', { text: ` badges earned in ${summary.season_year}` })
     ]),
-    held.length
-      ? el('ul', { className: 'badge-chips' },
-          held.map((b) => el('li', { className: chipClass(b.code), text: b.name })))
+    earned.length
+      ? el('ul', { className: 'badge-grid' }, earned.map((b) =>
+          el('li', {}, [badgeTile(b, { earned: true })])))
       : el('p', { className: 'muted-note', text: 'No badges yet this season.' })
   ]);
 }
@@ -147,7 +152,7 @@ async function lookUp(playerId) {
   const id = String(playerId || '').trim();
   if (!id) return;
 
-  if (!badgeOrder.size) await loadBadgeOrder();
+  if (!seasonBadges.length) await loadBadgeOrder();
 
   // Settled before the card is built, so the professor links are there on the
   // first render rather than appearing a moment later.
@@ -173,12 +178,14 @@ async function lookUp(playerId) {
 
 export async function loadBadgeOrder() {
   const { data, error } = await supabase
-    .from('badges').select('code, sort_order, season_year')
+    .from('badges').select('code, name, sort_order, season_year, is_active')
     .order('season_year', { ascending: false }).order('sort_order');
-  if (error || !data) return;
-  const season = data.length ? data[0].season_year : null;
-  data.filter((b) => b.season_year === season)
-      .forEach((b, i) => badgeOrder.set(b.code, i));
+  if (error || !data || !data.length) return;
+
+  const season = data[0].season_year;
+  seasonBadges = data
+    .filter((b) => b.season_year === season && b.is_active !== false)
+    .map((b) => ({ code: b.code, name: b.name }));
 }
 
 // Guarded, so this module can be imported by a page that has no lookup form.

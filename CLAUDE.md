@@ -1,4 +1,4 @@
-# CLAUDE.md — NoVa North League site
+# CLAUDE.md — LoCo League site
 
 Project rules. Read before making changes. These are constraints, not suggestions.
 
@@ -6,13 +6,17 @@ Project rules. Read before making changes. These are constraints, not suggestion
 
 ## What this is
 
-A website for the Northern Virginia North League ("NoVa North"), a local trading
+A website for LoCo League, a local trading
 card game league run in partnership with a game store. It tracks prize points,
 loyalty progress toward store purchase tiers, and event registration. Professors
 (volunteer organizers) manage the data. Players read it.
 
-Use "NoVa North League" in the interface. "Northern Virginia North League" is the
-full name and appears where the long form is warranted.
+The league is **LoCo League**, everywhere. There is no separate long form: the
+name is the same in the masthead, the footer, page titles and body copy.
+
+Every page carries the strapline "A Play! Pokémon league at Continental Cards,
+Ashburn" under the name, so a visitor landing on any page knows what and where
+this is.
 
 League meets Sundays at 2:00 PM, registration closes 2:30 PM, at Continental
 Cards Tournament Location, 21140 Ashburn Crossing Dr #110, Ashburn, VA 20147.
@@ -31,6 +35,8 @@ Many players are children. Privacy rules in this file are not negotiable.
 - **Mobile first.** Players read this on a phone at a game store. Design for a
   narrow viewport, then widen.
 - **One CSS file.** No CSS framework, no Tailwind, no preprocessor.
+- **No web fonts.** Georgia for display, the system sans for body. Both are
+  already on the machine; a font file is a dependency and a request.
 - **ES modules via CDN only.** `supabase-js` is imported from a CDN URL. Nothing
   else is added without asking.
 
@@ -40,8 +46,18 @@ If a task seems to need a framework or a build step, stop and ask. Do not add on
 
 ## Intellectual property
 
-- Use original branding, wording, and graphics only.
-- Do not use Pokémon logos, card art, character art, or official marks.
+- Branding and wording are original. The league name, the mark, the palette and
+  every phrase on the site are ours.
+- **Official Pokémon artwork and marks are used deliberately**, supplied by the
+  league organiser, who holds the relationship with TPCi. The risk was raised
+  before any of it was committed: the repository is public, the site is deployed,
+  and git history is permanent. Do not remove any of it on the grounds of the
+  earlier rule — it is here on purpose. What is here:
+  - `images/badges/*.png` — character art, one per badge
+  - `images/play-pokemon.png` — the Play! Pokémon mark, footer of every page
+  - `images/worlds.png` — the World Championships mark, on premier events
+  - `images/cc-logo.png` — the venue's own mark, behind every earned badge
+- Do not add further official artwork without asking.
 - Do not copy text from official sources.
 - Describe the league; do not represent it as official.
 - **Never put "Pokémon" or "Pokemon" in the domain name**, a social account
@@ -276,6 +292,62 @@ is at stake. Do not expand it into the full site before phase 5.
 Do not build features from a later phase because they seem convenient.
 
 ---
+
+## Visual identity
+
+Gold and graphite. Tokens live at the top of `styles.css`.
+
+- `--gold` is the action colour: links, primary buttons, the big figures. It is
+  dark enough to sit on white (5.37:1).
+- `--amber` is a **background only**. White on it fails at 2.28, so it never
+  carries text.
+- `--danger` is red, and is reserved for destructive or wrong. Before this it was
+  amber, which made a destructive button look like every other accent.
+- `--gold-metal` is one gradient, reused, so gold reads as a metal rather than as
+  mustard. Flat gold looks cheap.
+- `--teal` and `--teal-lift` still exist, pointing at the gold. Thirty-odd call
+  sites use them and renaming those would be churn: what changed is the colour,
+  not what the token means.
+
+The masthead is one dark band carrying the name, the strapline and the menu. The
+name itself is gold, using `--gold-metal` clipped to the text, with a solid
+fallback for browsers that cannot clip a background to text.
+
+The Play! Pokémon mark sits bottom right of every footer, on a white chip. It is
+black and red on transparent and would vanish into the dark footer; inverting it
+turned the red cyan, and a brand mark in the wrong colours is worse than one that
+needed a background.
+
+A premier event carries the World Championships mark in its top right corner.
+`is_premier` is the flag, and it is set on exactly the League Cups and Challenges. The
+site used to have a bar and a separate nav strip, which was two pieces of
+furniture doing one job. An inner page drops the meeting details and keeps the
+rest, so a header does not eat a phone screen on the way somewhere else.
+
+### Badges
+
+`images/badges/<code>.png`, one per badge code. The tile colour is taken from the
+artwork and written into `styles.css` as `--badge-<code>` and
+`--badge-<code>-edge` — extracted once, not sampled in the browser on every load.
+The edge is a darkened version of the fill so a pale badge still has an outline
+against a white card.
+
+Tile classes are `bdg-<code>`, **not** `badge-<code>`: event types on the schedule
+already use `.badge-<type>` and "prerelease" is both an event type and a badge
+code.
+
+Each earned tile has three layers: the colour from the artwork, the venue mark
+filling the tile behind it, and the badge art on top at 90%. The backdrop is a
+CSS background rather than an `<img>` — it is decoration, and a screen reader has
+no use for it. Because it is set in `styles.css`, which lives at the root, the
+`url()` resolves the same from an admin page as from a public one.
+
+**The player page shows only earned badges.** The count still says how many exist
+("5 of 13"), so the set is not a mystery, but a card mostly made of empty slots
+was not worth the space.
+
+**The Trainer Card screen keeps the empty slots.** They are the buttons a
+professor clicks to award a badge, so removing them would remove awarding.
 
 ## Conventions
 
