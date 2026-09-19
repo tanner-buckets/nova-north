@@ -10,7 +10,7 @@
 // Rank is not stored and not computed here. player_rank() decides it from the
 // badges, the ranks table and any Champion award, and this screen asks it rather
 // than keeping a second opinion that could disagree.
-import { supabase, el, problem } from '../supabase-client.js';
+import { supabase, el, problem, playerLinks } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status, playerPicker } from './attendance-core.js';
 
@@ -289,6 +289,7 @@ async function show(playerId) {
       el('section', { className: 'card' }, [
         el('h2', { text: `${data.first_name} ${data.last_name}`.trim() }),
         el('p', { className: 'player-id count', text: data.player_id }),
+        playerLinks(data.player_id, { current: 'trainer-card' }),
         el('p', { className: 'rank-line' }, [
           el('span', { className: 'rank-name', text: state.rank || 'No rank' }),
           el('span', { className: 'muted-note', text: ` — season ${season}` })

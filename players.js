@@ -1,4 +1,4 @@
-import { supabase, el, problem } from './supabase-client.js';
+import { supabase, el, problem, playerLinks } from './supabase-client.js';
 import { currentProfessor } from './auth.js';
 
 const form = document.querySelector('#lookup-form');
@@ -97,16 +97,10 @@ function pastSeasons(summary) {
   ]);
 }
 
-// A professor looking somebody up is usually about to do one of three things.
-// Each link carries the player, so none of the three screens has to be told who
-// it is a second time.
+// The same row the professor screens carry, pointing into admin/ from here.
+// Nothing is `current`, because this page is not one of the four.
 export function adminLinks(playerId) {
-  const id = encodeURIComponent(playerId);
-  return el('nav', { className: 'admin-links', 'aria-label': 'Professor actions' }, [
-    el('a', { href: `admin/points.html?id=${id}`, text: 'Prize points' }),
-    el('a', { href: `admin/trainer-card.html?id=${id}`, text: 'Trainer Card' }),
-    el('a', { href: `admin/consent.html?id=${id}`, text: 'Visibility and consent' })
-  ]);
+  return playerLinks(playerId, { prefix: 'admin/' });
 }
 
 export function summaryCard(summary) {
@@ -289,12 +283,12 @@ async function professorList() {
   return draw;
 }
 
-function wireSearch(filter) {
+function wireSearch(filter, signedIn) {
   searchFilter = filter;
 
   const label = document.querySelector('label[for="player-id"]');
   if (label) label.textContent = 'Player ID or name';
-  input.placeholder = 'e.g. 1234567 or Maya';
+  input.placeholder = signedIn ? 'e.g. 1234567 or Maya' : 'e.g. 1234567 or Maya R.';
   input.removeAttribute('inputmode');
   input.removeAttribute('required');
   input.type = 'search';
@@ -312,27 +306,51 @@ async function publicList() {
       text: 'No players are listed yet. Visibility is off by default, and a '
           + 'professor turns it on only with the player’s consent, or a '
           + 'parent’s for anyone under 18.' }));
-    return;
+    return null;
   }
 
-  listHost.replaceChildren(
-    el('p', { className: 'muted-note',
-      text: `${data.length} player` + (data.length === 1 ? '' : 's')
-          + ' have chosen to be listed.' }),
-    el('ul', { className: 'player-list' },
-      data.map((p) => playerButton(p.player_id, p.display_label)))
-  );
+  const listEl = el('ul', { className: 'player-list' });
+  const count = el('p', { className: 'muted-note' });
+
+  // Searched on display_label, which is exactly what consent already decided:
+  // a player whose name is public reads as "Maya R." and so can be found by
+  // name, and one who consented only to their ID reads as the ID and can only
+  // be found by that. Nothing here can match on a value the public may not see,
+  // because there is no such value in this list to match against.
+  function draw(filter) {
+    const q = String(filter || '').trim().toLowerCase();
+    const shown = q
+      ? data.filter((p) => p.display_label.toLowerCase().includes(q)
+                        || p.player_id.includes(q))
+      : data;
+
+    count.textContent = q
+      ? `${shown.length} of ${data.length} match.`
+      : `${data.length} player` + (data.length === 1 ? '' : 's')
+        + ' have chosen to be listed.';
+
+    listEl.replaceChildren(...shown.map((p) =>
+      playerButton(p.player_id, p.display_label)));
+
+    return shown;
+  }
+
+  draw('');
+  listHost.replaceChildren(count, listEl);
+
+  return draw;
 }
 
 (async () => {
   if (!listHost) return;
   try {
     const signedIn = await professorReady;
-    if (signedIn) {
-      wireSearch(await professorList());
-    } else {
-      await publicList();
-    }
+    const filter = signedIn ? await professorList() : await publicList();
+
+    // The public gets the same one field. It only ever searches what consent has
+    // already made public, so a name finds somebody exactly when they agreed to
+    // be found by name.
+    if (filter) wireSearch(filter, signedIn);
 
     listHost.addEventListener('click', (e) => {
       const button = e.target.closest('.player-button');

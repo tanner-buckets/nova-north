@@ -46,71 +46,102 @@ export function status(node, message, kind) {
   node.textContent = message;
 }
 
-// Find a player by ID or by name. Used wherever a professor has to name someone
-// who is not already on the screen in front of them.
+// Find a player. One box, because a professor at a desk does not know in
+// advance whether they are about to be handed a Player ID or a name, and two
+// fields a few centimetres apart asking almost the same question is the thing
+// that makes somebody hesitate.
+//
+// Digits match an ID, letters match a first or last name, and one query does
+// both: there is no mode to pick and no wrong box to type in.
 export function playerPicker({
   onPick, allowCreate = false,
-  idLabel = 'Player ID', nameLabel = 'Or look up an ID by name'
+  label = 'Player ID or name'
 }) {
-  const idInput = el('input', { inputmode: 'numeric', placeholder: '1234567' });
-  const addById = el('button', { type: 'button', className: 'button button-quiet', text: 'Add by ID' });
-  const nameInput = el('input', { placeholder: 'Start typing a name' });
+  const fieldId = `pick-${Math.random().toString(36).slice(2, 8)}`;
+  const input = el('input', {
+    id: fieldId, type: 'search', autocomplete: 'off',
+    placeholder: 'e.g. 1234567 or Maya'
+  });
   const found = el('div', { className: 'search-results' });
   const note = el('p', { className: 'form-status', role: 'status' });
 
-  const idFieldId = `pick-id-${Math.random().toString(36).slice(2, 8)}`;
-  const nameFieldId = `pick-name-${Math.random().toString(36).slice(2, 8)}`;
-  idInput.id = idFieldId;
-  nameInput.id = nameFieldId;
+  let timer = null;
+  // Answers can come back out of order when somebody types quickly. Without
+  // this, a slow reply for "Ma" can land after the reply for "Maya" and put the
+  // wrong list on screen.
+  let latest = 0;
+  let results = [];
 
-  addById.addEventListener('click', async () => {
-    const id = idInput.value.trim();
-    if (!id) return;
-    const { data, error } = await supabase.from('players')
-      .select('player_id, first_name, last_name').eq('player_id', id).maybeSingle();
-    if (error) {
-      status(note, `That lookup failed: ${error.message}. Try again.`, 'error');
-      return;
-    }
-    if (!data) {
-      status(note, allowCreate
-        ? 'No player has that ID yet. Check the digits, search by name, or add '
-          + 'them as someone new below.'
-        : 'No player has that ID. Check the digits, search by name, or add them '
-          + 'on the players screen.', 'error');
-      return;
-    }
-    idInput.value = '';
-    onPick(data, note);
-  });
-
-  nameInput.addEventListener('input', async () => {
-    const q = nameInput.value.trim();
-    if (q.length < 2) { found.replaceChildren(); return; }
-    const { data } = await supabase.from('players')
-      .select('player_id, first_name, last_name')
-      .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%`)
-      .order('first_name').limit(8);
-    if (!data) return;
-
-    found.replaceChildren(...data.map((p) => {
+  function render(rows) {
+    results = rows;
+    found.replaceChildren(...rows.map((p) => {
       const button = el('button', { type: 'button', className: 'player-button' }, [
-        el('span', { className: 'player-label', text: `${p.first_name} ${p.last_name}` }),
+        el('span', { className: 'player-label', text: `${p.first_name} ${p.last_name}`.trim() }),
         el('span', { className: 'player-id count', text: p.player_id })
       ]);
       button.addEventListener('click', () => {
-        nameInput.value = '';
+        input.value = '';
         found.replaceChildren();
+        results = [];
         onPick(p, note);
       });
       return button;
     }));
+  }
+
+  async function search(q) {
+    const mine = ++latest;
+    const { data, error } = await supabase.from('players')
+      .select('player_id, first_name, last_name')
+      .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,player_id.ilike.%${q}%`)
+      .order('first_name').limit(8);
+    if (mine !== latest) return;
+
+    if (error) {
+      status(note, `That search failed: ${error.message}. Try again.`, 'error');
+      return;
+    }
+    if (!data || !data.length) {
+      found.replaceChildren();
+      results = [];
+      status(note, allowCreate
+        ? 'Nobody matches that. Check the spelling, or add them as someone new below.'
+        : 'Nobody matches that. Check the spelling, or add them on the players screen.');
+      return;
+    }
+    status(note, '');
+    render(data);
+  }
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim();
+    clearTimeout(timer);
+    if (q.length < 2) {
+      found.replaceChildren();
+      results = [];
+      status(note, '');
+      return;
+    }
+    // A short wait, so typing a seven digit ID is one query rather than six.
+    timer = setTimeout(() => search(q), 200);
+  });
+
+  // Enter picks the only match. Typing a whole Player ID and pressing return is
+  // the fastest way through, and it should not need a click at the end.
+  input.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (results.length === 1) {
+      const only = results[0];
+      input.value = '';
+      found.replaceChildren();
+      results = [];
+      onPick(only, note);
+    }
   });
 
   return el('div', { className: 'picker' }, [
-    el('p', { className: 'field' }, [el('label', { for: idFieldId, text: idLabel }), idInput]),
-    el('p', {}, [addById]),
-    el('p', { className: 'field' }, [el('label', { for: nameFieldId, text: nameLabel }), nameInput]),
+    el('p', { className: 'field' }, [el('label', { for: fieldId, text: label }), input]),
     found,
     note,
     allowCreate ? newPlayerForm(onPick) : null

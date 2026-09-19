@@ -10,7 +10,7 @@
 //
 // Balance is the sum of the deltas. There is no total column and there must
 // never be one.
-import { supabase, el, problem } from '../supabase-client.js';
+import { supabase, el, problem, playerLinks } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status, playerPicker } from './attendance-core.js';
 
@@ -29,8 +29,73 @@ let player = null;
 const activeActions = () => actions.filter((a) => a.is_active !== false);
 const activeItems = () => items.filter((i) => i.is_active !== false);
 
+// --- The rank discount -------------------------------------------------------
+
+// A League Ace Trainer or a League Champion takes ten percent off anything on
+// the prize wall.
+//
+// The badge threshold is read from trainer_card_ranks rather than written here,
+// the same way the Trainer Card screen reads it, so moving the ladder moves the
+// discount with it. Champions qualify for ever: the rank resets each season but
+// having been Champion does not.
+let ranks = [];
+let discount = null;   // { reason } when this player qualifies
+
+export const DISCOUNT_RATE = 0.1;
+
+// Rounded UP, in the player's favour. A 25 point pack is 3 off, not 2.
+export function discountFor(cost) {
+  return Math.ceil(cost * DISCOUNT_RATE);
+}
+
+export function discountedCost(cost) {
+  return Math.max(0, cost - discountFor(cost));
+}
+
+function badgeThreshold() {
+  return ranks
+    .filter((r) => r.badges_required != null)
+    .reduce((max, r) => Math.max(max, r.badges_required), 0);
+}
+
+// Qualification, in one place so the banner and the price cannot disagree.
+async function loadDiscount(playerId) {
+  const threshold = badgeThreshold();
+
+  const [season, champs] = await Promise.all([
+    supabase.rpc('current_badge_season'),
+    supabase.from('champion_awards').select('season_year').eq('player_id', playerId)
+  ]);
+
+  const championSeasons = (champs.data || []).map((c) => c.season_year);
+
+  let badgeCount = 0;
+  if (season.data) {
+    const { data } = await supabase
+      .from('player_badges')
+      .select('badge_id, badges!inner(season_year)')
+      .eq('player_id', playerId)
+      .eq('badges.season_year', season.data);
+    badgeCount = (data || []).length;
+  }
+
+  if (championSeasons.length) {
+    return {
+      reason: `League Champion in ${championSeasons.sort((a, b) => b - a).join(', ')}`
+    };
+  }
+  if (threshold && badgeCount >= threshold) {
+    return {
+      reason: `${badgeCount} badges this season, at or above the ${threshold} needed`
+    };
+  }
+  return null;
+}
+
 // Set by the local demo so the panels can render without a session.
-export function _setReference(a, i, p) { actions = a; items = i; player = p; }
+export function _setReference(a, i, p, d = null, r = []) {
+  actions = a; items = i; player = p; discount = d; ranks = r;
+}
 
 const WHEN = new Intl.DateTimeFormat('en-US', {
   month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/New_York'
@@ -169,9 +234,18 @@ export function spendPanel(balance) {
     ]);
   }
 
+  // The list shows what this player pays, not the wall price. A professor
+  // reading one number off the screen and another off the shelf is how the
+  // discount gets forgotten.
   const select = el('select', { id: 'spend-item' },
-    available.map((i) => el('option', { value: i.id, text: `${i.label} (${i.default_cost})` })));
+    available.map((i) => el('option', {
+      value: i.id,
+      text: discount
+        ? `${i.label} (${discountedCost(i.default_cost)}, was ${i.default_cost})`
+        : `${i.label} (${i.default_cost})`
+    })));
   const cost = el('input', { id: 'spend-cost', type: 'number', step: '1', min: '0' });
+  const priced = el('p', { className: 'field-help' });
   const reason = el('input', { id: 'spend-reason' });
   const after = el('p', { className: 'field-help' });
   const result = el('p', { className: 'form-status', role: 'status' });
@@ -198,7 +272,9 @@ export function spendPanel(balance) {
 
   function syncCost() {
     const i = available.find((x) => x.id === select.value);
-    if (i && !cost.dataset.touched) cost.value = i.default_cost;
+    if (i && !cost.dataset.touched) {
+      cost.value = discount ? discountedCost(i.default_cost) : i.default_cost;
+    }
     syncAfter();
   }
 
@@ -208,6 +284,15 @@ export function spendPanel(balance) {
   function syncAfter() {
     const spend = Number(cost.value) || 0;
     const left = balance - spend;
+
+    const item = available.find((x) => x.id === select.value);
+    priced.textContent = (discount && item)
+      ? `${item.label} is ${item.default_cost} on the wall, less `
+        + `${discountFor(item.default_cost)} at 10% rounded up, so `
+        + `${discountedCost(item.default_cost)}. Change the cost to charge `
+        + 'something else.'
+      : '';
+
     if (left < 0) {
       after.className = 'field-help is-warning';
       after.textContent = `That leaves ${left}, below zero. Their balance is `
@@ -229,6 +314,7 @@ export function spendPanel(balance) {
     el('p', { className: 'field' }, [
       el('label', { for: 'spend-cost', text: 'Cost in points' }), cost
     ]),
+    priced,
     after,
     el('p', { className: 'field' }, [
       el('label', { for: 'spend-reason', text: 'Note, optional' }), reason
@@ -257,12 +343,24 @@ export function spendPanel(balance) {
   }
 
   async function record(spend) {
+    const typed = reason.value.trim();
+    const item = chosen();
+
+    // Recorded on the entry, so a smaller number in the history is explicable a
+    // season later without anyone having to remember the rule. An item name is
+    // already public on the prize wall and so is a rank, so this reveals
+    // nothing new.
+    const discounted = !!(discount && item && spend < item.default_cost);
+    const note = discounted
+      ? (typed ? `${typed} (10% rank discount)` : '10% rank discount')
+      : (typed || null);
+
     await write({
       // Stored as a negative delta. Spending is a transaction like any other,
       // and the balance is still just a sum.
       delta: -spend,
       prize_item_id: select.value,
-      reason: reason.value.trim() || null
+      reason: note
     }, result, go, retire.checked ? select.value : null);
   }
 
@@ -375,11 +473,13 @@ async function show(playerId) {
 
     const ledger = await loadLedger(playerId);
     const balance = ledger.reduce((sum, r) => sum + r.delta, 0);
+    discount = await loadDiscount(playerId);
 
     detail.replaceChildren(
       el('section', { className: 'card' }, [
         el('h2', { text: `${data.first_name} ${data.last_name}`.trim() }),
         el('p', { className: 'player-id count', text: data.player_id }),
+        playerLinks(data.player_id, { current: 'points' }),
         el('p', { className: 'balance' }, [
           // A balance below zero should not look like a healthy one. It is a
           // real state -- a professor may hand something over on credit -- but
@@ -390,7 +490,11 @@ async function show(playerId) {
           }),
           el('span', { text: ' prize points' })
         ]),
-        el('p', { className: 'muted-note', text: 'Prize points never reset.' })
+        el('p', { className: 'muted-note', text: 'Prize points never reset.' }),
+        discount ? el('p', { className: 'discount-note' }, [
+          el('strong', { text: '10% off the prize wall. ' }),
+          el('span', { text: discount.reason + '. Already taken off the price below.' })
+        ]) : null
       ]),
       earnPanel(balance),
       spendPanel(balance),
@@ -414,13 +518,15 @@ async function show(playerId) {
   }
 
   try {
-    const [a, i] = await Promise.all([
+    const [a, i, r] = await Promise.all([
       supabase.from('earning_actions').select('*').order('sort_order'),
-      supabase.from('prize_items').select('*').order('sort_order')
+      supabase.from('prize_items').select('*').order('sort_order'),
+      supabase.from('trainer_card_ranks').select('*').order('sort_order')
     ]);
-    if (a.error || i.error) throw a.error || i.error;
+    if (a.error || i.error || r.error) throw a.error || i.error || r.error;
     actions = a.data || [];
     items = i.data || [];
+    ranks = r.data || [];
   } catch (err) {
     console.error(err);
     gate.replaceChildren(el('p', { className: 'notice notice-problem',

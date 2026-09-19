@@ -436,6 +436,28 @@ Point values are defaults. Each is prefilled from the action or item and stays
 editable, and an action worth zero plus a note is how a one-off award is
 recorded.
 
+### The rank discount
+
+A League Ace Trainer or a League Champion takes **10% off** anything on the prize
+wall, rounded **up** in the player's favour: a 25 point pack is 3 off, not 2.
+
+Qualification is worked out in one place so the reminder and the price cannot
+disagree. The badge threshold is read from `trainer_card_ranks` rather than
+written into the page, the same way the Trainer Card screen reads it, so moving
+the ladder moves the discount with it. **Champions qualify for ever** — the rank
+resets each season, having been Champion does not.
+
+The points screen says so next to the balance, and the price is already
+discounted everywhere it appears: the dropdown reads "Booster pack (22, was 25)"
+and the cost field is prefilled with 22. A professor reading one number off the
+screen and another off the shelf is how a discount gets forgotten.
+
+The cost stays editable, like every other point value. When a discounted price is
+recorded, the ledger entry says "10% rank discount", so a smaller number in the
+history is explicable a season later without anyone having to remember the rule.
+
+### Retiring an item on redemption
+
 Handing something over does **not** by itself take it off the prize wall — most
 items are restocked. Retiring one is a separate checkbox on the redemption, and
 because it changes what every professor and player sees rather than just this
@@ -605,6 +627,17 @@ often than they agree:
   and moves with the player as they get older; true or false is a recorded
   decision that outlives their next birthday. The screen says which, because "no"
   and "nobody asked" are not the same fact.
+- **The checkbox reads the permission, not the column.** An adult with nothing
+  recorded is listed by the age default, so the box is ticked even though
+  `show_player_id` is null. Reading the raw column showed an adult who *is*
+  listed as unticked — confusing on its own, and it left no obvious way to take
+  somebody off at their request, because the box they needed unticked already
+  looked unticked. Unticking now records an explicit `false`, which outlasts the
+  default.
+- It is compared against that same permission on submit, so leaving an adult's
+  box alone records **nothing**. Comparing against the raw column would have
+  written an explicit "yes" every time a professor opened an adult's record and
+  saved — consent invented by a page rather than given by a person.
 - `show_name` is not null and defaults to false, so false carries no information
   about whether anyone was ever asked. It is worded differently for that reason.
 - Consent needs attendance inside three months behind it. A player can have both
@@ -686,10 +719,32 @@ comes from `display_label()`, and `public_players` is untouched. A professor see
 the real full name and a `visible_publicly` flag, so the card can say plainly
 that this player is not on the public site.
 
-The card also carries three links for a signed-in professor — **prize points,
-Trainer Card, visibility and consent** — each already pointing at that player. A
-professor looking somebody up is usually about to do one of those three, and none
-of the screens should have to be told who it is a second time.
+The card also carries links for a signed-in professor — **prize points, Trainer
+Card, visibility and consent, player record** — each already pointing at that
+player.
+
+Those four screens are all about a single player, and a professor rarely wants
+just one of them: consent, points and the Trainer Card come up in the same
+conversation at the desk. So every one of the four carries the same row, minus
+itself, and `playerLinks()` in `supabase-client.js` is the single definition of
+it. Having to search for the same person three times was the tax that made the
+tools feel slow.
+
+**One search field everywhere.** `playerPicker()` in
+`admin/attendance-core.js` is the single implementation, used by the upload,
+manual attendance, points, Trainer Card and consent screens. It used to be two
+fields — one for an ID, one for a name — and the consent screen carried its own
+second copy of the same idea, so the lookup behaved differently depending on
+which screen you were on. Digits match an ID, letters match a name, and one
+query does both: there is no mode to choose and no wrong box to type in. Typing
+is debounced, out-of-order replies are discarded, and Enter picks the only match.
+
+**The public page searches too.** It filters `public_players` on
+`display_label`, which is exactly what consent already decided: a player whose
+name is public reads as "Maya R." and can be found by name; one who consented
+only to their ID reads as the ID and can be found only by that. Nothing can match
+on a value the public may not see, because no such value is in the list being
+matched against.
 
 **One search field, not two.** The page already asks for a Player ID, so a second
 box doing the same job a few centimetres away is the kind of thing that makes
