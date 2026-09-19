@@ -1,4 +1,4 @@
-import { supabase, el, problem } from './supabase-client.js';
+import { supabase, el, problem, playerLinks } from './supabase-client.js';
 import { currentProfessor } from './auth.js';
 
 const form = document.querySelector('#lookup-form');
@@ -97,16 +97,10 @@ function pastSeasons(summary) {
   ]);
 }
 
-// A professor looking somebody up is usually about to do one of three things.
-// Each link carries the player, so none of the three screens has to be told who
-// it is a second time.
+// The same row the professor screens carry, pointing into admin/ from here.
+// Nothing is `current`, because this page is not one of the four.
 export function adminLinks(playerId) {
-  const id = encodeURIComponent(playerId);
-  return el('nav', { className: 'admin-links', 'aria-label': 'Professor actions' }, [
-    el('a', { href: `admin/points.html?id=${id}`, text: 'Prize points' }),
-    el('a', { href: `admin/trainer-card.html?id=${id}`, text: 'Trainer Card' }),
-    el('a', { href: `admin/consent.html?id=${id}`, text: 'Visibility and consent' })
-  ]);
+  return playerLinks(playerId, { prefix: 'admin/' });
 }
 
 export function summaryCard(summary) {

@@ -10,7 +10,7 @@
 //
 // Balance is the sum of the deltas. There is no total column and there must
 // never be one.
-import { supabase, el, problem } from '../supabase-client.js';
+import { supabase, el, problem, playerLinks } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status, playerPicker } from './attendance-core.js';
 
@@ -380,6 +380,7 @@ async function show(playerId) {
       el('section', { className: 'card' }, [
         el('h2', { text: `${data.first_name} ${data.last_name}`.trim() }),
         el('p', { className: 'player-id count', text: data.player_id }),
+        playerLinks(data.player_id, { current: 'points' }),
         el('p', { className: 'balance' }, [
           // A balance below zero should not look like a healthy one. It is a
           // real state -- a professor may hand something over on credit -- but

@@ -9,7 +9,7 @@
 //
 // There is no delete. A player record is never removed -- attendance, ledger
 // entries and registrations all point at it, and history has to keep resolving.
-import { supabase, el, problem } from '../supabase-client.js';
+import { supabase, el, problem, playerLinks } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status } from './attendance-core.js';
 
@@ -203,6 +203,7 @@ export function editPanel(player) {
   return el('section', { className: 'card' }, [
     el('h2', { text: `${player.first_name} ${player.last_name}`.trim() }),
     el('p', { className: 'player-id count', text: player.player_id }),
+    playerLinks(player.player_id, { current: 'players' }),
 
     // Stated rather than editable. The switches are on the consent screen because
     // changing one is a record of a conversation, not a field edit.

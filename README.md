@@ -697,10 +697,16 @@ comes from `display_label()`, and `public_players` is untouched. A professor see
 the real full name and a `visible_publicly` flag, so the card can say plainly
 that this player is not on the public site.
 
-The card also carries three links for a signed-in professor — **prize points,
-Trainer Card, visibility and consent** — each already pointing at that player. A
-professor looking somebody up is usually about to do one of those three, and none
-of the screens should have to be told who it is a second time.
+The card also carries links for a signed-in professor — **prize points, Trainer
+Card, visibility and consent, player record** — each already pointing at that
+player.
+
+Those four screens are all about a single player, and a professor rarely wants
+just one of them: consent, points and the Trainer Card come up in the same
+conversation at the desk. So every one of the four carries the same row, minus
+itself, and `playerLinks()` in `supabase-client.js` is the single definition of
+it. Having to search for the same person three times was the tax that made the
+tools feel slow.
 
 **One search field everywhere.** `playerPicker()` in
 `admin/attendance-core.js` is the single implementation, used by the upload,

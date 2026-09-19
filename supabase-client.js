@@ -96,6 +96,36 @@ export function el(tag, options = {}, children = []) {
   return node;
 }
 
+// --- Moving one player between screens ---------------------------------------
+
+// The four professor screens that are all about a single player. A professor
+// rarely wants just one of them: consent, points and the Trainer Card tend to
+// come up in the same conversation at the desk, and having to search for the
+// same person three times is the tax that made it feel slow.
+//
+// Every one of these reads ?id=, so a link carries the player with it.
+export const PLAYER_SCREENS = [
+  { key: 'points', href: 'points.html', label: 'Prize points' },
+  { key: 'trainer-card', href: 'trainer-card.html', label: 'Trainer Card' },
+  { key: 'consent', href: 'consent.html', label: 'Visibility and consent' },
+  { key: 'players', href: 'players.html', label: 'Player record' }
+];
+
+// `current` is the screen doing the rendering, and it is left out: a link back
+// to the page you are already on is noise.
+export function playerLinks(playerId, { prefix = '', current = null } = {}) {
+  const id = encodeURIComponent(playerId);
+  return el('nav', {
+    className: 'admin-links',
+    'aria-label': 'This player on other screens'
+  }, PLAYER_SCREENS
+    .filter((screen) => screen.key !== current)
+    .map((screen) => el('a', {
+      href: `${prefix}${screen.href}?id=${id}`,
+      text: screen.label
+    })));
+}
+
 // Error messages say what happened and what to do about it.
 export function problem(what) {
   return el('p', {

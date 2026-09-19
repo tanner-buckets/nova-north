@@ -19,7 +19,7 @@
 //      the choice is removed rather than defaulted.
 //   3. Consent lapses without attendance in three months. The flag alone is not
 //      visibility, so the card reports what is actually in force and why.
-import { supabase, el, problem } from '../supabase-client.js';
+import { supabase, el, problem, playerLinks } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status, playerPicker } from './attendance-core.js';
 
@@ -139,6 +139,7 @@ export function currentState(state) {
   return el('section', { className: 'card' }, [
     el('h2', { text: fullName(p) }),
     el('p', { className: 'player-id count', text: p.player_id }),
+    playerLinks(p.player_id, { current: 'consent' }),
 
     el('p', {
       className: state.idVisible ? 'live-state is-on' : 'live-state is-off',
