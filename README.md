@@ -691,6 +691,22 @@ Trainer Card, visibility and consent** — each already pointing at that player.
 professor looking somebody up is usually about to do one of those three, and none
 of the screens should have to be told who it is a second time.
 
+**One search field everywhere.** `playerPicker()` in
+`admin/attendance-core.js` is the single implementation, used by the upload,
+manual attendance, points, Trainer Card and consent screens. It used to be two
+fields — one for an ID, one for a name — and the consent screen carried its own
+second copy of the same idea, so the lookup behaved differently depending on
+which screen you were on. Digits match an ID, letters match a name, and one
+query does both: there is no mode to choose and no wrong box to type in. Typing
+is debounced, out-of-order replies are discarded, and Enter picks the only match.
+
+**The public page searches too.** It filters `public_players` on
+`display_label`, which is exactly what consent already decided: a player whose
+name is public reads as "Maya R." and can be found by name; one who consented
+only to their ID reads as the ID and can be found only by that. Nothing can match
+on a value the public may not see, because no such value is in the list being
+matched against.
+
 **One search field, not two.** The page already asks for a Player ID, so a second
 box doing the same job a few centimetres away is the kind of thing that makes
 somebody hesitate at the desk. Signed in, that field becomes "Player ID or name":

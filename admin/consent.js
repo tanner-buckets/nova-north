@@ -21,6 +21,7 @@
 //      visibility, so the card reports what is actually in force and why.
 import { supabase, el, problem } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
+import { status, playerPicker } from './attendance-core.js';
 
 const gate = document.querySelector('#gate');
 const app = document.querySelector('#app');
@@ -32,11 +33,6 @@ const PLAYER_COLUMNS =
   + 'consent_source, consent_recorded_at';
 
 // --- Helpers -----------------------------------------------------------------
-
-function status(node, message, kind) {
-  node.className = 'form-status' + (kind ? ` is-${kind}` : '');
-  node.textContent = message;
-}
 
 function fullName(p) {
   return `${p.first_name} ${p.last_name}`.trim();
@@ -329,64 +325,13 @@ export function history(state) {
 
 // --- Search ------------------------------------------------------------------
 
+// The same one-box picker every other professor screen uses. This page used to
+// carry its own copy with two fields, which meant the lookup behaved differently
+// depending on which screen you happened to be on.
 function searchPanel() {
-  const idInput = el('input', { id: 'find-id', inputmode: 'numeric', placeholder: '1234567' });
-  const nameInput = el('input', { id: 'find-name', placeholder: 'Start typing a name' });
-  const found = el('div', { className: 'search-results' });
-  const note = el('p', { className: 'form-status', role: 'status' });
-
-  const form = el('form', {}, [
-    el('p', { className: 'field' }, [
-      el('label', { for: 'find-id', text: 'Player ID' }), idInput
-    ]),
-    el('p', {}, [el('button', { type: 'submit', className: 'button button-quiet', text: 'Look up' })])
-  ]);
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const id = idInput.value.trim();
-    if (!id) return;
-    const { data } = await supabase.from('players')
-      .select('player_id').eq('player_id', id).maybeSingle();
-    if (!data) {
-      status(note, 'No player has that ID. Check the digits, or search by name.', 'error');
-      return;
-    }
-    status(note, '');
-    show(id);
-  });
-
-  nameInput.addEventListener('input', async () => {
-    const q = nameInput.value.trim();
-    if (q.length < 2) { found.replaceChildren(); return; }
-    const { data } = await supabase.from('players')
-      .select('player_id, first_name, last_name')
-      .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%`)
-      .order('first_name').limit(10);
-    if (!data) return;
-
-    found.replaceChildren(...data.map((p) => {
-      const button = el('button', { type: 'button', className: 'player-button' }, [
-        el('span', { className: 'player-label', text: fullName(p) }),
-        el('span', { className: 'player-id count', text: p.player_id })
-      ]);
-      button.addEventListener('click', () => {
-        nameInput.value = '';
-        found.replaceChildren();
-        show(p.player_id);
-      });
-      return button;
-    }));
-  });
-
   return el('section', { className: 'card' }, [
     el('h2', { text: 'Find a player' }),
-    form,
-    el('p', { className: 'field' }, [
-      el('label', { for: 'find-name', text: 'Or search by name' }), nameInput
-    ]),
-    found,
-    note
+    playerPicker({ onPick: (p) => show(p.player_id) })
   ]);
 }
 
