@@ -21,3 +21,4 @@ data/source/*
 # Local-only demo pages. Never committed.
 _demo*.html
 _demo*.js
+_demo*.css

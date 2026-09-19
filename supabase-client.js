@@ -126,6 +126,34 @@ export function playerLinks(playerId, { prefix = '', current = null } = {}) {
     })));
 }
 
+// --- Badges -------------------------------------------------------------------
+
+// One tile, used by the public player card and by the Trainer Card screen, so a
+// badge looks the same wherever it is shown.
+//
+// The colour comes from the artwork: styles.css carries a fill and an edge per
+// badge code, extracted from the image once rather than sampled in the browser
+// on every load.
+export function badgeTile(badge, { earned, prefix = '' } = {}) {
+  const tile = el('span', { className: 'badge-tile' },
+    earned
+      ? [el('img', {
+          src: `${prefix}images/badges/${badge.code}.png`,
+          alt: '',                       // the name is right below it
+          loading: 'lazy', decoding: 'async'
+        })]
+      : []);
+
+  return el('span', {
+    // bdg-, not badge-: event types on the schedule already use .badge-<type>
+    // and "prerelease" is both an event type and a badge code.
+    className: `badge-slot bdg-${badge.code} ${earned ? 'is-earned' : 'is-empty'}`
+  }, [
+    tile,
+    el('span', { className: 'badge-name', text: badge.name })
+  ]);
+}
+
 // Error messages say what happened and what to do about it.
 export function problem(what) {
   return el('p', {

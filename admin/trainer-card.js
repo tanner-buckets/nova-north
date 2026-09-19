@@ -10,7 +10,7 @@
 // Rank is not stored and not computed here. player_rank() decides it from the
 // badges, the ranks table and any Champion award, and this screen asks it rather
 // than keeping a second opinion that could disagree.
-import { supabase, el, problem, playerLinks } from '../supabase-client.js';
+import { supabase, el, problem, playerLinks, badgeTile } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status, playerPicker } from './attendance-core.js';
 
@@ -34,12 +34,6 @@ const DAY = new Intl.DateTimeFormat('en-US', {
 
 function day(value) {
   return value ? DAY.format(new Date(`${String(value).slice(0, 10)}T12:00:00Z`)) : '';
-}
-
-// Colour by position in this season's list, the same rule the public player card
-// uses, so next season's badges colour themselves without anyone assigning one.
-function chipClass(index, earned) {
-  return `badge-toggle badge-c${index % 13}` + (earned ? ' is-earned' : '');
 }
 
 // --- Loading -----------------------------------------------------------------
@@ -74,15 +68,19 @@ export function badgePanel(state) {
   const note = el('p', { className: 'form-status', role: 'status' });
   const earned = badges.filter((b) => state.held.has(b.id)).length;
 
-  const chips = badges.map((badge, i) => {
+  const chips = badges.map((badge) => {
     const row = state.held.get(badge.id);
+
+    // The same tile the player card shows, so a professor awarding a badge is
+    // looking at what the player will see. Being a button is the only
+    // difference.
     const button = el('button', {
       type: 'button',
-      className: chipClass(i, !!row),
+      className: 'badge-button',
       'aria-pressed': row ? 'true' : 'false',
       title: badge.task
     }, [
-      el('span', { className: 'badge-toggle-name', text: badge.name }),
+      badgeTile(badge, { earned: !!row, prefix: '../' }),
       row ? el('span', { className: 'badge-toggle-date', text: day(row.awarded_on) }) : null
     ]);
 
@@ -115,7 +113,7 @@ export function badgePanel(state) {
       text: `Season ${season}. Tap a badge to award it, tap it again to take it `
           + 'back. A badge is earned once, so there is nothing to edit.' }),
     badges.length
-      ? el('div', { className: 'badge-toggles' }, chips)
+      ? el('div', { className: 'badge-grid badge-grid-toggle' }, chips)
       : el('p', { className: 'muted-note',
           text: 'No badges have been set for this season yet.' }),
     note

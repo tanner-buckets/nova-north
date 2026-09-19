@@ -1,6 +1,6 @@
-# NoVa North League
+# LoCo League
 
-Database and website for the Northern Virginia North League, a trading card game
+Database and website for the LoCo League, a trading card game
 league that meets Sundays at 2:00 PM at Continental Cards Tournament Location,
 21140 Ashburn Crossing Dr #110, Ashburn, VA 20147.
 

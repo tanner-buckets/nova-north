@@ -104,7 +104,7 @@ export function loyaltySheet(release, tiers, rows) {
       el('h2', { text: `${release.name} — loyalty` }),
       el('p', { text: `${day(release.starts_on)} to ${day(release.ends_on)}` }),
       el('p', { className: 'sheet-sub',
-        text: 'NoVa North League at Continental Cards' })
+        text: 'LoCo League at Continental Cards' })
     ]),
 
     ...groups.map(({ tier, members }) => el('section', { className: 'sheet-group' }, [
