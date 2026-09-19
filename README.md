@@ -605,6 +605,17 @@ often than they agree:
   and moves with the player as they get older; true or false is a recorded
   decision that outlives their next birthday. The screen says which, because "no"
   and "nobody asked" are not the same fact.
+- **The checkbox reads the permission, not the column.** An adult with nothing
+  recorded is listed by the age default, so the box is ticked even though
+  `show_player_id` is null. Reading the raw column showed an adult who *is*
+  listed as unticked — confusing on its own, and it left no obvious way to take
+  somebody off at their request, because the box they needed unticked already
+  looked unticked. Unticking now records an explicit `false`, which outlasts the
+  default.
+- It is compared against that same permission on submit, so leaving an adult's
+  box alone records **nothing**. Comparing against the raw column would have
+  written an explicit "yes" every time a professor opened an adult's record and
+  saved — consent invented by a page rather than given by a person.
 - `show_name` is not null and defaults to false, so false carries no information
   about whether anyone was ever asked. It is worded differently for that reason.
 - Consent needs attendance inside three months behind it. A player can have both

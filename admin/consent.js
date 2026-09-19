@@ -90,14 +90,19 @@ async function loadState(playerId) {
     log: log.data || []
   };
 
-  // Lapsed means the switches say yes but the player is still not public. The
-  // recency test is not repeated here -- id_visible() already answered, and the
-  // only remaining reason it can say no, once the switches permit and there is
-  // attendance on file, is that the attendance is too old. Deriving it this way
-  // cannot drift from the three months the database actually enforces.
-  const permits = player.show_player_id === true
+  // Whether consent permits the Player ID to be public, setting attendance
+  // recency aside. This is the question the checkbox asks, and it is not the
+  // same as show_player_id being true: an adult with nothing recorded is listed
+  // by the age default, so consent permits it even though the column is null.
+  state.permits = player.show_player_id === true
     || (player.show_player_id === null && !state.minor);
-  state.lapsed = permits && !state.idVisible && !!state.lastAttendance;
+
+  // Lapsed means consent permits but the player is still not public. The recency
+  // test is not repeated here -- id_visible() already answered, and the only
+  // remaining reason it can say no, once consent permits and there is attendance
+  // on file, is that the attendance is too old. Deriving it this way cannot
+  // drift from the three months the database actually enforces.
+  state.lapsed = state.permits && !state.idVisible && !!state.lastAttendance;
 
   return state;
 }
@@ -172,7 +177,13 @@ export function consentForm(state) {
   const p = state.player;
 
   const showId = el('input', { type: 'checkbox', id: 'show-id' });
-  showId.checked = p.show_player_id === true;
+
+  // Ticked when the Player ID is public for any reason, including the age
+  // default that lists adults without anything being recorded. Reading the raw
+  // column here showed an adult who IS listed as unticked, which is confusing on
+  // its own and leaves no obvious way to take somebody off at their request:
+  // the box they need unticked already looked unticked.
+  showId.checked = state.permits;
 
   const showName = el('input', { type: 'checkbox', id: 'show-name' });
   showName.checked = p.show_name === true;
@@ -230,6 +241,10 @@ export function consentForm(state) {
     el('p', { className: 'field field-inline' }, [
       showId, el('label', { for: 'show-id', text: 'Show their Player ID publicly' })
     ]),
+    (p.show_player_id === null && !state.minor) ? el('p', { className: 'field-help',
+      text: 'Ticked because adults are listed by default and nobody has recorded '
+          + 'a decision for this player. Untick it to take them off at their '
+          + 'request; that records an explicit no, which outlasts the default.' }) : null,
     el('p', { className: 'field field-inline' }, [
       showName, el('label', { for: 'show-name', text: 'Show their first name and last initial' })
     ]),
@@ -257,7 +272,7 @@ export function consentForm(state) {
     // Re-confirming writes both switches and a fresh consent date, which is the
     // conversation that actually happened.
     const changes = [];
-    if (state.lapsed || showId.checked !== (p.show_player_id === true)) {
+    if (state.lapsed || showId.checked !== state.permits) {
       changes.push({ field: 'show_player_id', value: showId.checked });
     }
     if (state.lapsed || showName.checked !== (p.show_name === true)) {
