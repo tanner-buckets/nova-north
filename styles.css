@@ -1806,3 +1806,23 @@ a.player-button:hover .player-label {
   font-size: 0.9rem;
   font-weight: 600;
 }
+
+/* The rank discount, next to the balance where a professor is already looking. */
+.discount-note {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.7rem;
+  background: #fdf3e2;
+  border-left: 4px solid var(--amber);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.9rem;
+}
+
+/* The rank discount, next to the balance where a professor is already looking. */
+.discount-note {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.7rem;
+  background: #fdf3e2;
+  border-left: 4px solid var(--amber);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.9rem;
+}

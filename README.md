@@ -436,6 +436,28 @@ Point values are defaults. Each is prefilled from the action or item and stays
 editable, and an action worth zero plus a note is how a one-off award is
 recorded.
 
+### The rank discount
+
+A League Ace Trainer or a League Champion takes **10% off** anything on the prize
+wall, rounded **up** in the player's favour: a 25 point pack is 3 off, not 2.
+
+Qualification is worked out in one place so the reminder and the price cannot
+disagree. The badge threshold is read from `trainer_card_ranks` rather than
+written into the page, the same way the Trainer Card screen reads it, so moving
+the ladder moves the discount with it. **Champions qualify for ever** — the rank
+resets each season, having been Champion does not.
+
+The points screen says so next to the balance, and the price is already
+discounted everywhere it appears: the dropdown reads "Booster pack (22, was 25)"
+and the cost field is prefilled with 22. A professor reading one number off the
+screen and another off the shelf is how a discount gets forgotten.
+
+The cost stays editable, like every other point value. When a discounted price is
+recorded, the ledger entry says "10% rank discount", so a smaller number in the
+history is explicable a season later without anyone having to remember the rule.
+
+### Retiring an item on redemption
+
 Handing something over does **not** by itself take it off the prize wall — most
 items are restocked. Retiring one is a separate checkbox on the redemption, and
 because it changes what every professor and player sees rather than just this
