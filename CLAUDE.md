@@ -310,7 +310,11 @@ Gold and graphite. Tokens live at the top of `styles.css`.
   not what the token means.
 
 The masthead is one dark band carrying the name, the strapline and the menu. The
-name itself is gold, using `--gold-metal` clipped to the text, with a solid
+site used to have a bar and a separate nav strip, which was two pieces of
+furniture doing one job. An inner page drops the meeting details and keeps the
+rest, so a header does not eat a phone screen on the way somewhere else.
+
+The name itself is gold, using `--gold-metal` clipped to the text, with a solid
 fallback for browsers that cannot clip a background to text.
 
 The Play! Pokémon mark sits bottom right of every footer, on a white chip. It is
@@ -319,10 +323,8 @@ turned the red cyan, and a brand mark in the wrong colours is worse than one tha
 needed a background.
 
 A premier event carries the World Championships mark in its top right corner.
-`is_premier` is the flag, and it is set on exactly the League Cups and Challenges. The
-site used to have a bar and a separate nav strip, which was two pieces of
-furniture doing one job. An inner page drops the meeting details and keeps the
-rest, so a header does not eat a phone screen on the way somewhere else.
+`is_premier` is the flag, and it is set on exactly the League Cups and
+Challenges.
 
 ### Badges
 
