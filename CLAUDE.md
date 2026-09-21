@@ -53,7 +53,8 @@ If a task seems to need a framework or a build step, stop and ask. Do not add on
   before any of it was committed: the repository is public, the site is deployed,
   and git history is permanent. Do not remove any of it on the grounds of the
   earlier rule — it is here on purpose. What is here:
-  - `images/badges/*.png` — character art, one per badge
+  - `images/badges/*.png` — character art for the original thirteen badges
+  - the `badge-art` storage bucket — artwork uploaded by a professor since
   - `images/play-pokemon.png` — the Play! Pokémon mark, footer of every page
   - `images/worlds.png` — the World Championships mark, on premier events
   - `images/cc-logo.png` — the venue's own mark, behind every earned badge
@@ -328,15 +329,25 @@ Challenges.
 
 ### Badges
 
-`images/badges/<code>.png`, one per badge code. The tile colour is taken from the
-artwork and written into `styles.css` as `--badge-<code>` and
-`--badge-<code>-edge` — extracted once, not sampled in the browser on every load.
-The edge is a darkened version of the fill so a pale badge still has an outline
-against a white card.
+A badge carries its own art and its own colours on its row: `image_path`,
+`tile_color`, `tile_edge`.
 
-Tile classes are `bdg-<code>`, **not** `badge-<code>`: event types on the schedule
-already use `.badge-<type>` and "prerelease" is both an event type and a badge
-code.
+- `image_path` null means the committed file at `images/badges/<code>.png`,
+  which is where the original thirteen still live. Set, it names an object in
+  the `badge-art` storage bucket. One code path, two sources, and no re-upload
+  of artwork that already works.
+- The colours are extracted from the picture **in the browser, at upload**, by
+  `admin/badge-art.js`. They used to be extracted offline and pasted into
+  `styles.css` by hand, which is why a badge a professor created had none: a
+  broken image on a plain gold tile.
+- The edge is the fill darkened until white on it clears 4.5:1. It rounds to
+  whole channels at **every** step, not only at the end, because that is what
+  the offline script did and the thirteen stored values must stay re-derivable.
+  Keeping floats is a shade more accurate and puts a new badge on a different
+  footing from an old one.
+
+Colour is never a stylesheet entry any more. A badge added by a professor could
+never have had one.
 
 Each earned tile has three layers: the colour from the artwork, the venue mark
 filling the tile behind it, and the badge art on top at 90%. The backdrop is a
