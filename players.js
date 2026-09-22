@@ -178,14 +178,18 @@ async function lookUp(playerId) {
 
 export async function loadBadgeOrder() {
   const { data, error } = await supabase
-    .from('badges').select('code, name, sort_order, season_year, is_active')
+    .from('badges')
+    .select('code, name, sort_order, season_year, is_active, image_path, tile_color, tile_edge')
     .order('season_year', { ascending: false }).order('sort_order');
   if (error || !data || !data.length) return;
 
   const season = data[0].season_year;
   seasonBadges = data
     .filter((b) => b.season_year === season && b.is_active !== false)
-    .map((b) => ({ code: b.code, name: b.name }));
+    .map((b) => ({
+      code: b.code, name: b.name,
+      image_path: b.image_path, tile_color: b.tile_color, tile_edge: b.tile_edge
+    }));
 }
 
 // Guarded, so this module can be imported by a page that has no lookup form.

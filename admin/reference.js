@@ -14,6 +14,7 @@
 import { supabase, el, problem } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status } from './attendance-core.js';
+import { artField, uploadArt, removeArt } from './badge-art.js';
 
 const gate = document.querySelector('#gate');
 const app = document.querySelector('#app');
@@ -61,6 +62,7 @@ function badgeRow(badge) {
   const code = el('input', { value: badge.code });
   const task = el('input', { value: badge.task });
   const order = el('input', { type: 'number', step: '1', value: badge.sort_order });
+  const art = artField(badge, { label: 'Replace the picture' });
   const note = el('p', { className: 'form-status', role: 'status' });
   const save = el('button', { type: 'submit', className: 'button button-quiet', text: 'Save' });
 
@@ -116,6 +118,7 @@ function badgeRow(badge) {
           + 'players already hold is safe but pointless.' }),
     field('Task', task),
     field('Sort order', order),
+    ...art.nodes,
     el('p', { className: 'item-actions' }, [save, toggle, confirmRow]),
     note
   ]);
@@ -129,13 +132,30 @@ function badgeRow(badge) {
     save.disabled = true;
     status(note, 'Saving.');
     try {
-      const { error } = await supabase.from('badges').update({
+      const patch = {
         name: name.value.trim(),
         code: code.value.trim(),
         task: task.value.trim(),
         sort_order: Number(order.value) || 0
-      }).eq('id', badge.id);
+      };
+
+      // A new picture brings its own colours. Uploaded before the row is
+      // written, so a failed upload leaves the badge exactly as it was rather
+      // than pointing at a file that is not there.
+      const picked = art.chosen();
+      if (picked) {
+        status(note, 'Uploading the picture.');
+        patch.image_path = await uploadArt(badge, picked);
+        patch.tile_color = picked.tile_color;
+        patch.tile_edge = picked.tile_edge;
+      }
+
+      const { error } = await supabase.from('badges').update(patch).eq('id', badge.id);
       if (error) throw error;
+
+      // Only once the row points at the new file.
+      if (picked && badge.image_path) await removeArt(badge.image_path);
+
       await refresh();
     } catch (err) {
       console.error(err);
@@ -161,6 +181,7 @@ function addBadgePanel(current) {
   const code = el('input', {});
   const task = el('input', {});
   const season = el('input', { type: 'number', step: '1', value: current || new Date().getFullYear() });
+  const art = artField(null, { label: 'Badge picture' });
   const note = el('p', { className: 'form-status', role: 'status' });
   const go = el('button', { type: 'submit', className: 'button', text: 'Add the badge' });
   const warn = el('p', { className: 'field-help' });
@@ -193,6 +214,7 @@ function addBadgePanel(current) {
     field('Task', task),
     field('Season', season),
     warn,
+    ...art.nodes,
     el('p', {}, [go]),
     note
   ]);
@@ -214,17 +236,37 @@ function addBadgePanel(current) {
     try {
       const sameSeason = badges.filter((b) => b.season_year === year);
       const nextOrder = sameSeason.reduce((max, b) => Math.max(max, b.sort_order), 0) + 10;
-      const { error } = await supabase.from('badges').insert({
+
+      const row = {
         name: name.value.trim(),
         code: code.value.trim(),
         task: task.value.trim(),
         season_year: year,
         sort_order: nextOrder
-      });
+      };
+
+      // Without a picture the tile falls back to plain gold, which is what made
+      // a professor-created badge look broken. Not refused, because a badge
+      // with its art still to come is a reasonable half-finished thing, but the
+      // result says so.
+      const picked = art.chosen();
+      if (picked) {
+        status(note, 'Uploading the picture.');
+        row.image_path = await uploadArt(
+          { code: row.code, season_year: row.season_year }, picked);
+        row.tile_color = picked.tile_color;
+        row.tile_edge = picked.tile_edge;
+      }
+
+      const { error } = await supabase.from('badges').insert(row);
       if (error) throw error;
       form.reset();
       go.disabled = false;
       await refresh();
+      if (!picked) {
+        status(note, 'Added, but with no picture yet, so its tile is plain gold. '
+          + 'Open it below to add one.', 'error');
+      }
     } catch (err) {
       console.error(err);
       go.disabled = false;
