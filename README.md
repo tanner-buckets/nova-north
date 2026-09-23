@@ -281,25 +281,45 @@ silently.
 
 ### Badges are seasonal
 
-Each season has its own badge list. Names may repeat year to year, and rank is
-judged on the most recent season's badges.
+Each season has its own badge list. Names may repeat year to year.
 
 - **The badge carries the season, not the award.** That is what makes the
   September–October overlap work: a 2026 badge earned in October 2026 still
   counts toward 2026.
-- **`current_badge_season()` is the latest season present in `badges`.** Adding
-  next year's list is what advances it — no flag to flip, and the autumn overlap
-  needs no special case.
+- **A season ends when a professor retires it, not when a later one appears.**
+  `badge_seasons` holds one row per retirement, and a season with no row is
+  running. `active_badge_seasons()` is the list of seasons still being awarded;
+  `current_badge_season()` is the newest of them. Adding a 2027 list while 2026
+  is still running leaves both live, which is what a changeover needs.
+- **Retirement is reversible and is never a delete.** The row is flipped, and
+  `retired_at` stays as the record of what happened. There is no `DELETE` grant
+  on the table.
+- **Rank is the best any running season gives.** `best_player_rank()` asks
+  `player_rank()` for each active season and keeps the highest, so a player who
+  reached League Ace Trainer last season holds it until that season is retired.
+  Judging on the newest season alone would demote everybody the moment a new
+  badge list appeared. `best_rank_season()` says which season is carrying it.
 - **Rank is never stored, for any season.** Badges persist and carry their
   season, so 2026's rank is still derivable in 2030. A badge corrected years
   later corrects the history with it.
+- **Champion and Elite 4 stay on the newest running season.** There is one
+  ladder, not one per badge list.
 - **Champion is a table**, one row per season won, which is what lets a two-time
   Champion show two stars.
 - **`elite_four_wins` records wins only.** A lost attempt leaves no trace and can
   be retried; rows are season-scoped, so progress resets each year.
 
 The thirteen seeded badges are the 2025–26 list, so they belong to season 2026.
-There is no 2027 list yet.
+
+### A badge can be secret
+
+`badges.is_secret` keeps a badge off the programs page and out of the count of
+badges a player could earn, so nothing on a card hints that it exists. A
+professor sees it and awards it like any other, and once a player has it, it is
+on their card and in their total.
+
+Secret is not the same as retired. A retired badge is finished with; a secret one
+is live and unannounced.
 
 ### Professor screens
 
@@ -447,6 +467,11 @@ written into the page, the same way the Trainer Card screen reads it, so moving
 the ladder moves the discount with it. **Champions qualify for ever** — the rank
 resets each season, having been Champion does not.
 
+Badges are counted **per season and the best one wins**, matching how rank is
+worked out while more than one season is being awarded. Adding the seasons
+together would let four badges in each of two years buy a discount that neither
+year earns.
+
 The points screen says so next to the balance, and the price is already
 discounted everywhere it appears: the dropdown reads "Booster pack (22, was 25)"
 and the cost field is prefilled with 22. A professor reading one number off the
@@ -495,12 +520,20 @@ loyalty tiers. These are the tables that decide what the rest of the site means,
 and all of them are read live rather than copied anywhere, so a change re-decides
 what everybody has already earned.
 
-**Adding a badge for a later season rolls the league over.**
-`current_badge_season()` is `max(season_year)` on `badges`, so the first 2027
-badge makes 2027 the current season: every player's rank is judged on 2027 badges
-from that moment and 2026 becomes history. The add form says so when the year
-typed is later than the season running now, because it is not obvious and it is
-not undoable by deleting one row.
+**Adding a badge for a later season no longer rolls the league over.** A season
+runs until somebody retires it, so a 2027 list added while 2026 is running leaves
+both being awarded and a player keeps the better of the two ranks. The add form
+says so when the year typed is later than the season running now.
+
+**Retiring a season is the control that ends one.** It sits under that season's
+badge list, behind a confirmation, and says what it costs: those badges stop
+counting towards rank and stop being listed for players, and a player whose rank
+came from that season drops to what the seasons still running give them. Players
+keep every award. The screen refuses to retire the only season still running,
+because that would leave no badges being awarded at all.
+
+Every badge form carries a **Keep this badge secret** box. A secret badge is not
+listed for players and is not counted in the badges they could earn.
 
 Ranks can be edited but not added or removed. Four ranks is the program, and a
 fifth would need the public pages thought through first — `player_rank()` reads
@@ -544,22 +577,28 @@ the repeated hour and the hour that does not exist.
 
 `admin/trainer-card.html` records badges, Elite 4 battles and Champion.
 
-**Rank is not recorded and not computed here.** `player_rank()` decides it from
-the season's badges, the ranks table and any Champion award, and the screen asks
-it rather than keeping a second opinion that could disagree. The Champion
-threshold is read from `trainer_card_ranks` too, so moving it is a data change
-rather than a code change.
+**Rank is not recorded and not computed here.** `best_player_rank()` decides it
+from the badges of every season still being awarded, the ranks table and any
+Champion award, and the screen asks it rather than keeping a second opinion that
+could disagree. The Champion threshold is read from `trainer_card_ranks` too, so
+moving it is a data change rather than a code change.
+
+**Every badge in every running season is awardable here**, grouped by season when
+more than one is live, which is the whole point of retiring a season by hand.
+Secret badges are here too, marked as such: they are hidden from players, not
+from the people who award them.
 
 Nothing is edited. All three tables grant `INSERT` and `DELETE` and no `UPDATE`,
 so every control is a toggle: award it, or take it back. A badge given to the
-wrong player is taken off them and given to the right one. Badges are coloured by
-position in the season's list, the same rule the public player card uses, so next
-season's badges colour themselves.
+wrong player is taken off them and given to the right one. A badge carries its
+own colours, taken from its artwork when the picture is uploaded, so a badge a
+professor adds is coloured like every other.
 
 Only Elite 4 **wins** are recorded. A lost battle is nothing and a player may
-retry as often as they like, so there is no attempt to store. Everything on the
-screen is seasonal and resets when the next season's badge list arrives; past
-seasons stay on the player's record.
+retry as often as they like, so there is no attempt to store. Elite 4 and
+Champion belong to the newest running season and count only that season's badges,
+so two half-finished lists cannot add up to one Champion. Past seasons stay on
+the player's record.
 
 Recording a Champion who does not yet meet the threshold is **warned about, not
 blocked** — `player_rank()` does not check eligibility either, and a professor

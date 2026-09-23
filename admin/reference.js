@@ -6,11 +6,10 @@
 // decides which attendance counts towards loyalty and which tier it reaches.
 // None of it is hardcoded anywhere, which is why this screen exists.
 //
-// Badges are seasonal and the season is the badge list. current_badge_season()
-// is max(season_year) on this table, so adding a 2027 list is what rolls the
-// league over -- every player's rank is then judged on 2027 badges and last
-// year's stay as history. That is a consequence worth knowing before you add
-// one.
+// Badges are seasonal, and a season ends when a professor retires it rather
+// than when a later one appears. Adding a 2027 list while 2026 is still running
+// leaves both being awarded, which is what a changeover needs: last season's
+// badges stay earnable until somebody decides they are finished with.
 import { supabase, el, problem } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status } from './attendance-core.js';
@@ -21,6 +20,7 @@ const app = document.querySelector('#app');
 
 let professor = null;
 let badges = [];
+let seasonRows = [];
 let ranks = [];
 let releases = [];
 let tiers = [];
@@ -39,17 +39,19 @@ const field = (text, input) =>
   el('p', { className: 'field' }, [el('label', { text }, [input])]);
 
 async function loadAll() {
-  const [b, r, rel, t] = await Promise.all([
+  const [b, s, r, rel, t] = await Promise.all([
     supabase.from('badges').select('*')
       .order('season_year', { ascending: false }).order('sort_order'),
+    supabase.from('badge_seasons').select('*'),
     supabase.from('trainer_card_ranks').select('*').order('sort_order'),
     supabase.from('releases').select('*').order('starts_on', { ascending: false }),
     supabase.from('loyalty_tiers').select('*').order('weeks_required', { ascending: false })
   ]);
-  if (b.error || r.error || rel.error || t.error) {
-    throw b.error || r.error || rel.error || t.error;
+  if (b.error || s.error || r.error || rel.error || t.error) {
+    throw b.error || s.error || r.error || rel.error || t.error;
   }
   badges = b.data || [];
+  seasonRows = s.data || [];
   ranks = r.data || [];
   releases = rel.data || [];
   tiers = t.data || [];
@@ -57,11 +59,21 @@ async function loadAll() {
 
 // --- Badges ------------------------------------------------------------------
 
+// A season with no badge_seasons row has never been retired, so it is running.
+// Retirement is a decision somebody makes; the absence of one is not.
+const seasonRow = (year) => seasonRows.find((r) => r.season_year === year);
+const seasonActive = (year) => {
+  const row = seasonRow(year);
+  return row ? row.is_active : true;
+};
+
 function badgeRow(badge) {
   const name = el('input', { value: badge.name });
   const code = el('input', { value: badge.code });
   const task = el('input', { value: badge.task });
   const order = el('input', { type: 'number', step: '1', value: badge.sort_order });
+  const secret = el('input', { type: 'checkbox', id: `secret-${badge.id}` });
+  secret.checked = !!badge.is_secret;
   const art = artField(badge, { label: 'Replace the picture' });
   const note = el('p', { className: 'form-status', role: 'status' });
   const save = el('button', { type: 'submit', className: 'button button-quiet', text: 'Save' });
@@ -118,6 +130,14 @@ function badgeRow(badge) {
           + 'players already hold is safe but pointless.' }),
     field('Task', task),
     field('Sort order', order),
+    el('p', { className: 'field field-inline' }, [
+      secret, el('label', { for: secret.id, text: 'Keep this badge secret' })
+    ]),
+    el('p', { className: 'field-help',
+      text: 'A secret badge is not listed for players and is not counted in the '
+          + 'badges they could earn, so nothing on their card hints that it '
+          + 'exists. You award it exactly like any other, and once a player has '
+          + 'it, they see it.' }),
     ...art.nodes,
     el('p', { className: 'item-actions' }, [save, toggle, confirmRow]),
     note
@@ -136,7 +156,8 @@ function badgeRow(badge) {
         name: name.value.trim(),
         code: code.value.trim(),
         task: task.value.trim(),
-        sort_order: Number(order.value) || 0
+        sort_order: Number(order.value) || 0,
+        is_secret: secret.checked
       };
 
       // A new picture brings its own colours. Uploaded before the row is
@@ -169,6 +190,7 @@ function badgeRow(badge) {
       el('summary', {}, [
         el('span', { className: 'player-label', text: badge.name }),
         el('span', { className: 'count', text: badge.code }),
+        badge.is_secret ? el('span', { className: 'tag tag-secret', text: 'secret' }) : null,
         badge.is_active ? null : el('span', { className: 'tag tag-voided', text: 'retired' })
       ]),
       el('div', { className: 'disclosure-body' }, [form])
@@ -181,6 +203,7 @@ function addBadgePanel(current) {
   const code = el('input', {});
   const task = el('input', {});
   const season = el('input', { type: 'number', step: '1', value: current || new Date().getFullYear() });
+  const secret = el('input', { type: 'checkbox', id: 'add-badge-secret' });
   const art = artField(null, { label: 'Badge picture' });
   const note = el('p', { className: 'form-status', role: 'status' });
   const go = el('button', { type: 'submit', className: 'button', text: 'Add the badge' });
@@ -188,19 +211,22 @@ function addBadgePanel(current) {
 
   function syncWarning() {
     const value = Number(season.value);
+    warn.className = 'field-help';
     if (current && value > current) {
-      warn.className = 'field-help is-warning';
-      warn.textContent = `Season ${value} is later than ${current}, the season `
-        + 'running now. Adding this makes it the current season straight away: '
-        + `every player's rank starts being judged on ${value} badges, and `
-        + `${current} becomes history. Add the whole list at once if that is what `
-        + 'you mean.';
+      // Not a warning any more. A later season used to retire the running one
+      // on the spot, which is exactly the thing a changeover cannot afford.
+      warn.textContent = `Season ${value} starts alongside ${current}, which `
+        + 'keeps running until you retire it below. Both count towards rank '
+        + 'while both are live, and a player keeps the better of the two.';
+    } else if (current && value === current) {
+      warn.textContent = `Season ${value} is running now. A badge added to it `
+        + 'counts towards rank immediately.';
+    } else if (current) {
+      warn.textContent = `Season ${value} is earlier than ${current}. If that `
+        + 'season was retired, adding a badge to it does not bring it back: '
+        + 'restore it below.';
     } else {
-      warn.className = 'field-help';
-      warn.textContent = current
-        ? `Season ${current} is running now. A badge added to it counts towards `
-          + 'rank immediately.'
-        : 'The first badge sets the season.';
+      warn.textContent = 'The first badge sets the season.';
     }
   }
   season.addEventListener('input', syncWarning);
@@ -214,6 +240,12 @@ function addBadgePanel(current) {
     field('Task', task),
     field('Season', season),
     warn,
+    el('p', { className: 'field field-inline' }, [
+      secret, el('label', { for: secret.id, text: 'Keep this badge secret' })
+    ]),
+    el('p', { className: 'field-help',
+      text: 'A secret badge is not listed for players and is not counted in the '
+          + 'badges they could earn. You award it like any other.' }),
     ...art.nodes,
     el('p', {}, [go]),
     note
@@ -242,7 +274,8 @@ function addBadgePanel(current) {
         code: code.value.trim(),
         task: task.value.trim(),
         season_year: year,
-        sort_order: nextOrder
+        sort_order: nextOrder,
+        is_secret: secret.checked
       };
 
       // Without a picture the tile falls back to plain gold, which is what made
@@ -282,26 +315,117 @@ function addBadgePanel(current) {
   ]);
 }
 
+// Retiring a season is the same shape as retiring a badge: a confirmation, and
+// a reversal that is one click away. The difference is what it costs to get it
+// wrong -- a retired season stops counting towards every player's rank at once.
+function seasonControl(year, lastActive) {
+  const active = seasonActive(year);
+  const note = el('p', { className: 'form-status', role: 'status' });
+
+  const toggle = el('button', {
+    type: 'button',
+    className: active ? 'link-button' : 'button button-quiet',
+    text: active ? 'Retire this season' : 'Bring this season back'
+  });
+  const yes = el('button', { type: 'button', className: 'button button-danger',
+    text: 'Yes, retire it' });
+  const no = el('button', { type: 'button', className: 'link-button', text: 'Keep it running' });
+  const confirmRow = el('span', { className: 'confirm-row', hidden: 'hidden' }, [yes, no]);
+
+  no.addEventListener('click', () => {
+    confirmRow.hidden = true;
+    toggle.hidden = false;
+    status(note, '');
+  });
+
+  toggle.addEventListener('click', () => {
+    if (!active) { setActive(true); return; }
+    if (lastActive) {
+      status(note, `Season ${year} is the only one still running. Retiring it `
+        + 'would leave no badges being awarded at all. Add the next season '
+        + 'first, then retire this one.', 'error');
+      return;
+    }
+    toggle.hidden = true;
+    confirmRow.hidden = false;
+    status(note, `These badges stop counting towards rank, and stop being listed `
+      + 'for players and offered on the Trainer Card. Players who earned them '
+      + 'keep the awards, and a player whose rank came from this season drops '
+      + 'to what the seasons still running give them.');
+  });
+
+  yes.addEventListener('click', () => setActive(false));
+
+  async function setActive(value) {
+    toggle.disabled = true;
+    yes.disabled = true;
+    status(note, 'Saving.');
+    try {
+      const row = value
+        ? { season_year: year, is_active: true }
+        : { season_year: year, is_active: false,
+            retired_at: new Date().toISOString(), retired_by: professor?.userId || null };
+      const { error } = await supabase.from('badge_seasons')
+        .upsert(row, { onConflict: 'season_year' });
+      if (error) throw error;
+      await refresh();
+    } catch (err) {
+      console.error(err);
+      toggle.disabled = false;
+      yes.disabled = false;
+      status(note, `That did not go through: ${err.message || 'unknown error'}.`, 'error');
+    }
+  }
+
+  return el('div', { className: 'season-control' }, [
+    el('p', { className: 'item-actions' }, [toggle, confirmRow]),
+    note
+  ]);
+}
+
 function badgeSection() {
   const seasons = [...new Set(badges.map((b) => b.season_year))].sort((a, b) => b - a);
-  const current = seasons.length ? seasons[0] : null;
+  const running = seasons.filter(seasonActive);
+  const newest = running.length ? running[0] : null;
+
+  const intro = !seasons.length
+    ? 'No badges exist yet. The first one you add sets the season.'
+    : running.length > 1
+      ? `Seasons ${running.join(' and ')} are all being awarded. A player's rank `
+        + 'is the best any of them gives, so nobody is demoted by a new season '
+        + 'appearing. Retire one when it is finished with.'
+      : running.length === 1
+        ? `Season ${running[0]} is the only one being awarded. Rank is judged on `
+          + 'these badges. A season you add runs alongside this one until you '
+          + 'retire one of them.'
+        : 'Every season has been retired, so no badges are being awarded. Bring '
+          + 'one back or add a new one.';
 
   return el('div', { className: 'reference-section' }, [
-    el('p', { className: 'section-note',
-      text: current
-        ? `Season ${current} is the current one, because it is the latest season `
-          + 'with badges. Rank is judged on these and nothing else.'
-        : 'No badges exist yet. The first one you add sets the season.' }),
+    el('p', { className: 'section-note', text: intro }),
 
     ...seasons.map((year) => {
       const list = badges.filter((b) => b.season_year === year);
-      return el('section', { className: 'card' }, [
-        el('h3', { text: year === current ? `Season ${year}, running now` : `Season ${year}` }),
-        el('ul', { className: 'item-list' }, list.map(badgeRow))
+      const active = seasonActive(year);
+      const row = seasonRow(year);
+      return el('section', { className: 'card' + (active ? '' : ' is-retired') }, [
+        el('h3', {}, [
+          el('span', { text: `Season ${year}` }),
+          active
+            ? (year === newest && running.length > 1
+                ? el('span', { className: 'count', text: 'newest, being awarded' })
+                : el('span', { className: 'count', text: 'being awarded' }))
+            : el('span', { className: 'tag tag-voided', text: 'retired' })
+        ]),
+        row && !row.is_active && row.retired_at
+          ? el('p', { className: 'field-help', text: `Retired ${day(row.retired_at)}.` })
+          : null,
+        el('ul', { className: 'item-list' }, list.map(badgeRow)),
+        seasonControl(year, active && running.length === 1)
       ]);
     }),
 
-    addBadgePanel(current)
+    addBadgePanel(newest)
   ]);
 }
 
@@ -697,6 +821,6 @@ async function refresh() {
 export { badgeSection, rankSection, releaseSection };
 
 // Set by the local demo so the sections can render without a session.
-export function _setReference(b, r, rel, t) {
-  badges = b; ranks = r; releases = rel; tiers = t;
+export function _setReference(b, r, rel, t, seasons = []) {
+  badges = b; ranks = r; releases = rel; tiers = t; seasonRows = seasons;
 }

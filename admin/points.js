@@ -59,24 +59,39 @@ function badgeThreshold() {
 }
 
 // Qualification, in one place so the banner and the price cannot disagree.
+//
+// Counted per season and the best one wins, which is how rank is worked out
+// while more than one season is being awarded. Counting across seasons instead
+// would let four badges in each of two years buy a discount that neither year
+// earns.
 async function loadDiscount(playerId) {
   const threshold = badgeThreshold();
 
-  const [season, champs] = await Promise.all([
-    supabase.rpc('current_badge_season'),
+  const [seasons, champs] = await Promise.all([
+    supabase.rpc('active_badge_seasons'),
     supabase.from('champion_awards').select('season_year').eq('player_id', playerId)
   ]);
 
   const championSeasons = (champs.data || []).map((c) => c.season_year);
+  const active = (seasons.data || []).map(Number);
 
   let badgeCount = 0;
-  if (season.data) {
+  let badgeSeason = null;
+  if (active.length) {
     const { data } = await supabase
       .from('player_badges')
       .select('badge_id, badges!inner(season_year)')
       .eq('player_id', playerId)
-      .eq('badges.season_year', season.data);
-    badgeCount = (data || []).length;
+      .in('badges.season_year', active);
+
+    const perSeason = new Map();
+    for (const row of data || []) {
+      const year = row.badges.season_year;
+      perSeason.set(year, (perSeason.get(year) || 0) + 1);
+    }
+    for (const [year, count] of perSeason) {
+      if (count > badgeCount) { badgeCount = count; badgeSeason = year; }
+    }
   }
 
   if (championSeasons.length) {
@@ -86,7 +101,8 @@ async function loadDiscount(playerId) {
   }
   if (threshold && badgeCount >= threshold) {
     return {
-      reason: `${badgeCount} badges this season, at or above the ${threshold} needed`
+      reason: `${badgeCount} badges in season ${badgeSeason}, at or above the `
+            + `${threshold} needed`
     };
   }
   return null;

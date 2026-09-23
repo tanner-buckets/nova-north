@@ -362,6 +362,39 @@ was not worth the space.
 **The Trainer Card screen keeps the empty slots.** They are the buttons a
 professor clicks to award a badge, so removing them would remove awarding.
 
+### Seasons end by decision, not by succession
+
+A season used to end the moment a later one had a badge, because
+`current_badge_season()` was `max(season_year)`. A changeover cannot afford that:
+last season's badges have to stay earnable while the new list goes up.
+
+- `badge_seasons` holds one row per **retirement**. A season with no row is
+  running, so adding next year's list needs no bookkeeping and cannot
+  half-happen.
+- Retiring is **reversible and never a delete**. The row is flipped and
+  `retired_at` stays. There is no `DELETE` grant on the table.
+- `active_badge_seasons()` is what is being awarded. `current_badge_season()` is
+  the newest of those.
+- **Rank is the best any running season gives** — `best_player_rank()`, with
+  `best_rank_season()` naming which one. Judging on the newest alone would demote
+  everybody the moment a new badge list appeared.
+- **Elite 4 and Champion stay on the newest running season** and count only that
+  season's badges. There is one ladder, not one per badge list, and two
+  half-finished lists must not add up to one Champion.
+- The prize discount counts badges **per season and takes the best**, for the
+  same reason.
+- A professor cannot retire the only season still running. That would leave no
+  badges being awarded at all.
+
+### A badge can be secret
+
+`is_secret` keeps a badge off the programs page and out of `badges_available`, so
+nothing on a card hints that it exists. A professor sees it, marked, and awards
+it like any other. Once earned it is on the card and in the total.
+
+Secret is not retired. A retired badge is finished with; a secret one is live and
+unannounced.
+
 ## Conventions
 
 - Two-space indentation.
