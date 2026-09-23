@@ -2147,3 +2147,53 @@ a.player-button:hover .player-label {
   text-align: center;
   margin-top: 0.4rem;
 }
+
+/* A season heading on the Trainer Card, while a changeover has two running. */
+.season-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1rem 0 0.3rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-head);
+  font-size: 1rem;
+}
+
+/* Marked where it is awarded, because a professor cannot otherwise tell a
+   secret badge from one every player can already see listed. */
+.tag-secret {
+  background: var(--ink-soft);
+  color: var(--card);
+}
+
+/* A season's heading carries its own state beside the year. */
+.reference-section .card > h3 {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.reference-section .card > h3 .count {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* Retiring a season, under its badge list. Set apart from the badges above it,
+   because it acts on all of them at once. */
+.season-control {
+  margin-top: 0.9rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+/* A retired season is still readable -- it is history, not an error. */
+.card.is-retired {
+  background: var(--paper);
+}
+.card.is-retired h3 .count,
+.card.is-retired .item-list {
+  opacity: 0.85;
+}

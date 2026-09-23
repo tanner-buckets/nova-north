@@ -41,27 +41,64 @@ fill('#ranks', async () => {
 });
 
 fill('#badges', async () => {
-  const [{ data, error }, { data: ranks, error: rankError }] = await Promise.all([
-    supabase.from('badges').select('*').eq('is_active', true).order('sort_order'),
-    supabase.from('trainer_card_ranks').select('badges_required')
+  const [{ data, error }, { data: ranks, error: rankError },
+         { data: seasons, error: seasonError }] = await Promise.all([
+    // Secret badges are absent entirely: not listed, and not counted. A player
+    // finds one rather than working towards it, which only holds if nothing on
+    // this page hints that it is there.
+    supabase.from('badges').select('*')
+      .eq('is_active', true).eq('is_secret', false)
+      .order('season_year', { ascending: false }).order('sort_order'),
+    supabase.from('trainer_card_ranks').select('badges_required'),
+    supabase.rpc('active_badge_seasons')
   ]);
-  if (error || rankError) throw error || rankError;
+  if (error || rankError || seasonError) throw error || rankError || seasonError;
 
   // Read the threshold rather than repeating it. The highest badge-earned rank
   // is the one that unlocks an Elite 4 challenge, so if that number is ever
   // changed in the table, this sentence follows it instead of contradicting it.
   const needed = Math.max(0, ...ranks.map((r) => r.badges_required || 0));
 
+  // A season being retired is what takes its badges off this page, so more than
+  // one list can be live during a changeover.
+  const active = new Set((seasons || []).map(Number));
+  const live = data.filter((b) => active.has(b.season_year));
+  const years = [...new Set(live.map((b) => b.season_year))].sort((a, b) => b - a);
+
+  if (!years.length) {
+    return [el('p', { text: 'No badge list is running at the moment.' })];
+  }
+
+  const rows = (year) => table(['Badge', 'How to earn it'],
+    live.filter((b) => b.season_year === year).map((b) => el('tr', {}, [
+      el('th', { scope: 'row', className: 'badge-name', text: b.name }),
+      el('td', { text: b.task })
+    ])));
+
+  // One season is the ordinary case and gets no heading, because a heading
+  // saying "2026" above the only list tells a player nothing.
+  if (years.length === 1) {
+    const count = live.length;
+    return [
+      el('p', { text: needed
+        ? `There are ${count} badges. You need ${needed} to be eligible to `
+          + 'challenge the Elite 4 and go for League Champion.'
+        : `There are ${count} badges to earn.` }),
+      rows(years[0])
+    ];
+  }
+
+  // Nothing here says which list is ending. A season runs until a professor
+  // retires it, and there is no date to promise.
   return [
-    el('p', { text: needed
-      ? `There are ${data.length} badges. You need ${needed} to be eligible to `
-        + 'challenge the Elite 4 and go for League Champion.'
-      : `There are ${data.length} badges to earn.` }),
-    table(['Badge', 'How to earn it'],
-      data.map((b) => el('tr', {}, [
-        el('th', { scope: 'row', className: 'badge-name', text: b.name }),
-        el('td', { text: b.task })
-      ])))
+    el('p', { text: `${years.length} badge sets are running while the season `
+      + 'changes over, and you can earn badges from any of them. '
+      + (needed ? `You need ${needed} from one set to be eligible to challenge `
+                + 'the Elite 4 and go for League Champion.' : '') }),
+    ...years.flatMap((year) => [
+      el('h3', { text: `Season ${year}` }),
+      rows(year)
+    ])
   ];
 });
 

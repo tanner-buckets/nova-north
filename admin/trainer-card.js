@@ -1,15 +1,20 @@
-// The Trainer Card: badges, Elite 4 battles and Champion, for one season.
+// The Trainer Card: badges, Elite 4 battles and Champion.
 //
-// Everything here is seasonal. Badges belong to a season, rank is worked out
-// from that season's badges alone, and all three reset when the next season's
-// badge list arrives -- which is why nothing is edited in place. Each of these
-// tables grants INSERT and DELETE and no UPDATE, so an award is either recorded
-// or removed, never amended. A badge awarded to the wrong player is taken off
-// them and given to the right one.
+// Everything here is seasonal. Badges belong to a season, and Elite 4 and
+// Champion reset with it -- which is why nothing is edited in place. Each of
+// these tables grants INSERT and DELETE and no UPDATE, so an award is either
+// recorded or removed, never amended. A badge awarded to the wrong player is
+// taken off them and given to the right one.
 //
-// Rank is not stored and not computed here. player_rank() decides it from the
-// badges, the ranks table and any Champion award, and this screen asks it rather
-// than keeping a second opinion that could disagree.
+// More than one season can be running at once, because a season ends when a
+// professor retires it rather than when a later one appears. Every badge in
+// every running season is awardable here. Elite 4 and Champion stay on the
+// newest running season: there is one ladder, not one per list.
+//
+// Rank is not stored and not computed here. best_player_rank() decides it from
+// the badges, the ranks table and any Champion award, taking the best any
+// running season gives, and this screen asks it rather than keeping a second
+// opinion that could disagree.
 import { supabase, el, problem, playerLinks, badgeTile } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status, playerPicker } from './attendance-core.js';
@@ -19,7 +24,8 @@ const app = document.querySelector('#app');
 
 let professor = null;
 let season = null;
-let badges = [];   // this season's badges, in order
+let badges = [];        // every active season's badges, newest first
+let activeSeasons = [];
 let ranks = [];
 let player = null;
 
@@ -39,26 +45,28 @@ function day(value) {
 // --- Loading -----------------------------------------------------------------
 
 async function loadState(playerId) {
-  const [held, elite, champion, rank] = await Promise.all([
+  const [held, elite, champion, rank, rankSeason] = await Promise.all([
     supabase.from('player_badges')
       .select('id, badge_id, awarded_on').eq('player_id', playerId),
     supabase.from('elite_four_wins')
       .select('id, battle_number, won_on').eq('player_id', playerId).eq('season_year', season),
     supabase.from('champion_awards')
       .select('id, season_year, awarded_on').eq('player_id', playerId),
-    supabase.rpc('player_rank', { p_player_id: playerId, p_season: season })
+    supabase.rpc('best_player_rank', { p_player_id: playerId }),
+    supabase.rpc('best_rank_season', { p_player_id: playerId })
   ]);
 
   const byBadge = new Map((held.data || []).map((r) => [r.badge_id, r]));
 
   return {
-    // Only this season's badges count towards rank, so only those are shown as
-    // toggles. Earlier seasons are history and are listed separately.
+    // Every badge in a running season is a toggle. Retired seasons are history
+    // and are listed separately.
     held: byBadge,
     elite: new Map((elite.data || []).map((r) => [r.battle_number, r])),
     champion: (champion.data || []).find((r) => r.season_year === season) || null,
     championSeasons: (champion.data || []).map((r) => r.season_year).sort((a, b) => b - a),
-    rank: rank.data || null
+    rank: rank.data || null,
+    rankSeason: rankSeason.data || null
   };
 }
 
@@ -81,6 +89,7 @@ export function badgePanel(state) {
       title: badge.task
     }, [
       badgeTile(badge, { earned: !!row, prefix: '../' }),
+      badge.is_secret ? el('span', { className: 'tag tag-secret', text: 'secret' }) : null,
       row ? el('span', { className: 'badge-toggle-date', text: day(row.awarded_on) }) : null
     ]);
 
@@ -107,13 +116,39 @@ export function badgePanel(state) {
     return button;
   });
 
+  // Grouped by season while more than one is being awarded, so a professor can
+  // see which list they are giving a badge from.
+  const years = [...new Set(badges.map((b) => b.season_year))].sort((a, b) => b - a);
+  const byYear = new Map(badges.map((b, i) => [b, chips[i]]));
+
+  const groups = years.length > 1
+    ? years.flatMap((year) => {
+        const mine = badges.filter((b) => b.season_year === year);
+        const got = mine.filter((b) => state.held.has(b.id)).length;
+        return [
+          el('h4', { className: 'season-heading' }, [
+            el('span', { text: `Season ${year}` }),
+            el('span', { className: 'count', text: `${got} of ${mine.length}` })
+          ]),
+          el('div', { className: 'badge-grid badge-grid-toggle' },
+            mine.map((b) => byYear.get(b)))
+        ];
+      })
+    : [el('div', { className: 'badge-grid badge-grid-toggle' }, chips)];
+
   return el('section', { className: 'card' }, [
     el('h3', { text: `Badges (${earned} of ${badges.length})` }),
     el('p', { className: 'field-help',
-      text: `Season ${season}. Tap a badge to award it, tap it again to take it `
-          + 'back. A badge is earned once, so there is nothing to edit.' }),
+      text: (years.length > 1
+        ? `Seasons ${years.join(' and ')} are both being awarded. `
+        : `Season ${season}. `)
+          + 'Tap a badge to award it, tap it again to take it back. A badge is '
+          + 'earned once, so there is nothing to edit.' }),
+    badges.some((b) => b.is_secret) ? el('p', { className: 'field-help',
+      text: 'A badge marked secret is not listed for players and is not counted '
+          + 'on their card until they earn it. You award it like any other.' }) : null,
     badges.length
-      ? el('div', { className: 'badge-grid badge-grid-toggle' }, chips)
+      ? el('div', {}, groups)
       : el('p', { className: 'muted-note',
           text: 'No badges have been set for this season yet.' }),
     note
@@ -177,7 +212,10 @@ export function elitePanel(state) {
 
 export function championPanel(state) {
   const note = el('p', { className: 'form-status', role: 'status' });
-  const earnedBadges = badges.filter((b) => state.held.has(b.id)).length;
+  // This season's badges only. Champion is recorded against one season, so two
+  // half-finished lists must not add up to one.
+  const earnedBadges = badges
+    .filter((b) => b.season_year === season && state.held.has(b.id)).length;
   const eliteWon = state.elite.size;
 
   // Read from the ranks table rather than written in here, so the threshold
@@ -235,8 +273,9 @@ export function championPanel(state) {
     // missing and asks.
     go.hidden = true;
     confirmRow.hidden = false;
-    status(note, `They have ${earnedBadges} of the ${needBadges} badges needed and `
-      + `${eliteWon} of 4 Elite 4 battles. Record it only if you saw them earn it.`);
+    status(note, `They have ${earnedBadges} of the ${needBadges} season ${season} `
+      + `badges needed and ${eliteWon} of 4 Elite 4 battles. Record it only if `
+      + 'you saw them earn it.');
   });
 
   yes.addEventListener('click', record);
@@ -249,8 +288,8 @@ export function championPanel(state) {
               + 'That is one star on their card.' })
       : el('p', { className: 'field-help',
           text: `${top ? top.name : 'The top rank'} needs all four Elite 4 battles `
-              + `and ${needBadges} badges. They have ${earnedBadges} badges and `
-              + `${eliteWon} battles.` }),
+              + `and ${needBadges} badges from season ${season}. They have `
+              + `${earnedBadges} of those and ${eliteWon} battles.` }),
 
     state.championSeasons.length
       ? el('p', { className: 'muted-note',
@@ -290,10 +329,15 @@ async function show(playerId) {
         playerLinks(data.player_id, { current: 'trainer-card' }),
         el('p', { className: 'rank-line' }, [
           el('span', { className: 'rank-name', text: state.rank || 'No rank' }),
-          el('span', { className: 'muted-note', text: ` — season ${season}` })
+          el('span', { className: 'muted-note',
+            text: state.rankSeason ? ` — from season ${state.rankSeason}` : '' })
         ]),
         el('p', { className: 'muted-note',
-          text: 'Rank is worked out from this season’s badges and Champion '
+          text: activeSeasons.length > 1
+            ? 'Rank is the best any season still being awarded gives, so a new '
+              + 'season starting does not demote anybody. It is not stored, so '
+              + 'it follows whatever is recorded below.'
+            : 'Rank is worked out from this season’s badges and Champion '
               + 'award. It is not stored, so it follows whatever is recorded '
               + 'below.' })
       ]),
@@ -322,14 +366,27 @@ async function show(playerId) {
     const { data: s } = await supabase.rpc('current_badge_season');
     season = s;
 
-    const [b, r] = await Promise.all([
-      supabase.from('badges').select('*')
-        .eq('season_year', season).eq('is_active', true).order('sort_order'),
+    // Every season still being awarded, not just the newest. During a
+    // changeover a professor has to be able to give out last season's badges,
+    // which is the whole point of retiring a season by hand.
+    const [seasonList, r] = await Promise.all([
+      supabase.rpc('active_badge_seasons'),
       supabase.from('trainer_card_ranks').select('*').order('sort_order')
     ]);
-    if (b.error || r.error) throw b.error || r.error;
-    badges = b.data || [];
+    if (seasonList.error || r.error) throw seasonList.error || r.error;
+
+    activeSeasons = (seasonList.data || []).map(Number);
     ranks = r.data || [];
+
+    const b = await supabase.from('badges').select('*')
+      .in('season_year', activeSeasons.length ? activeSeasons : [-1])
+      .eq('is_active', true)
+      .order('season_year', { ascending: false }).order('sort_order');
+    if (b.error) throw b.error;
+
+    // Secret badges are here. They are hidden from players, not from the people
+    // who award them.
+    badges = b.data || [];
   } catch (err) {
     console.error(err);
     gate.replaceChildren(el('p', { className: 'notice notice-problem',

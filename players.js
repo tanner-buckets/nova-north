@@ -44,51 +44,65 @@ function championStars(seasons) {
   ]);
 }
 
-// code -> position in this season's badge list, filled once on load. Colouring by
-// position rather than by name means next season's badges are covered without
-// anyone assigning them a colour.
-// This season's badges, in order, fetched once. The card needs the whole set
-// rather than only what a player holds: an empty slot is how somebody sees what
-// is left to earn.
-let seasonBadges = [];
-
+// The badges this player holds in the seasons still being awarded, with the
+// count saying how many exist so the set is not a mystery. Empty slots used to
+// be here; a card mostly made of them was not worth the space.
 function badgeList(summary) {
   const held = summary.badges || [];
-  const heldCodes = new Set(held.map((b) => b.code));
-
-  // Only what this player has earned. The count still says how many are out
-  // there, so the set is not a mystery, but an empty slot per unearned badge
-  // made a card mostly made of gaps.
-  const total = seasonBadges.length || summary.badges_available || held.length;
+  const total = summary.badges_available || held.length;
+  const active = (summary.active_seasons || []).map(Number);
 
   if (!total) {
     return el('p', { className: 'muted-note',
       text: 'No badge list has been set for this season yet.' });
   }
 
-  // Drawn in the season's order rather than the order they happened to be
-  // awarded, so two players' cards are comparable at a glance.
-  const earned = seasonBadges.length
-    ? seasonBadges.filter((b) => heldCodes.has(b.code))
-    : held.map((b) => ({ code: b.code, name: b.name }));
+  // Only what this player has earned, and already ordered by the summary:
+  // newest season first, then the season's own order, so two cards are
+  // comparable at a glance.
+  //
+  // A secret badge is here once earned and absent from the total until then,
+  // so nothing on the card hints at one nobody has found.
+  const count = el('p', { className: 'badge-count' }, [
+    el('span', { className: 'count', text: `${held.length} of ${total}` }),
+    el('span', { text: active.length > 1
+      ? ` badges earned across seasons ${active.sort((a, b) => b - a).join(' and ')}`
+      : ` badges earned in ${summary.season_year}` })
+  ]);
 
+  if (!held.length) {
+    return el('div', {}, [
+      count,
+      el('p', { className: 'muted-note', text: 'No badges yet this season.' })
+    ]);
+  }
+
+  const grid = (rows) => el('ul', { className: 'badge-grid' },
+    rows.map((b) => el('li', {}, [badgeTile(b, { earned: true })])));
+
+  // One season is the ordinary case and needs no heading. During a changeover
+  // the years are worth saying, because a player holding badges from both
+  // should be able to see which set each came from.
+  if (active.length < 2) {
+    return el('div', {}, [count, grid(held)]);
+  }
+
+  const years = [...new Set(held.map((b) => b.season_year))].sort((a, b) => b - a);
   return el('div', {}, [
-    el('p', { className: 'badge-count' }, [
-      el('span', { className: 'count', text: `${held.length} of ${total}` }),
-      el('span', { text: ` badges earned in ${summary.season_year}` })
-    ]),
-    earned.length
-      ? el('ul', { className: 'badge-grid' }, earned.map((b) =>
-          el('li', {}, [badgeTile(b, { earned: true })])))
-      : el('p', { className: 'muted-note', text: 'No badges yet this season.' })
+    count,
+    ...years.flatMap((year) => [
+      el('span', { className: 'eyebrow', text: `Season ${year}` }),
+      grid(held.filter((b) => b.season_year === year))
+    ])
   ]);
 }
 
 function pastSeasons(summary) {
-  // Only seasons other than the current one; the current season is shown above
-  // in full, so repeating it here would just be noise.
+  // Only seasons that are finished with. A season still being awarded is shown
+  // above in full, so repeating it here would just be noise.
+  const active = new Set((summary.active_seasons || []).map(Number));
   const past = (summary.badge_seasons || [])
-    .filter((s) => s.season_year !== summary.season_year);
+    .filter((s) => !active.has(Number(s.season_year)));
   if (!past.length) return null;
 
   return el('div', { className: 'past-seasons' }, [
@@ -136,7 +150,8 @@ export function summaryCard(summary) {
     championStars(champions),
 
     el('div', { className: 'stat-grid' }, [
-      stat('Rank', summary.rank || 'League Trainer', `Season ${summary.season_year}`),
+      stat('Rank', summary.rank || 'League Trainer',
+        `Season ${summary.rank_season || summary.season_year}`),
       stat('Prize points', summary.point_balance),
       loyalty,
       elite > 0 ? stat('Elite 4', `${elite} of 4`, 'battles won this season') : null
@@ -151,8 +166,6 @@ export function summaryCard(summary) {
 async function lookUp(playerId) {
   const id = String(playerId || '').trim();
   if (!id) return;
-
-  if (!seasonBadges.length) await loadBadgeOrder();
 
   // Settled before the card is built, so the professor links are there on the
   // first render rather than appearing a moment later.
@@ -174,22 +187,6 @@ async function lookUp(playerId) {
     console.error(err);
     result.replaceChildren(problem('That player'));
   }
-}
-
-export async function loadBadgeOrder() {
-  const { data, error } = await supabase
-    .from('badges')
-    .select('code, name, sort_order, season_year, is_active, image_path, tile_color, tile_edge')
-    .order('season_year', { ascending: false }).order('sort_order');
-  if (error || !data || !data.length) return;
-
-  const season = data[0].season_year;
-  seasonBadges = data
-    .filter((b) => b.season_year === season && b.is_active !== false)
-    .map((b) => ({
-      code: b.code, name: b.name,
-      image_path: b.image_path, tile_color: b.tile_color, tile_edge: b.tile_edge
-    }));
 }
 
 // Guarded, so this module can be imported by a page that has no lookup form.
