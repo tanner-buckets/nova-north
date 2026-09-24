@@ -380,6 +380,11 @@ was not worth the space.
 **The Trainer Card screen keeps the empty slots.** They are the buttons a
 professor clicks to award a badge, so removing them would remove awarding.
 
+**The programs page carries the picture at the end of each row**, after the name
+and the task, because those are what somebody reads down the list for. The tile
+has no label there: the name is already the first cell, and repeating it would
+read twice to a screen reader. `badgeTile(badge, { withName: false })`.
+
 ### Seasons end by decision, not by succession
 
 A season used to end the moment a later one had a badge, because

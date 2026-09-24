@@ -241,7 +241,7 @@ Built so far:
 | `index.html` | Home | nothing — static copy |
 | `schedule.html` | Schedule | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
 | `event.html` | no — reached by link | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
-| `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers` |
+| `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers`, `active_badge_seasons()` |
 | `prize-items.html` | no | `prize_items` |
 | `players.html` | Players | `get_player_summary()`, `public_players` |
 | `id_help.html` | no | nothing — static copy |
@@ -355,6 +355,15 @@ Each season has its own badge list. Names may repeat year to year.
   be retried; rows are season-scoped, so progress resets each year.
 
 The thirteen seeded badges are the 2025–26 list, so they belong to season 2026.
+
+The badge table on the programs page carries each badge's **picture at the end
+of its row**, in the same tile the player card uses — the colour from the
+artwork, the venue mark behind it, the art on top. The name and the task come
+first because they are what somebody reads down the list for. The tile is drawn
+with `withName: false`, since the name is already the first cell of the row and
+repeating it would read twice to a screen reader. The column's heading is there
+for a screen reader and hidden from sight: writing "Picture" above a column of
+pictures tells a sighted reader nothing.
 
 ### A badge can be secret
 

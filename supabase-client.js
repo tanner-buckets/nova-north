@@ -151,7 +151,10 @@ export function badgeArtUrl(badge, prefix = '') {
 // Three layers: the colour taken from the artwork, the venue mark filling the
 // tile behind, and the badge art on top. The backdrop is a background rather
 // than an <img> so it cannot be mistaken for content by a screen reader.
-export function badgeTile(badge, { earned, prefix = '' } = {}) {
+// withName false leaves the label off, for somewhere the name is already beside
+// the tile -- a table row whose first cell is the name. Repeating it would read
+// twice to a screen reader and look like a mistake to everybody else.
+export function badgeTile(badge, { earned, prefix = '', withName = true } = {}) {
   const tile = el('span', { className: 'badge-tile' },
     earned
       ? [el('img', {
@@ -165,9 +168,10 @@ export function badgeTile(badge, { earned, prefix = '' } = {}) {
 
   const slot = el('span', {
     className: `badge-slot ${earned ? 'is-earned' : 'is-empty'}`
+        + (withName ? '' : ' is-bare')
   }, [
     tile,
-    el('span', { className: 'badge-name', text: badge.name })
+    withName ? el('span', { className: 'badge-name', text: badge.name }) : null
   ]);
 
   // Set from the row rather than from a class per badge code. A badge added by

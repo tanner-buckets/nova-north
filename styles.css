@@ -2262,3 +2262,30 @@ h1.event-name + .event-when {
   font-family: var(--font-head);
   font-size: 1rem;
 }
+
+/* A label for a screen reader where a sighted reader needs none: a column of
+   pictures does not want the word "Picture" written above it, but the column
+   still has to be named. */
+.hidden-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The badge picture at the end of its row on the programs page. Shrunk to its
+   contents so the name and the task keep the width they need. */
+.data-table .badge-cell {
+  width: 1%;
+  padding-left: 0.75rem;
+  text-align: right;
+  vertical-align: middle;
+}
+.badge-slot.is-bare {
+  width: 3.2rem;
+  display: inline-grid;
+}
