@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Event — LoCo League</title>
+    <meta name="description" content="Register for a LoCo League event at Continental Cards in Ashburn, Virginia.">
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="event.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="masthead masthead-compact">
+      <a class="masthead-brand" href="index.html">
+        <span class="masthead-name">LoCo League</span>
+      </a>
+      <p class="masthead-strap">A Play! Pokémon league at Continental Cards, Ashburn</p>
+      <nav class="masthead-nav" aria-label="Main">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="schedule.html">Schedule</a></li>
+            <li><a href="league_programs.html">League programs</a></li>
+            <li><a href="players.html">Players</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main id="main">
+      <div id="event" aria-busy="true">
+        <p class="notice">Loading the event.</p>
+      </div>
+
+      <section class="panel" aria-labelledby="where-heading">
+        <h2 id="where-heading">Where to come</h2>
+        <address class="meets-where">
+          <strong>Continental Cards Tournament Location</strong><br>
+          21140 Ashburn Crossing Dr #110<br>
+          Ashburn, VA 20147
+        </address>
+        <p>
+          A professor at the desk in the back will sign you in. If it is your first
+          time, come a few minutes early so we can get you set up correctly.
+        </p>
+        <p><a href="schedule.html">See everything else coming up</a></p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        LoCo League meets at Continental Cards and is run by
+        volunteer professors.
+      </p>
+      <p>
+        This site is made and maintained by those volunteers. It is not an
+        official publisher website.
+      </p>
+      <p class="footer-mark">
+        <img src="images/play-pokemon.png" width="180" height="40"
+             alt="Play! Pokémon" loading="lazy" decoding="async">
+      </p>
+    </footer>
+    <script type="module">
+      import { mountProfessorBar } from './auth.js';
+      mountProfessorBar();
+    </script>
+  </body>
+</html>
