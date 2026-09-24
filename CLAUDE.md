@@ -194,6 +194,18 @@ is applied to the production database.** There is no confirmation step.
   on-screen confirmation naming who was promoted.
 - Drop requests require Player ID **and** matching name, and do not take effect
   until a professor confirms.
+- **Registration closes when the event starts.** Enforced in
+  `register_for_event()`, not in page code: the anon key can call the function
+  directly, so a check on the schedule is not a check.
+- **A professor can close registration early** with `set_registration_closed()`,
+  which records who and when and is reversible. This is **not** the
+  `registration_open` flag: that one says whether the event takes registration at
+  all, and turning it off also removes the event from the drop confirmation
+  screen and the printable desk list. Closing must leave every existing place,
+  the waiting list order and drop requests alone.
+- **A drop request is never refused by a closing.** A player who cannot come must
+  always be able to say so, and never more than once their place could go to
+  somebody waiting.
 - **An event that takes registration has a page of its own**, `event.html?e=<id>`,
   so a professor has a link to post that is one event rather than the whole
   schedule. It reads what the schedule reads and nothing more: places left and

@@ -268,6 +268,10 @@ whole flight group by the four digit code flights already share.
   is the one the page is titled with.
 - **A past event still resolves.** A link outlives the afternoon it was posted
   for, and a page saying the event has happened is better than a dead link.
+- **A closed event still offers the cancel form.** Somebody who registered
+  before it closed may still need to say they cannot come, and that is exactly
+  when it matters most: their place is the one that could go to whoever is
+  waiting.
 - **The registration form is open**, not folded into a disclosure. On the
   schedule it is folded away, because a card there is one of many and the form
   would bury the next event. Here, registering is the only reason anybody
@@ -606,6 +610,37 @@ the public schedule: it groups flights for the desk and means nothing to a
 player.
 
 New events prefill to the next Sunday at 2:00, which is when league meets.
+
+### Two ways registration closes
+
+**It closes on its own when the event starts.** `register_for_event()` refuses
+anything at or after `starts_at`, with the code `event_started`. Before this it
+checked only `registration_open`, so an event from last month would still take a
+registration today, for ever — the schedule hid a past event and the event page
+said it had happened, but both of those are page code, and the anon key can call
+the function directly.
+
+**A professor can close it early**, with `set_registration_closed()`. That writes
+`registration_closed_at` and `registration_closed_by`, and reopening clears both.
+A timestamp rather than a boolean, because "when did we stop taking people" is
+the question asked afterwards.
+
+**Closing is not the same as the Take registration checkbox**, and this is the
+reason there are two flags rather than one. `registration_open` means the event
+takes registration *at all*; turning it off drops the event from the drop
+confirmation screen and out of the printable desk list. Closing a full prerelease
+the night before would have deleted the list somebody needed at the desk in the
+morning. Closing stops new registrations arriving and leaves everything else
+standing: every existing place, the waiting list order, and drop requests.
+
+`registrationState(event)` in `event-registration.js` reproduces the function's
+order — `none`, `started`, `closed`, `open` — so a page never offers a form the
+database is about to refuse, and never gives a different reason than it would. A
+form that looks open and then refuses is a player who thinks they have a place
+and has not.
+
+Reopening an event that has already started reports back that it changed nothing
+visible, rather than reporting success: the clock refuses it either way.
 
 Opening an event on this screen shows a **Link to post** — the absolute URL of
 that event's own page, with a copy button. The field is readable and selectable
