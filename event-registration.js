@@ -15,7 +15,14 @@ const REGISTER_MESSAGES = {
   missing_details: 'Please fill in every field except the contact, which is optional.',
   unknown_event: 'That event could not be found. Reload the page and try again.',
   registration_closed: 'Registration is not open for this event.',
-  already_registered: 'That Player ID is already registered for this event.'
+  already_registered: 'That Player ID is already registered for this event.',
+  // Both of these can arrive at a form that was open when the page loaded: an
+  // event can start, or a professor can close it, while somebody is still
+  // filling the thing in. Neither is the player's fault and both say what to do.
+  event_started: 'This event has started, so registration has closed. Come to the '
+    + 'desk and a professor will sign you in if there is room.',
+  closed_by_professor: 'A professor has closed registration for this event. Speak '
+    + 'to one at league if you still want to play.'
 };
 
 export const TYPE_LABELS = {
@@ -39,6 +46,19 @@ export function eventPath(event, prefix = '') {
 // "registration is not open yet" would be misleading -- there is nothing to open.
 export function takesRegistration(counts) {
   return counts.some((c) => c.capacity !== null);
+}
+
+// Why a form is or is not being offered.
+//
+// The same order as register_for_event(), so a page never offers a form the
+// database is about to refuse, and never gives a different reason than it would.
+// Getting this wrong is worse than having no page at all: a form that looks open
+// and then refuses is a player who thinks they have a place and has not.
+export function registrationState(event) {
+  if (!event.registration_open) return 'none';
+  if (new Date(event.starts_at).getTime() <= Date.now()) return 'started';
+  if (event.registration_closed_at) return 'closed';
+  return 'open';
 }
 
 // The places left, in an element that can be refilled.
@@ -222,13 +242,28 @@ export function cancelForm(event) {
 // bury the next event. Open on an event's own page, where registering is the
 // only reason anybody followed the link.
 export function registrationBlock(event, counts, { onChange, open = false, prefix = '' } = {}) {
-  if (!event.registration_open) {
-    return [el('p', {
-      className: 'event-note',
-      text: takesRegistration(counts)
+  const state = registrationState(event);
+
+  if (state !== 'open') {
+    const note = {
+      none: takesRegistration(counts)
         ? 'Registration for this event has not opened yet. Check back closer to the date.'
-        : 'No pre-registration for this event. Just turn up.'
-    })];
+        : 'No pre-registration for this event. Just turn up.',
+      started: 'This event has started, so registration has closed. Come to the '
+        + 'desk and a professor will sign you in if there is room.',
+      closed: 'Registration has closed for this event. Speak to a professor at '
+        + 'league if you still want to play.'
+    }[state];
+
+    // The cancel form stays. Somebody who registered before it closed may still
+    // need to say they cannot come, and that is exactly when they most need to:
+    // their place is the one that could go to whoever is waiting.
+    const cancel = state === 'none' ? null
+      : el('details', { className: 'disclosure' }, [
+          el('summary', { text: 'Cancel a registration' }), cancelForm(event)
+        ]);
+
+    return [el('p', { className: 'event-note', text: note }), cancel].filter(Boolean);
   }
 
   const register = registerForm(event, { onChange, prefix });

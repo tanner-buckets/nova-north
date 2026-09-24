@@ -13,7 +13,7 @@ import {
   supabase, el, problem, formatEventDay, formatEventTime, leagueDayKey
 } from './supabase-client.js';
 import {
-  TYPE_LABELS, spotsHost, fillSpots, registrationBlock
+  TYPE_LABELS, spotsHost, fillSpots, registrationBlock, registrationState
 } from './event-registration.js';
 
 const host = document.querySelector('#event');
@@ -178,9 +178,18 @@ async function refresh() {
       return;
     }
 
-    const openCount = events.filter((e) => e.registration_open && !isPast(e)).length;
+    const states = events.map(registrationState);
+    const openCount = states.filter((st) => st === 'open').length;
     const days = new Set(events.map((e) => leagueDayKey(e.starts_at)));
     const when = days.size === 1 ? `, on ${formatEventDay(events[0].starts_at)}` : '';
+
+    // Why none of them are taking anybody, when none of them are. "Not open
+    // yet" and "closed" are opposite pieces of news and a player acts on them
+    // differently: one means come back, the other means talk to somebody.
+    const closedNote = states.every((st) => st === 'none')
+      ? 'Registration is not open yet.'
+      : 'Registration has closed on every flight. Speak to a professor at league '
+        + 'if you still want to play.';
 
     host.replaceChildren(
       el('h1', { text: lead.name }),
@@ -189,7 +198,7 @@ async function refresh() {
             + (openCount
                 ? 'Register for the one you want to play. You can hold a place in '
                   + 'one flight and wait for a place in the others.'
-                : 'Registration is not open yet.') }),
+                : closedNote) }),
       el('ul', { className: 'card-list' },
         events.map((e) => detail(e, counts.get(e.id) || [],
           { onChange: refreshCounts, heading: 'h2', tag: 'li' })))

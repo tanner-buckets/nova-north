@@ -11,7 +11,7 @@ import {
   supabase, el, problem, formatEventDay, formatEventTime,
   DIVISION_ORDER, DIVISION_LABEL
 } from '../supabase-client.js';
-import { eventPath } from '../event-registration.js';
+import { eventPath, registrationState } from '../event-registration.js';
 import { currentProfessor } from '../auth.js';
 import { status } from './attendance-core.js';
 
@@ -399,6 +399,98 @@ export function eventForm(event, { onSaved }) {
   return form;
 }
 
+const WHEN = new Intl.DateTimeFormat('en-US', {
+  month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+  timeZone: 'America/New_York'
+});
+
+// Closing registration early, and opening it again.
+//
+// Deliberately not the "Take registration" checkbox above. That one says whether
+// the event takes registration at all, and turning it off takes the event off
+// the drop confirmation screen and out of the printable desk list -- so closing
+// a full prerelease the night before would delete the list somebody needs at the
+// desk in the morning. This closes the door and leaves everything else standing.
+function closingPanel(event) {
+  const state = registrationState(event);
+  const closed = !!event.registration_closed_at;
+
+  const note = el('p', { className: 'form-status', role: 'status' });
+  const toggle = el('button', {
+    type: 'button',
+    className: closed ? 'button button-quiet' : 'link-button',
+    text: closed ? 'Open registration again' : 'Close registration now'
+  });
+  const yes = el('button', { type: 'button', className: 'button button-danger',
+    text: 'Yes, close it' });
+  const no = el('button', { type: 'button', className: 'link-button', text: 'Leave it open' });
+  const confirmRow = el('span', { className: 'confirm-row', hidden: 'hidden' }, [yes, no]);
+
+  no.addEventListener('click', () => {
+    confirmRow.hidden = true;
+    toggle.hidden = false;
+    status(note, '');
+  });
+
+  toggle.addEventListener('click', () => {
+    if (closed) { set(false); return; }
+    toggle.hidden = true;
+    confirmRow.hidden = false;
+    status(note, 'Nobody new can register after this. Everyone already registered '
+      + 'keeps their place, the waiting list keeps its order, and drop requests '
+      + 'still come through. You can open it again at any time.');
+  });
+
+  yes.addEventListener('click', () => set(true));
+
+  async function set(value) {
+    toggle.disabled = true;
+    yes.disabled = true;
+    status(note, 'Saving.');
+    try {
+      const { data, error } = await supabase.rpc('set_registration_closed', {
+        p_event_id: event.id, p_closed: value
+      });
+      if (error) throw error;
+      if (!data.ok) throw new Error(data.code);
+
+      // Reopening an event that has already started changes nothing anybody can
+      // see, because the clock refuses it either way. Saying so beats a screen
+      // that reports success and a player who is still refused.
+      if (!value && data.already_started) {
+        status(note, 'Reopened, but this event has already started, so '
+          + 'registration stays closed until the start time is changed.', 'error');
+        return;
+      }
+      await refresh();
+    } catch (err) {
+      console.error(err);
+      toggle.disabled = false;
+      yes.disabled = false;
+      status(note, `That did not go through: ${err.message || 'unknown error'}.`, 'error');
+    }
+  }
+
+  return el('div', { className: 'closing-panel' }, [
+    el('h4', { text: 'Registration' }),
+    el('p', { className: 'live-state ' + (state === 'open' ? 'is-on' : 'is-off'),
+      text: {
+        open: 'Open. Players can register.',
+        closed: `Closed by hand${event.registration_closed_at
+          ? ` on ${WHEN.format(new Date(event.registration_closed_at))}` : ''}.`,
+        started: 'Closed, because the event has started.',
+        none: 'This event does not take registration.'
+      }[state] }),
+    el('p', { className: 'field-help',
+      text: 'Registration closes on its own when the event starts. This is for '
+          + 'closing it before then, and it is not the same as the Take '
+          + 'registration box above: the event stays on the drop screen and in '
+          + 'the printable desk list either way.' }),
+    state === 'none' ? null : el('p', { className: 'item-actions' }, [toggle, confirmRow]),
+    note
+  ]);
+}
+
 // The link a professor posts. An absolute URL, because it is going into a
 // Discord message or a text, where a relative path means nothing.
 //
@@ -457,7 +549,11 @@ async function eventRow(event) {
       el('span', { className: 'count',
         text: `${formatEventDay(event.starts_at)}, ${formatEventTime(event.starts_at)}` }),
       event.registration_open
-        ? el('span', { className: 'tag tag-division', text: 'registration' })
+        ? el('span', {
+            className: 'tag ' + (registrationState(event) === 'open'
+              ? 'tag-division' : 'tag-voided'),
+            text: registrationState(event) === 'open' ? 'registration' : 'registration closed'
+          })
         : null,
       event.is_premier ? el('span', { className: 'tag tag-new', text: 'premier' }) : null,
       // Professor-facing only. The PIN groups flights for the desk and means
@@ -485,6 +581,7 @@ async function eventRow(event) {
         : el('p', { className: 'field-help',
             text: 'This event does not take registration, so a capacity would cap '
                 + 'nothing. Turn registration on above and save to set one.' }),
+      closingPanel(event),
       shareLink(event)
     );
   });

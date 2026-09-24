@@ -2249,3 +2249,16 @@ h1.event-name + .event-when {
   margin: 0 0 0.6rem;
   font-size: 1.05rem;
 }
+
+/* Closing registration early, under the capacity panel. Set apart because it
+   acts on the event as a whole and is not the Take registration checkbox. */
+.closing-panel {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+.closing-panel h4 {
+  margin: 0 0 0.3rem;
+  font-family: var(--font-head);
+  font-size: 1rem;
+}
