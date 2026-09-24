@@ -11,6 +11,7 @@ import {
   supabase, el, problem, formatEventDay, formatEventTime,
   DIVISION_ORDER, DIVISION_LABEL
 } from '../supabase-client.js';
+import { eventPath } from '../event-registration.js';
 import { currentProfessor } from '../auth.js';
 import { status } from './attendance-core.js';
 
@@ -398,6 +399,56 @@ export function eventForm(event, { onSaved }) {
   return form;
 }
 
+// The link a professor posts. An absolute URL, because it is going into a
+// Discord message or a text, where a relative path means nothing.
+//
+// The field is readable and selectable rather than a button alone: clipboard
+// access can be refused, and a professor who cannot copy still needs to be able
+// to read the link off the screen and type it.
+function shareLink(event) {
+  const url = new URL(eventPath(event, '../'), window.location.href).href;
+
+  const box = el('input', {
+    className: 'share-url', value: url, readonly: 'readonly',
+    id: `share-${event.id}`, 'aria-label': 'Link to this event'
+  });
+  box.addEventListener('focus', () => box.select());
+
+  const note = el('p', { className: 'form-status', role: 'status' });
+  const copy = el('button', { type: 'button', className: 'button button-quiet', text: 'Copy link' });
+
+  copy.addEventListener('click', async () => {
+    box.select();
+    try {
+      await navigator.clipboard.writeText(url);
+      status(note, 'Copied. Paste it wherever you are posting the event.', 'good');
+    } catch {
+      status(note, 'This browser would not let the page copy it. The link is '
+        + 'selected, so press Ctrl+C.', 'error');
+    }
+  });
+
+  return el('div', { className: 'share-block' }, [
+    el('h4', { text: 'Link to post' }),
+    el('p', { className: 'field-help',
+      text: 'Opens this event on a page of its own, with the registration form '
+          + 'and nothing else on it. Safe to post publicly: it shows what the '
+          + 'schedule shows, and never who has registered.' }),
+    el('p', { className: 'share-row' }, [box, copy]),
+    event.linked_group_id
+      ? el('p', { className: 'field-help',
+          text: `This event is flight ${event.linked_group_id}, so the link opens `
+              + 'every flight in the group and lets a player pick one.' })
+      : null,
+    event.registration_open
+      ? null
+      : el('p', { className: 'field-help is-warning',
+          text: 'Registration is off for this event, so the page will say so '
+              + 'rather than offer the form. Turn it on above before posting.' }),
+    note
+  ]);
+}
+
 async function eventRow(event) {
   const body = el('div', { className: 'disclosure-body' });
   const wrapper = el('details', { className: 'disclosure' }, [
@@ -433,7 +484,8 @@ async function eventRow(event) {
         ? capacityPanel(event.id, caps)
         : el('p', { className: 'field-help',
             text: 'This event does not take registration, so a capacity would cap '
-                + 'nothing. Turn registration on above and save to set one.' })
+                + 'nothing. Turn registration on above and save to set one.' }),
+      shareLink(event)
     );
   });
 

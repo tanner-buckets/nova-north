@@ -240,12 +240,53 @@ Built so far:
 |---|---|---|
 | `index.html` | Home | nothing — static copy |
 | `schedule.html` | Schedule | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
+| `event.html` | no — reached by link | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
 | `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers` |
 | `prize-items.html` | no | `prize_items` |
 | `players.html` | Players | `get_player_summary()`, `public_players` |
 | `id_help.html` | no | nothing — static copy |
 
-All five public pages are built.
+All the public pages are built.
+
+### One event, on a page of its own
+
+`event.html` is the link a professor posts. The schedule carries every event and
+its registration form, but a link to the schedule is a link to everything:
+somebody following it from a Discord post has to find the right card, and by the
+following week the right card has moved.
+
+The event is named in the query string by **its own id** — `event.html?e=<uuid>`
+— so nothing was added to the database for this. `event.html?g=<code>` opens a
+whole flight group by the four digit code flights already share.
+
+- **It reads exactly what the schedule reads**: `events` and
+  `public_event_counts`. Places left and the number waiting, never who is
+  registered. Safe to post publicly because there is nothing on it that is not
+  already on the schedule.
+- **Following a link to one flight shows the others.** A full flight is a reason
+  to take a different one, not a reason to give up. The flight that was linked to
+  is the one the page is titled with.
+- **A past event still resolves.** A link outlives the afternoon it was posted
+  for, and a page saying the event has happened is better than a dead link.
+- **The registration form is open**, not folded into a disclosure. On the
+  schedule it is folded away, because a card there is one of many and the form
+  would bury the next event. Here, registering is the only reason anybody
+  followed the link.
+- **Registering refreshes the numbers, not the page.** The message the form
+  prints is the player's only confirmation — there is no email, and the message
+  says so — so redrawing the card would take it away before they had read it.
+  The schedule behaves the same way now, for the same reason.
+
+`event-registration.js` holds the forms, the refusal messages and the places-left
+line, and both pages import them. Two copies of a form that writes to the
+database is two places for a message to go stale, and the one that goes stale is
+the one nobody is looking at.
+
+**A posted link previews as the site, not as the event.** Link previews come from
+`<meta>` tags in the served HTML, and filling those in per event needs either a
+server or a build step. Both are ruled out, so the page sets `document.title`
+after it loads — which fixes the browser tab and a bookmark, and does nothing for
+Discord. Write the event name in the post alongside the link.
 
 `supabase-client.js` holds the client, league-time formatting and the DOM
 helpers. Times are pinned to `America/New_York`: "2:00 PM" must mean the same
@@ -565,6 +606,13 @@ the public schedule: it groups flights for the desk and means nothing to a
 player.
 
 New events prefill to the next Sunday at 2:00, which is when league meets.
+
+Opening an event on this screen shows a **Link to post** — the absolute URL of
+that event's own page, with a copy button. The field is readable and selectable
+as well as copyable, because clipboard access can be refused and a professor
+still has to be able to get the link off the screen. It says when registration is
+off, since the page will then say so rather than offer the form, and it says when
+the event is part of a flight group, since the link opens all of them.
 
 Times are league time, not the browser's. A `datetime-local` input carries no
 zone, so the value is composed and parsed against `America/New_York` explicitly,

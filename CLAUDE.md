@@ -194,6 +194,10 @@ is applied to the production database.** There is no confirmation step.
   on-screen confirmation naming who was promoted.
 - Drop requests require Player ID **and** matching name, and do not take effect
   until a professor confirms.
+- **An event that takes registration has a page of its own**, `event.html?e=<id>`,
+  so a professor has a link to post that is one event rather than the whole
+  schedule. It reads what the schedule reads and nothing more: places left and
+  the number waiting, never who is registered. A flight code opens the group.
 - **Every registration requires a Player ID**, prereleases included. Someone
   without one is sent to a help page explaining how to look one up or create one,
   including for a child, with professor contact details as the fallback. A
@@ -248,11 +252,13 @@ publication. Nothing printed is ever rendered on a public page.
 ```
 index.html          league overview, meeting time, how to join
 schedule.html       upcoming events
+event.html          one event, by ?e=<id>, for a link that can be posted
 prizes.html         prize wall catalog
 players.html        player lookup by Player ID
 admin/              professor-only pages
 data/source/*.csv   spreadsheet exports used to seed reference tables
-app.js              shared logic
+event-registration.js  the register and cancel forms, shared by both pages
+supabase-client.js  the client, league time, and the DOM helpers
 styles.css          all styles
 supabase/migrations/  schema, one file per change
 ```
