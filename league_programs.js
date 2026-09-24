@@ -1,4 +1,4 @@
-import { supabase, el, problem } from './supabase-client.js';
+import { supabase, el, problem, badgeTile } from './supabase-client.js';
 
 function fill(selector, build) {
   const host = document.querySelector(selector);
@@ -13,11 +13,15 @@ function fill(selector, build) {
     .finally(() => host.removeAttribute('aria-busy'));
 }
 
+// A heading is a string, or a node where the column needs a label a screen
+// reader can use and a sighted reader does not.
 function table(headings, rows) {
   return el('div', { className: 'table-wrap' }, [
     el('table', { className: 'data-table' }, [
       el('thead', {}, [
-        el('tr', {}, headings.map((h) => el('th', { scope: 'col', text: h })))
+        el('tr', {}, headings.map((h) => typeof h === 'string'
+          ? el('th', { scope: 'col', text: h })
+          : el('th', { scope: 'col' }, [h])))
       ]),
       el('tbody', {}, rows)
     ])
@@ -69,10 +73,18 @@ fill('#badges', async () => {
     return [el('p', { text: 'No badge list is running at the moment.' })];
   }
 
-  const rows = (year) => table(['Badge', 'How to earn it'],
+  // The picture sits at the end of the row rather than in front of the name,
+  // because the name and the task are what somebody reads down the list for.
+  // The heading is there for a screen reader; showing "Picture" above a column
+  // of pictures tells a sighted reader nothing.
+  const rows = (year) => table(
+    ['Badge', 'How to earn it', el('span', { className: 'hidden-label', text: 'Picture' })],
     live.filter((b) => b.season_year === year).map((b) => el('tr', {}, [
       el('th', { scope: 'row', className: 'badge-name', text: b.name }),
-      el('td', { text: b.task })
+      el('td', { text: b.task }),
+      el('td', { className: 'badge-cell' }, [
+        badgeTile(b, { earned: true, withName: false })
+      ])
     ])));
 
   // One season is the ordinary case and gets no heading, because a heading
