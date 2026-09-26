@@ -58,6 +58,10 @@ If a task seems to need a framework or a build step, stop and ask. Do not add on
   - `images/play-pokemon.png` — the Play! Pokémon mark, footer of every page
   - `images/worlds.png` — the World Championships mark, on premier events
   - `images/cc-logo.png` — the venue's own mark, behind every earned badge
+  - `images/icon-32.png`, `images/icon-180.png`, `favicon.ico` — the same venue
+    mark, on graphite, as the tab icon. Chosen by the organiser over an original
+    league mark; the concern that it reads as the store's site rather than the
+    league's was raised and answered.
 - Do not add further official artwork without asking.
 - Do not copy text from official sources.
 - Describe the league; do not represent it as official.
@@ -340,6 +344,25 @@ The Play! Pokémon mark sits bottom right of every footer, on a white chip. It i
 black and red on transparent and would vanish into the dark footer; inverting it
 turned the red cyan, and a brand mark in the wrong colours is worse than one that
 needed a background.
+
+### The tab icon
+
+The venue mark on a graphite tile, at `images/icon-32.png`, `images/icon-180.png`
+and `favicon.ico`. Graphite because the mark is pale gold on transparent and
+would vanish against a light tab strip; the tile is `--ink`, the masthead band,
+so the tab matches the top of the page.
+
+- **Every page carries the link tags.** There is no build step and so no shared
+  head, which means a new page needs them copied in or its tab falls back to the
+  browser's blank icon.
+- **The paths are relative**, like every other link here. Pages serves the site
+  from the `/nova-north/` subpath, so a leading slash resolves to the domain root
+  and 404s. An admin page needs `../`.
+- `favicon.ico` sits at the repo root because browsers request it with no tag at
+  all. It holds 16, 32 and 48 pixel versions.
+- Generated from `CC-Logo-No-Text.png` by fitting the mark to the tile height at
+  10% padding and reducing from 8× with Lanczos. Regenerating from a different
+  picture is the way to change it; the sizes are not hand-drawn.
 
 A premier event carries the World Championships mark in its top right corner.
 `is_premier` is the flag, and it is set on exactly the League Cups and

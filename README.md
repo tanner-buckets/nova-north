@@ -304,6 +304,14 @@ Pages are served from a project subpath, `tanner-buckets.github.io/nova-north/`,
 so every internal link is relative. An absolute `/styles.css` would resolve to the
 domain root and break.
 
+The **tab icon** is the venue mark on a graphite tile: `images/icon-32.png`,
+`images/icon-180.png` for iOS, and `favicon.ico` at the repo root for browsers
+that ask for it with no tag at all. Graphite because the mark is pale gold on
+transparent and would disappear against a light tab strip. Every page carries the
+link tags — no build step means no shared head, so a new page needs them copied
+in, with `../` from `admin/`. They are generated from `CC-Logo-No-Text.png`, not
+drawn by hand, so changing the icon means regenerating from a different picture.
+
 ### The Trainer Card Program
 
 `trainer_card_ranks`, `badges` and `player_badges`, set up so the badge list can
