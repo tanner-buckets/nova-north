@@ -304,6 +304,14 @@ Pages are served from a project subpath, `tanner-buckets.github.io/nova-north/`,
 so every internal link is relative. An absolute `/styles.css` would resolve to the
 domain root and break.
 
+The **masthead** carries the venue mark to the right of the name, sized to the
+name and the strapline together. Those two are wrapped in `.masthead-top` so the
+mark can be a sibling of both. Its height is a number per header variant rather
+than a stretch: `align-self: stretch` does nothing to an image, because
+`height: auto` on a replaced element resolves to its intrinsic size. `alt` is
+empty — the strapline already names Continental Cards in text, and the mark sits
+beside a link whose accessible name is "LoCo League".
+
 The **tab icon** is the venue mark on a graphite tile: `images/icon-32.png`,
 `images/icon-180.png` for iOS, and `favicon.ico` at the repo root for browsers
 that ask for it with no tag at all. Graphite because the mark is pale gold on

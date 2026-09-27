@@ -345,6 +345,26 @@ black and red on transparent and would vanish into the dark footer; inverting it
 turned the red cyan, and a brand mark in the wrong colours is worse than one that
 needed a background.
 
+The venue mark sits to the right of the name in the masthead, matching the
+height of the name and the strapline together. That is why those two are wrapped
+in `.masthead-top` and `.masthead-titles`: the mark has to be a sibling of both,
+not of the name alone.
+
+It carries no plate, unlike the tab icon. The band behind it is already graphite,
+which is the contrast the pale gold needed.
+
+**Its height is a number per header variant**, not `align-self: stretch`.
+Stretch does nothing to an image — `height: auto` on a replaced element resolves
+to its intrinsic size, so the mark would be 197px tall and the band would grow to
+fit it. Letting it grow with the column would run away on a narrow screen anyway:
+a taller mark is a wider mark, a wider mark leaves the strapline less room, the
+strapline wraps, and the column gets taller again. Four numbers, one per
+combination of full or compact and narrow or wide.
+
+`alt` is empty. The strapline underneath already says Continental Cards in text,
+and the mark sits next to a link whose name is "LoCo League" — alt text there
+would change what that link is called.
+
 ### The tab icon
 
 The venue mark on a graphite tile, at `images/icon-32.png`, `images/icon-180.png`
