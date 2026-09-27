@@ -247,6 +247,15 @@ is applied to the production database.** There is no confirmation step.
 - **Only players the file lists earn the play award.** Someone added by hand
   earns the loyalty week and the attendance point and nothing more. The file is
   the claim that a tournament was played; a name typed at the desk is not.
+- **Ask which judges were there**, as a list of checkboxes, not a fourth search.
+  A judge is at every event by definition, and making a professor retype four
+  names every week is asking them to enter what the site already knows. The list
+  comes from `professors` joined to their own player record, never from IDs
+  written into page code: who judges changes.
+- **A judge earns what anybody added by hand earns** — the loyalty week and the
+  attendance point, and no play award. Judging is not playing. A judge who also
+  played is in the file already, so their box is ticked and locked rather than
+  offering to add them twice.
 
 ---
 
@@ -344,6 +353,26 @@ The Play! Pokémon mark sits bottom right of every footer, on a white chip. It i
 black and red on transparent and would vanish into the dark footer; inverting it
 turned the red cyan, and a brand mark in the wrong colours is worse than one that
 needed a background.
+
+The venue mark sits to the left of the name in the masthead, matching the
+height of the name and the strapline together. That is why those two are wrapped
+in `.masthead-top` and `.masthead-titles`: the mark has to be a sibling of both,
+not of the name alone.
+
+It carries no plate, unlike the tab icon. The band behind it is already graphite,
+which is the contrast the pale gold needed.
+
+**Its height is a number per header variant**, not `align-self: stretch`.
+Stretch does nothing to an image — `height: auto` on a replaced element resolves
+to its intrinsic size, so the mark would be 197px tall and the band would grow to
+fit it. Letting it grow with the column would run away on a narrow screen anyway:
+a taller mark is a wider mark, a wider mark leaves the strapline less room, the
+strapline wraps, and the column gets taller again. Four numbers, one per
+combination of full or compact and narrow or wide.
+
+`alt` is empty. The strapline underneath already says Continental Cards in text,
+and the mark sits next to a link whose name is "LoCo League" — alt text there
+would change what that link is called.
 
 ### The tab icon
 

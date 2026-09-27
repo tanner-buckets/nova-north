@@ -118,6 +118,33 @@ a:hover {
   border-image: var(--gold-metal) 1;
 }
 
+/* The name and the strapline in one column, with the venue mark beside them
+   matching their combined height. The mark is pale gold on transparent, which is
+   why it needs no plate here: the band behind it is already graphite. */
+.masthead-top {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.masthead-titles { min-width: 0; }
+
+.masthead-logo {
+  /* Sized per header rather than stretched to the column beside it.
+     align-self: stretch does nothing to an image: height: auto on a replaced
+     element resolves to its intrinsic size, so the mark would be 197px tall and
+     the column would grow to fit it.
+
+     A number per variant instead, each one matching the name plus the strapline
+     at that size. Letting it grow with the column would run away on a narrow
+     screen anyway: a taller mark is a wider mark, a wider mark leaves the
+     strapline less room, the strapline wraps, and the column gets taller again. */
+  height: 3.4rem;
+  width: auto;
+  flex: none;
+}
+.masthead-compact .masthead-logo { height: 2.9rem; }
+
 .masthead-brand {
   display: flex;
   align-items: center;
@@ -158,7 +185,7 @@ a:hover {
 }
 
 .masthead-strap {
-  margin: 0.55rem 0 0;
+  margin: 0.4rem 0 0;
   color: rgba(255, 255, 255, 0.74);
   font-size: 0.92rem;
 }
@@ -1079,9 +1106,11 @@ h3 {
   .masthead { padding: 1.7rem 2rem 1.2rem; }
   .masthead-name { font-size: 2.2rem; }
   .masthead-compact .masthead-name { font-size: 1.6rem; }
+  /* The name is taller here and the strapline fits on one line. */
+  .masthead-logo { height: 4.1rem; }
+  .masthead-compact .masthead-logo { height: 3.4rem; }
 
-  .masthead-brand,
-  .masthead-strap,
+  .masthead-top,
   .masthead-meta,
   .masthead-nav {
     max-width: 62rem;
@@ -2288,4 +2317,24 @@ h1.event-name + .event-when {
 .badge-slot.is-bare {
   width: 3.2rem;
   display: inline-grid;
+}
+
+/* The judges, as a row of boxes on the upload screen. Wrapping rather than a
+   grid: there are four of them, and a fixed column count would leave a gap the
+   day a fifth joins. */
+.judge-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.4rem;
+}
+.judge-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.judge-list .field {
+  margin: 0;
 }

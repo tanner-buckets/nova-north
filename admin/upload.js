@@ -29,6 +29,8 @@ let known = new Set();  // player_ids already in the players table
 let extras = [];        // attendees added by hand
 let actions = [];       // earning_actions rows
 let alreadyPaid = new Set();   // already have the play point for this tournament
+let judges = [];        // professors with a player record of their own
+let judgesError = false;
 
 // --- Parsing -----------------------------------------------------------------
 
@@ -97,6 +99,28 @@ async function refreshKnown() {
   known = new Set(data.map((r) => r.player_id));
 }
 
+// The professors who are also players. Read from the professors table rather
+// than written into this file: who judges changes, and a list in page code would
+// be wrong the first time somebody joined or left.
+async function loadJudges() {
+  const { data: profs, error } = await supabase
+    .from('professors').select('display_name, player_id')
+    .not('player_id', 'is', null);
+  if (error) throw error;
+
+  const ids = (profs || []).map((r) => r.player_id);
+  if (!ids.length) return [];
+
+  // Names come from players, not from display_name, because that is what goes
+  // into the attendee list beside everybody else.
+  const { data: rows, error: playerError } = await supabase
+    .from('players').select('player_id, first_name, last_name').in('player_id', ids);
+  if (playerError) throw playerError;
+
+  return (rows || []).sort((a, b) =>
+    `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`));
+}
+
 // --- Rendering ---------------------------------------------------------------
 
 function attendeeList() {
@@ -107,7 +131,8 @@ function attendeeList() {
         el('span', { className: 'player-label', text: `${p.first_name} ${p.last_name}`.trim() }),
         el('span', { className: 'player-id count', text: p.player_id }),
         known.has(p.player_id) ? null : el('span', { className: 'tag tag-new', text: 'new' }),
-        p.added ? el('span', { className: 'tag tag-added', text: 'added by hand' }) : null
+        p.judged ? el('span', { className: 'tag tag-added', text: 'judged' })
+          : p.added ? el('span', { className: 'tag tag-added', text: 'added by hand' }) : null
       ])))
   ]);
 }
@@ -147,6 +172,86 @@ function rosterCard() {
     ]),
     attendeeList()
   ]);
+}
+
+// The judges, as a fixed list of boxes rather than four more searches. A judge
+// is at every event by definition, so asking by name every week is asking a
+// professor to retype what the site already knows.
+//
+// A judge earns what anybody added by hand earns: the loyalty week and the point
+// for attending, and no play award. Judging is not playing, and the file is the
+// claim that somebody played.
+export function judgesCard() {
+  const note = el('p', { className: 'form-status', role: 'status' });
+
+  if (judgesError) {
+    return el('section', { className: 'card' }, [
+      el('h2', { text: 'Which judges were here?' }),
+      el('p', { className: 'form-status is-error',
+        text: 'The list of judges could not be loaded. Add them by name below '
+            + 'instead, in Was anyone else here.' })
+    ]);
+  }
+
+  if (!judges.length) {
+    return el('section', { className: 'card' }, [
+      el('h2', { text: 'Which judges were here?' }),
+      el('p', { className: 'muted-note',
+        text: 'No professor has a player record linked yet, so there is nobody '
+            + 'to tick. Add anyone who judged by name below.' })
+    ]);
+  }
+
+  const boxes = judges.map((judge) => {
+    // Somebody who played in the tournament is already counted, and cannot be
+    // taken off the list by unticking a box here.
+    const inFile = parsed.players.some((p) => p.player_id === judge.player_id);
+    const added = extras.some((p) => p.player_id === judge.player_id);
+
+    const box = el('input', { type: 'checkbox', id: `judge-${judge.player_id}` });
+    box.checked = inFile || added;
+    box.disabled = inFile;
+
+    box.addEventListener('change', () => {
+      if (box.checked) {
+        extras.push({ ...judge, added: true, judged: true });
+        known.add(judge.player_id);
+        status(note, `${judge.first_name} added.`, 'good');
+      } else {
+        extras = extras.filter((p) => p.player_id !== judge.player_id);
+        status(note, `${judge.first_name} taken off.`);
+      }
+      redraw();
+      // redraw replaces the whole screen, so the box that was just clicked has
+      // to be found again or a professor working by keyboard loses their place.
+      document.getElementById(box.id)?.focus();
+    });
+
+    return el('li', {}, [
+      el('span', { className: 'field field-inline' }, [
+        box,
+        el('label', { for: box.id,
+          text: `${judge.first_name} ${judge.last_name}`.trim() })
+      ]),
+      inFile ? el('span', { className: 'tag tag-added', text: 'in the file' }) : null
+    ]);
+  });
+
+  return el('section', { className: 'card' }, [
+    el('h2', { text: 'Which judges were here?' }),
+    el('p', { text: 'A judge earns the day like anyone who turned up: the '
+      + 'loyalty week and the point for attending. Not the play award, because '
+      + 'judging is not playing.' }),
+    el('ul', { className: 'judge-list' }, boxes),
+    note
+  ]);
+}
+
+// Set by the local demo so the judges panel can be rendered and clicked without
+// a session and without a tournament file.
+export function _setUpload(j, p, e) {
+  judges = j; parsed = p; extras = e || [];
+  judgesError = false;
 }
 
 // A step of its own, open, between the roster and the button. It was a collapsed
@@ -318,7 +423,7 @@ function renderPicker() {
 }
 
 function redraw() {
-  app.replaceChildren(rosterCard(), othersCard(), recordCard());
+  app.replaceChildren(rosterCard(), judgesCard(), othersCard(), recordCard());
 }
 
 // --- Writing -----------------------------------------------------------------
@@ -368,6 +473,16 @@ async function commit({ attendedOn, attendActionId, playActionId, createMissing,
       el('a', { href: 'index.html', text: 'Professor tools' })
     ]));
     return;
+  }
+
+  // The judges are a convenience, not a requirement: failing to load them is
+  // worth saying on screen, not worth refusing the upload over, because every
+  // one of them can still be added by name below.
+  try {
+    judges = await loadJudges();
+  } catch (err) {
+    console.error(err);
+    judgesError = true;
   }
 
   try {

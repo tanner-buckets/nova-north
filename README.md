@@ -304,6 +304,14 @@ Pages are served from a project subpath, `tanner-buckets.github.io/nova-north/`,
 so every internal link is relative. An absolute `/styles.css` would resolve to the
 domain root and break.
 
+The **masthead** carries the venue mark to the left of the name, sized to the
+name and the strapline together. Those two are wrapped in `.masthead-top` so the
+mark can be a sibling of both. Its height is a number per header variant rather
+than a stretch: `align-self: stretch` does nothing to an image, because
+`height: auto` on a replaced element resolves to its intrinsic size. `alt` is
+empty — the strapline already names Continental Cards in text, and the mark sits
+beside a link whose accessible name is "LoCo League".
+
 The **tab icon** is the venue mark on a graphite tile: `images/icon-32.png`,
 `images/icon-180.png` for iOS, and `favicon.ico` at the repo root for browsers
 that ask for it with no tag at all. Graphite because the mark is pale gold on
@@ -425,6 +433,25 @@ attending and for playing. The screen asks one question, "was this a premier
 event?", which switches the play award between the casual and championship
 actions. Both dropdowns stay editable, because point values are defaults a
 professor may override.
+
+Between the roster and the button it asks two questions, both open rather than
+folded away, because a collapsed disclosure is the same as not asking.
+
+**"Which judges were here?"** — a checkbox each, not a fourth search. A judge is
+at every event by definition, and making a professor retype four names every
+week is asking them to enter what the site already knows. The list is built from
+`professors` joined to their own player record, never from IDs in page code:
+who judges changes, and a hardcoded list would be wrong the first time somebody
+joined or left. A judge who also played is in the file already, so their box is
+ticked and locked instead of offering to add them twice. Failing to load the
+list does not block the upload — it says so and points at the search below.
+
+**"Was anyone else here?"** — a free search, for anyone who turned up without
+entering the tournament.
+
+Both routes produce the same thing: the loyalty week and the attendance point,
+and **no play award**. The file is the claim that a tournament was played; a
+name typed at the desk is not, and judging is not playing.
 
 Two consequences of the domain rules show up in the result message rather than as
 errors:
