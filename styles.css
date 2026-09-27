@@ -2318,3 +2318,23 @@ h1.event-name + .event-when {
   width: 3.2rem;
   display: inline-grid;
 }
+
+/* The judges, as a row of boxes on the upload screen. Wrapping rather than a
+   grid: there are four of them, and a fixed column count would leave a gap the
+   day a fifth joins. */
+.judge-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.4rem;
+}
+.judge-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.judge-list .field {
+  margin: 0;
+}
