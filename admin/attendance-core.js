@@ -234,8 +234,17 @@ function newPlayerForm(onPick) {
 export async function recordAttendance({
   attendees, known, attendedOn, attendActionId, playActionId,
   createMissing, professor, actions, source, reason, skipPlayFor,
-  otherAttendees
+  otherAttendees, attendPoints, playPoints, sourceRef
 }) {
+  // A screen may hand over the number of points itself rather than let the
+  // earning action decide. Point values are defaults a professor can change at
+  // entry time, and the upload screen now asks for the number directly instead
+  // of making them pick a different action to change it. A screen that passes
+  // nothing keeps the action's own value.
+  const attendDelta = Number.isFinite(attendPoints)
+    ? attendPoints : pointsFor(actions, attendActionId);
+  const playDelta = Number.isFinite(playPoints)
+    ? playPoints : pointsFor(actions, playActionId);
   const missing = attendees.filter((p) => !known.has(p.player_id));
   let created = [];
 
@@ -319,7 +328,7 @@ export async function recordAttendance({
   for (const p of eligible) {
     if (newlyPresent.has(p.player_id)) {
       ledger.push({
-        player_id: p.player_id, delta: pointsFor(actions, attendActionId),
+        player_id: p.player_id, delta: attendDelta,
         earning_action_id: attendActionId, created_by: professor.userId
       });
     }
@@ -334,10 +343,12 @@ export async function recordAttendance({
     // two routes agreeing.
     if (playActionId && p.played && !(skipPlayFor && skipPlayFor.has(p.player_id))) {
       ledger.push({
-        player_id: p.player_id, delta: pointsFor(actions, playActionId),
+        player_id: p.player_id, delta: playDelta,
         earning_action_id: playActionId, created_by: professor.userId,
         // Public through get_player_summary(). Never write anything private here.
-        reason: reason || null
+        reason: reason || null,
+        // Not public, and the only thing the repeat-upload check reads.
+        source_ref: sourceRef || null
       });
     }
   }
@@ -466,12 +477,21 @@ export function otherAttendeesField(initialDate) {
   };
 }
 
-export async function alreadyPaidFor(reason, playerIds) {
-  if (!reason || !playerIds.length) return new Set();
+// Which of these players already hold a play award for this exact tournament.
+//
+// Keyed on the tournament's own id, not on its name. A league that exports the
+// same event name every week would otherwise flag every returning player from
+// the second week onward, and the default is to skip paying them -- so regulars
+// would quietly stop earning the play point.
+//
+// No id, no check. A file that does not carry one cannot be told apart from
+// another file, and guessing from the name is what this replaced.
+export async function alreadyPaidFor(sourceRef, playerIds) {
+  if (!sourceRef || !playerIds.length) return new Set();
 
   const { data, error } = await supabase
     .from('point_ledger').select('player_id')
-    .eq('reason', reason).in('player_id', playerIds);
+    .eq('source_ref', sourceRef).in('player_id', playerIds);
 
   // A failed check must not silently become "nobody has been paid". Better to
   // let the caller decide than to quietly pay everyone twice.

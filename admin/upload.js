@@ -16,7 +16,7 @@ import { supabase, el } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import {
   ATTEND_LABEL, CASUAL_LABEL, PREMIER_LABEL,
-  loadActions, actionField, status, playerPicker, recordAttendance, outcomeNodes,
+  loadActions, status, playerPicker, recordAttendance, outcomeNodes,
   describeFailure, alreadyPaidFor, otherAttendeesField
 } from './attendance-core.js';
 
@@ -31,6 +31,8 @@ let actions = [];       // earning_actions rows
 let alreadyPaid = new Set();   // already have the play point for this tournament
 let judges = [];        // professors with a player record of their own
 let judgesError = false;
+let others = null;      // the other-attendee field, built once per file
+let earn = null;        // the fields on the record card, likewise
 
 // --- Parsing -----------------------------------------------------------------
 
@@ -53,6 +55,12 @@ function parseTdf(text) {
   const eventName = data?.querySelector('name')?.textContent?.trim() || 'Untitled event';
   const startdate = data?.querySelector('startdate')?.textContent?.trim() || '';
 
+  // The tournament's own id, which sits directly after the name. It is what
+  // tells one tournament from another: a league that exports the same event
+  // name every Sunday has a different id every Sunday. Most files carry one;
+  // a file without one gets no repeat-upload check rather than a guess.
+  const eventId = data?.querySelector('id')?.textContent?.trim() || null;
+
   // The file writes MM/DD/YYYY. The database wants a plain calendar day.
   const m = startdate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   const attendedOn = m
@@ -72,7 +80,7 @@ function parseTdf(text) {
     }))
     .filter((p) => p.player_id);
 
-  return { eventName, attendedOn, players };
+  return { eventName, eventId, attendedOn, players };
 }
 
 // --- Helpers -----------------------------------------------------------------
@@ -259,6 +267,10 @@ export function _setUpload(j, p, e) {
 // queue closes the file and never sees it. Anyone who turned up without entering
 // the tournament earns the same loyalty week as everybody else, and this is the
 // only moment somebody is standing there to be remembered.
+//
+// The other-attendee count sits in here rather than down with the point awards.
+// It is a question about who was in the room, which is what this card is for,
+// and down there it was the last field on a long form and went unanswered.
 function othersCard() {
   return el('section', { className: 'card' }, [
     el('h2', { text: 'Was anyone else here?' }),
@@ -266,6 +278,7 @@ function othersCard() {
       + 'Anyone who came along without entering still earns the day: the same '
       + 'loyalty week, and the point for attending.' }),
     playerPicker({ onPick: add, allowCreate: true }),
+    ...others.nodes,
     extras.length
       ? el('p', { className: 'form-status is-good',
           text: `${extras.length} added by hand. They are in the list above and `
@@ -275,24 +288,102 @@ function othersCard() {
   ]);
 }
 
-function recordCard() {
-  const attendees = allAttendees();
-  const unknown = attendees.filter((p) => !known.has(p.player_id));
+// The action a ledger row points at is decided by the premier checkbox, not by a
+// dropdown. Two lists of every earning action was a lot of screen for a choice
+// nobody makes: the award for turning up is the award for turning up, and which
+// play award applies is the question the checkbox above already asked.
+function actionNamed(label) {
+  return actions.find((a) => a.label === label) || null;
+}
 
+// The fields a professor fills in, built once per file rather than once per
+// render.
+//
+// redraw() replaces the whole screen, and it runs every time somebody is added
+// by hand or a judge is ticked. Rebuilding these along with it silently reverted
+// them: tick "this was a premier event", then add one person, and premier was
+// off again and everybody earned a point less. Nothing said so. The same went
+// for "add them as players" and for the points themselves.
+function earnFields() {
   const dateInput = el('input', { type: 'date', id: 'attended-on', value: parsed.attendedOn });
-  const others = otherAttendeesField(dateInput.value);
   dateInput.addEventListener('change', () => others.setDate(dateInput.value));
+
   const premier = el('input', { type: 'checkbox', id: 'premier' });
-  const attendField = actionField(actions, 'attend-action', 'Award for attending', ATTEND_LABEL);
-  const playField = actionField(actions, 'play-action', 'Award for playing', CASUAL_LABEL);
+
+  const attendAction = actionNamed(ATTEND_LABEL);
+  const playAction = () => actionNamed(premier.checked ? PREMIER_LABEL : CASUAL_LABEL);
+
+  // Numbers, not dropdowns. Point values are defaults a professor can change at
+  // entry time, and changing the number is what they actually want to do --
+  // picking a different earning action to get a different number was the long
+  // way round to it.
+  const attendPoints = el('input', {
+    type: 'number', id: 'attend-points', step: '1', min: '0', inputmode: 'numeric',
+    value: attendAction ? attendAction.default_points : 1
+  });
+  const playPoints = el('input', {
+    type: 'number', id: 'play-points', step: '1', min: '0', inputmode: 'numeric',
+    value: playAction() ? playAction().default_points : 1
+  });
+
+  const attendNote = el('p', { className: 'field-help' });
+  const playNote = el('p', { className: 'field-help' });
+
+  // The note carries what the number would be if nobody touched it, so a
+  // professor can see at a glance whether what is in the box is the usual thing.
+  function syncNotes() {
+    const play = playAction();
+    attendNote.textContent = attendAction
+      ? `Normally ${attendAction.default_points} for ${attendAction.label}. `
+        + 'Everyone on the list gets this, whether they played or not.'
+      : `No earning action is called “${ATTEND_LABEL}” any more, so this is `
+        + 'recorded against the first action on the list. Points still land.';
+    playNote.textContent = play
+      ? `Normally ${play.default_points} for ${play.label}. Only the players the `
+        + 'file lists get this — anyone added by hand earns the day and nothing '
+        + 'for a tournament they were not in.'
+      : 'That earning action no longer exists, so this is recorded against the '
+        + 'first action on the list. Points still land.';
+  }
 
   premier.addEventListener('change', () => {
-    const match = actions.find((a) => a.label === (premier.checked ? PREMIER_LABEL : CASUAL_LABEL));
-    if (match) playField.querySelector('select').value = match.id;
+    // The basis changed, so the number goes back to the new default. A figure
+    // typed against the casual award is not a considered figure for the premier
+    // one.
+    const play = playAction();
+    if (play) playPoints.value = play.default_points;
+    syncNotes();
   });
+  syncNotes();
 
   const createMissing = el('input', { type: 'checkbox', id: 'create-missing', checked: 'checked' });
   const payAnyway = el('input', { type: 'checkbox', id: 'pay-anyway' });
+
+  const whole = (input, fallback) => {
+    const n = Math.trunc(Number(input.value));
+    return Number.isFinite(n) && n >= 0 ? n : fallback;
+  };
+
+  return {
+    dateInput, premier, attendPoints, playPoints, attendNote, playNote,
+    createMissing, payAnyway,
+    // The action still goes on the ledger row, so history keeps a label. The
+    // box decides how many points, not what they were for.
+    attendActionId: () => (attendAction || actions[0] || {}).id || null,
+    playActionId: () => (playAction() || actions[0] || {}).id || null,
+    attendValue: () => whole(attendPoints, attendAction ? attendAction.default_points : 1),
+    playValue: () => whole(playPoints, playAction() ? playAction().default_points : 1)
+  };
+}
+
+function recordCard() {
+  const attendees = allAttendees();
+  const unknown = attendees.filter((p) => !known.has(p.player_id));
+  const {
+    dateInput, premier, attendPoints, playPoints, attendNote, playNote,
+    createMissing, payAnyway
+  } = earn;
+
   const result = el('div', { id: 'result' });
   const go = el('button', {
     type: 'submit', className: 'button', text: `Record ${attendees.length} attending`
@@ -312,29 +403,56 @@ function recordCard() {
       text: 'Premier play is worth an extra point. The play award goes to the '
           + 'players in the file. Anyone added by hand earns the day and the '
           + 'attendance point only — the file is what says somebody played.' }),
-    attendField,
-    playField,
-    ...others.nodes,
+
+    // Folded away, because the numbers are right nearly every week and a form
+    // that asks twice for something nobody changes reads as a form that has to
+    // be filled in. Opening it is the whole of the change.
+    el('details', { className: 'disclosure' }, [
+      el('summary', { text: 'Need to change the points earned today?' }),
+      el('div', { className: 'disclosure-body' }, [
+        el('p', { className: 'field-help',
+          text: 'The numbers below are what everyone earns for this upload. They '
+              + 'are prefilled from the earning actions and from the premier box '
+              + 'above, so leave them alone unless today was unusual.' }),
+        el('p', { className: 'field' }, [
+          el('label', { for: attendPoints.id, text: 'Points for attending' }), attendPoints
+        ]),
+        attendNote,
+        el('p', { className: 'field' }, [
+          el('label', { for: playPoints.id, text: 'Points for playing' }), playPoints
+        ]),
+        playNote
+      ])
+    ]),
 
     alreadyPaid.size ? el('div', { className: 'warn-block' }, [
       el('p', {}, [
         el('strong', { text: `${alreadyPaid.size} of these players ` }),
-        el('span', { text: 'already hold points for a tournament with this name.' })
+        el('span', { text: 'already hold points for this tournament.' })
       ]),
       el('p', { className: 'field-help',
-        text: 'By default they are not paid again, in case this file has been '
-            + 'uploaded before. Their attendance counts either way and everyone '
-            + 'else is unaffected.' }),
+        text: 'Matched on the tournament’s own id, so this is the same '
+            + 'tournament and not just one with the same name. It has been '
+            + 'uploaded before.' }),
+      el('p', { className: 'field-help',
+        text: 'By default they are not paid again. Their attendance counts '
+            + 'either way, and everyone else in the file is unaffected.' }),
       el('p', { className: 'field field-inline' }, [
         payAnyway,
-        el('label', { for: 'pay-anyway', text: 'Pay them anyway: this is a different tournament' })
+        el('label', { for: 'pay-anyway', text: 'Pay them anyway' })
       ]),
       el('p', { className: 'field-help',
-        text: 'Tick this if they really did play in two tournaments. Playing twice '
-            + 'earns twice — only the day itself is counted once. The check goes '
-            + 'on the tournament’s name, which is all the ledger records, so two '
-            + 'flights exported under one name look identical to it.' })
+        text: 'Only if they really did earn it twice. Playing twice earns twice; '
+            + 'the day itself is still counted once.' })
     ]) : null,
+
+    // A file with no id cannot be told apart from another file, so nothing is
+    // checked. Said out loud, because the alternative is a professor assuming a
+    // check ran.
+    parsed.eventId ? null : el('p', { className: 'field-help',
+      text: 'This file carries no tournament id, so it has not been checked '
+          + 'against earlier uploads. Uploading it twice would pay the play '
+          + 'award twice.' }),
 
     unknown.length ? el('div', { className: 'warn-block' }, [
       el('p', {}, [
@@ -363,8 +481,10 @@ function recordCard() {
     e.preventDefault();
     commit({
       attendedOn: dateInput.value,
-      attendActionId: attendField.querySelector('select').value,
-      playActionId: playField.querySelector('select').value,
+      attendActionId: earn.attendActionId(),
+      playActionId: earn.playActionId(),
+      attendPoints: earn.attendValue(),
+      playPoints: earn.playValue(),
       createMissing: createMissing.checked,
       payAnyway: payAnyway.checked,
       otherAttendees: others.value(),
@@ -396,12 +516,17 @@ function renderPicker() {
         throw new Error('That file has no readable start date. Use manual entry instead.');
       }
       extras = [];
+      // Built here rather than in the card, so redrawing the screen -- which
+      // happens every time a judge is ticked -- does not wipe a number already
+      // typed into it.
+      others = otherAttendeesField(parsed.attendedOn);
+      earn = earnFields();
       await refreshKnown();
 
       // Asked before anything is shown, so the warning is on screen while the
       // professor is still deciding rather than in the receipt afterwards.
       alreadyPaid = await alreadyPaidFor(
-        playReason(), parsed.players.map((p) => p.player_id));
+        parsed.eventId, parsed.players.map((p) => p.player_id));
 
       redraw();
     } catch (err) {
@@ -432,8 +557,9 @@ function redraw() {
 
 // --- Writing -----------------------------------------------------------------
 
-async function commit({ attendedOn, attendActionId, playActionId, createMissing,
-                        payAnyway, otherAttendees, resultNode, button }) {
+async function commit({ attendedOn, attendActionId, playActionId, attendPoints,
+                        playPoints, createMissing, payAnyway, otherAttendees,
+                        resultNode, button }) {
   button.disabled = true;
   status(resultNode, 'Recording.');
 
@@ -444,11 +570,14 @@ async function commit({ attendedOn, attendActionId, playActionId, createMissing,
       attendedOn,
       attendActionId,
       playActionId,
+      attendPoints,
+      playPoints,
       createMissing,
       professor,
       actions,
       source: 'tdf',
       reason: playReason(),
+      sourceRef: parsed.eventId,
       otherAttendees,
       // Detection is worth having; refusing is not the professor's decision to
       // lose. Playing in two tournaments earns two lots of points, and only the

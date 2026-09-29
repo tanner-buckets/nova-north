@@ -249,6 +249,18 @@ is applied to the production database.** There is no confirmation step.
   collapsed disclosure is not a prompt: anyone who turned up without entering the
   tournament earns the same loyalty week, and the upload is the only moment they
   are still standing there to be remembered.
+- **The repeat-upload check is keyed on the tournament's own id**, read from the
+  file directly after the name, and stored on `point_ledger.source_ref`. Not on
+  the name: a league that exports the same event name every Sunday would flag
+  every returning player from the second week onward, and the default is not to
+  pay them, so regulars would quietly stop earning the play point. Two
+  tournaments on one day have two ids and do not collide.
+- **No id, no check.** A file without one is not guessed at from its name; the
+  screen says plainly that nothing was checked, because a professor assuming a
+  check ran is worse than no check.
+- **`source_ref` is not public.** `reason` is — `get_player_summary()` returns it
+  and it shows on a player card — which is exactly why a filing reference does
+  not go in there.
 - **Only players the file lists earn the play award.** Someone added by hand
   earns the loyalty week and the attendance point and nothing more. The file is
   the claim that a tournament was played; a name typed at the desk is not.
@@ -267,6 +279,20 @@ is applied to the production database.** There is no confirmation step.
   roomful, so a second entry replaces rather than adds, and the box says so and
   shows what is already recorded. The manual attendance screen asks the same
   question, or a day recorded by hand would read as nobody having come.
+  It belongs on the **"Was anyone else here?"** card with the other question
+  about who was in the room, not at the end of the point awards where it was the
+  last field on a long form and went unanswered.
+- **The points are two number boxes, not two dropdowns**, and they are folded
+  away behind a disclosure because they are right nearly every week. Which
+  earning action a ledger row points at is decided by the premier checkbox;
+  the box decides how many points, not what they were for. Two lists of every
+  earning action was a lot of screen for a choice nobody makes, and picking a
+  different action to get a different number was the long way round to it.
+- **The fields on the record card are built once per file, not once per render.**
+  `redraw()` replaces the whole screen and runs every time somebody is added by
+  hand or a judge is ticked. Rebuilding the fields with it silently reverted
+  them: tick "this was a premier event", add one person, and premier was off
+  again and everybody earned a point less, with nothing on screen saying so.
 
 ---
 

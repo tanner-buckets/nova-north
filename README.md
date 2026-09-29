@@ -502,9 +502,21 @@ creating; a professor who corrected one by hand outranks a file.
 
 Each attendee gets two things: an `attendance` row, and point ledger entries for
 attending and for playing. The screen asks one question, "was this a premier
-event?", which switches the play award between the casual and championship
-actions. Both dropdowns stay editable, because point values are defaults a
-professor may override.
+event?", which decides which play action the ledger row points at.
+
+**The point values are two number boxes behind a disclosure**, not two dropdowns
+of every earning action. Point values are defaults a professor may override, and
+overriding them means changing the number — picking a different earning action to
+get a different number was the long way round. The action still goes on the
+ledger row so history keeps a label; the box decides how many. A note beside each
+box says what the number normally is, and follows the premier checkbox.
+
+**The fields on that card are built once per file, not once per render.**
+`redraw()` replaces the whole screen and runs every time somebody is added by hand
+or a judge is ticked. Rebuilding the fields along with it silently reverted them:
+tick "this was a premier event", add one person, and premier was off again and
+everybody earned a point less, with nothing saying so. The same went for "add them
+as players" and for a number typed into the other-attendee box.
 
 Between the roster and the button it asks two questions, both open rather than
 folded away, because a collapsed disclosure is the same as not asking.
@@ -519,7 +531,10 @@ ticked and locked instead of offering to add them twice. Failing to load the
 list does not block the upload — it says so and points at the search below.
 
 **"Was anyone else here?"** — a free search, for anyone who turned up without
-entering the tournament.
+entering the tournament, and the **other-attendee count**. That box used to sit
+at the end of the point awards, which is the wrong card and the wrong place on
+it: last field on a long form, and it went unanswered. It is a question about
+who was in the room, so it belongs with the other one.
 
 Both routes produce the same thing: the loyalty week and the attendance point,
 and **no play award**. The file is the claim that a tournament was played; a
@@ -532,13 +547,18 @@ errors:
   constraint on (player, date) is the one-loyalty-week-per-day rule working.
   Those players still receive the play points, because two events are two things
   played.
-- **The same tournament is never paid twice.** That last rule makes a plain
-  re-upload dangerous: the attendance row and the attendance point are protected
-  by the constraint, but the play point is deliberately not, so uploading a file
-  again would pay it a second time. Before recording, the screen asks which of
-  these players already hold a ledger entry naming this tournament, warns if any
-  do, and leaves them out of the play award. Their attendance still stands and
-  everyone else is unaffected.
+- **The same tournament is never paid twice.** The check is keyed on the
+  tournament's own id, read from the file directly after the name and stored on
+  `point_ledger.source_ref`. It used to key on the event *name*, which is wrong
+  in both directions: a league exporting the same name every Sunday flags every
+  returning player from week two onward (and the default is not to pay them, so
+  regulars quietly stop earning the play point), while two different tournaments
+  exported under one name look identical. Two tournaments on one day have two
+  ids. A file with no id gets no check at all and the screen says so, rather than
+  falling back to a guess. `source_ref` is deliberately a column and not part of
+  `reason`: `reason` is returned by `get_player_summary()` and shows on a public
+  player card, and a filing reference does not belong in a sentence somebody
+  reads.
 
   **Detection, not refusal.** Playing in two tournaments earns two lots of points
   — only the day itself is counted once — so the professor can tick "pay them
