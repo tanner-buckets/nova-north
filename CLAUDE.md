@@ -330,6 +330,10 @@ than skipping ahead.
 
 `admin/attendance-history.html` reads all of it back: how many came each week,
 split by played, attended and age division, and who was there on any given day.
+**"In the room" is the total** — players plus everybody without a Player ID — and
+it leads the table, because Players at the left with Others at the far right got
+read as the total, which it is not. A day nobody counted shows the room as `11+`,
+a floor rather than a number.
 It writes nothing. Both figures come from `attendance_by_day()` and
 `attendance_on()` rather than from queries in page code, because the division
 split needs birth years and a birth year is a protected field — a professor may
@@ -416,6 +420,33 @@ so the tab matches the top of the page.
 A premier event carries the World Championships mark in its top right corner.
 `is_premier` is the flag, and it is set on exactly the League Cups and
 Challenges.
+
+### Charts
+
+One chart exists: the stacked column on the attendance history page. Inline SVG
+built in page code — there is no charting library, because there is no build step
+and no dependency budget, and a stacked column is a handful of rectangles.
+
+- **Stacked, because the question is part-to-whole.** The height of a column is
+  the room; the split inside it is players and everybody else.
+- **Two steps of one hue, not two hues.** `--gold` `#8a6410` under `--amber`
+  `#d9a32c`. They are a whole and a part of it, not rival categories, and this
+  site has one accent colour. The pair was validated as an ordinal ramp: monotone
+  lightness, a visible step between them, and the light end still readable on the
+  card. Gold against graphite was tried first and fails — a grey light enough to
+  sit in the band is too close to gold to tell apart.
+- **A 2px gap in the surface colour separates the segments.** Never a stroke
+  around a mark: a border is ink that is not data.
+- Marks cap at 24px wide; the data end is rounded 4px and the baseline is square.
+  Gridlines are hairline, solid and recessive. Text wears text tokens, never the
+  series colour.
+- **A legend is always present** once there are two series, and one direct label
+  rides the endpoint. A number on every column would go unread.
+- **Hover and keyboard focus show the same tooltip**, and it is clamped so the
+  last columns do not push it off the edge. It never gates anything: every figure
+  is in the table underneath.
+- On a narrow screen the wrapper scrolls rather than the chart shrinking into
+  illegibility, the same as `.table-wrap`.
 
 ### Badges
 

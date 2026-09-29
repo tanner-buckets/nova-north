@@ -112,7 +112,11 @@ as $function$
     (count(*) filter (where public.division(p.birth_year, a.attended_on) = 'senior'))::integer,
     (count(*) filter (where public.division(p.birth_year, a.attended_on) = 'master'))::integer,
     (count(*) filter (where public.division(p.birth_year, a.attended_on) is null))::integer,
-    coalesce(o.headcount, 0)::integer
+    -- Not coalesced to zero. The whole point of keeping other_attendees
+    -- undeletable is that "a professor counted and there were none" is a
+    -- different statement from "nobody counted", and coalescing here would
+    -- throw that away before the page ever saw it.
+    o.headcount
   from public.attendance a
   join public.players p on p.player_id = a.player_id
   left join public.other_attendees o on o.attended_on = a.attended_on
@@ -122,6 +126,9 @@ as $function$
   group by a.attended_on, o.headcount
   order by a.attended_on desc;
 $function$;
+
+-- other_attendees is null when nobody counted, and 0 when somebody counted and
+-- there were none. The page shows a dash for the first and a 0 for the second.
 
 comment on function public.attendance_by_day(date, date) is
   'One row per day attendance was recorded, for the professor history screen. Empty for anybody who is not a professor. split_unknown counts rows from before played was tracked; a day where it equals total has no split to show.';

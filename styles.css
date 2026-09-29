@@ -2349,3 +2349,112 @@ h1.event-name + .event-when {
 .attendance-table .link-button {
   white-space: nowrap;
 }
+
+/* --- The attendance chart ---------------------------------------------------
+   Inline SVG, built in attendance-history.js. No charting library: the site has
+   no build step and no dependencies beyond the Supabase client, and a stacked
+   column is a few rectangles. */
+
+.chart-wrap {
+  position: relative;
+  overflow-x: auto;
+  margin-top: 0.75rem;
+}
+.chart {
+  display: block;
+  /* Below this the columns and the tick labels stop being readable, so the
+     wrapper scrolls rather than the chart shrinking into illegibility. */
+  min-width: 30rem;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Recessive: one step off the surface, hairline, solid. Never dashed. */
+.chart-grid { stroke: var(--line); stroke-width: 1; }
+.chart-axis { stroke: var(--muted); stroke-width: 1; }
+
+/* Text wears text tokens, never the series colour. */
+.chart-tick,
+.chart-x {
+  fill: var(--muted);
+  font-size: 11px;
+  font-family: var(--font-body);
+}
+.chart-cap {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-body);
+}
+
+.chart-col { cursor: pointer; }
+.chart-col rect { transition: opacity 0.12s ease; }
+/* The hovered mark responds, so the reader knows the chart heard them. */
+.chart-col:hover rect,
+.chart-col:focus-visible rect { opacity: 0.82; }
+.chart-col:focus { outline: none; }
+.chart-col:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.chart-legend {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.2rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+/* A rect, because the marks are fills. A line key would be for a line chart. */
+.chart-key {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 3px;
+  flex: none;
+}
+.chart-key-players { background: #8a6410; }
+.chart-key-others { background: #d9a32c; }
+
+.chart-tip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 2px 10px rgba(20, 18, 10, 0.14);
+  padding: 0.45rem 0.6rem;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  z-index: 2;
+}
+.chart-tip p { margin: 0; color: var(--muted); }
+.chart-tip-day {
+  font-weight: 700;
+  color: var(--text) !important;
+  margin-bottom: 0.15rem !important;
+}
+/* Values lead, labels follow: the reader has the day and wants the number. */
+.chart-tip-value {
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.chart-tip-room {
+  margin-top: 0.2rem !important;
+  padding-top: 0.2rem !important;
+  border-top: 1px solid var(--line);
+}
+
+/* The room total is the column the eye should land on. */
+.room-count { font-weight: 700; }
