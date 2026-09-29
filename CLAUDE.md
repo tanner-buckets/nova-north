@@ -249,6 +249,18 @@ is applied to the production database.** There is no confirmation step.
   collapsed disclosure is not a prompt: anyone who turned up without entering the
   tournament earns the same loyalty week, and the upload is the only moment they
   are still standing there to be remembered.
+- **The repeat-upload check is keyed on the tournament's own id**, read from the
+  file directly after the name, and stored on `point_ledger.source_ref`. Not on
+  the name: a league that exports the same event name every Sunday would flag
+  every returning player from the second week onward, and the default is not to
+  pay them, so regulars would quietly stop earning the play point. Two
+  tournaments on one day have two ids and do not collide.
+- **No id, no check.** A file without one is not guessed at from its name; the
+  screen says plainly that nothing was checked, because a professor assuming a
+  check ran is worse than no check.
+- **`source_ref` is not public.** `reason` is — `get_player_summary()` returns it
+  and it shows on a player card — which is exactly why a filing reference does
+  not go in there.
 - **Only players the file lists earn the play award.** Someone added by hand
   earns the loyalty week and the attendance point and nothing more. The file is
   the claim that a tournament was played; a name typed at the desk is not.

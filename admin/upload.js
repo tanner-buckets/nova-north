@@ -55,6 +55,12 @@ function parseTdf(text) {
   const eventName = data?.querySelector('name')?.textContent?.trim() || 'Untitled event';
   const startdate = data?.querySelector('startdate')?.textContent?.trim() || '';
 
+  // The tournament's own id, which sits directly after the name. It is what
+  // tells one tournament from another: a league that exports the same event
+  // name every Sunday has a different id every Sunday. Most files carry one;
+  // a file without one gets no repeat-upload check rather than a guess.
+  const eventId = data?.querySelector('id')?.textContent?.trim() || null;
+
   // The file writes MM/DD/YYYY. The database wants a plain calendar day.
   const m = startdate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   const attendedOn = m
@@ -74,7 +80,7 @@ function parseTdf(text) {
     }))
     .filter((p) => p.player_id);
 
-  return { eventName, attendedOn, players };
+  return { eventName, eventId, attendedOn, players };
 }
 
 // --- Helpers -----------------------------------------------------------------
@@ -422,22 +428,31 @@ function recordCard() {
     alreadyPaid.size ? el('div', { className: 'warn-block' }, [
       el('p', {}, [
         el('strong', { text: `${alreadyPaid.size} of these players ` }),
-        el('span', { text: 'already hold points for a tournament with this name.' })
+        el('span', { text: 'already hold points for this tournament.' })
       ]),
       el('p', { className: 'field-help',
-        text: 'By default they are not paid again, in case this file has been '
-            + 'uploaded before. Their attendance counts either way and everyone '
-            + 'else is unaffected.' }),
+        text: 'Matched on the tournament’s own id, so this is the same '
+            + 'tournament and not just one with the same name. It has been '
+            + 'uploaded before.' }),
+      el('p', { className: 'field-help',
+        text: 'By default they are not paid again. Their attendance counts '
+            + 'either way, and everyone else in the file is unaffected.' }),
       el('p', { className: 'field field-inline' }, [
         payAnyway,
-        el('label', { for: 'pay-anyway', text: 'Pay them anyway: this is a different tournament' })
+        el('label', { for: 'pay-anyway', text: 'Pay them anyway' })
       ]),
       el('p', { className: 'field-help',
-        text: 'Tick this if they really did play in two tournaments. Playing twice '
-            + 'earns twice — only the day itself is counted once. The check goes '
-            + 'on the tournament’s name, which is all the ledger records, so two '
-            + 'flights exported under one name look identical to it.' })
+        text: 'Only if they really did earn it twice. Playing twice earns twice; '
+            + 'the day itself is still counted once.' })
     ]) : null,
+
+    // A file with no id cannot be told apart from another file, so nothing is
+    // checked. Said out loud, because the alternative is a professor assuming a
+    // check ran.
+    parsed.eventId ? null : el('p', { className: 'field-help',
+      text: 'This file carries no tournament id, so it has not been checked '
+          + 'against earlier uploads. Uploading it twice would pay the play '
+          + 'award twice.' }),
 
     unknown.length ? el('div', { className: 'warn-block' }, [
       el('p', {}, [
@@ -511,7 +526,7 @@ function renderPicker() {
       // Asked before anything is shown, so the warning is on screen while the
       // professor is still deciding rather than in the receipt afterwards.
       alreadyPaid = await alreadyPaidFor(
-        playReason(), parsed.players.map((p) => p.player_id));
+        parsed.eventId, parsed.players.map((p) => p.player_id));
 
       redraw();
     } catch (err) {
@@ -562,6 +577,7 @@ async function commit({ attendedOn, attendActionId, playActionId, attendPoints,
       actions,
       source: 'tdf',
       reason: playReason(),
+      sourceRef: parsed.eventId,
       otherAttendees,
       // Detection is worth having; refusing is not the professor's decision to
       // lose. Playing in two tournaments earns two lots of points, and only the

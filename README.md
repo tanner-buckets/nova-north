@@ -547,13 +547,18 @@ errors:
   constraint on (player, date) is the one-loyalty-week-per-day rule working.
   Those players still receive the play points, because two events are two things
   played.
-- **The same tournament is never paid twice.** That last rule makes a plain
-  re-upload dangerous: the attendance row and the attendance point are protected
-  by the constraint, but the play point is deliberately not, so uploading a file
-  again would pay it a second time. Before recording, the screen asks which of
-  these players already hold a ledger entry naming this tournament, warns if any
-  do, and leaves them out of the play award. Their attendance still stands and
-  everyone else is unaffected.
+- **The same tournament is never paid twice.** The check is keyed on the
+  tournament's own id, read from the file directly after the name and stored on
+  `point_ledger.source_ref`. It used to key on the event *name*, which is wrong
+  in both directions: a league exporting the same name every Sunday flags every
+  returning player from week two onward (and the default is not to pay them, so
+  regulars quietly stop earning the play point), while two different tournaments
+  exported under one name look identical. Two tournaments on one day have two
+  ids. A file with no id gets no check at all and the screen says so, rather than
+  falling back to a guess. `source_ref` is deliberately a column and not part of
+  `reason`: `reason` is returned by `get_player_summary()` and shows on a public
+  player card, and a filing reference does not belong in a sentence somebody
+  reads.
 
   **Detection, not refusal.** Playing in two tournaments earns two lots of points
   — only the day itself is counted once — so the professor can tick "pay them
