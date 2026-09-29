@@ -167,6 +167,11 @@ is applied to the production database.** There is no confirmation step.
   references the original. Never update or delete a ledger row.
 - **Retire, never delete.** Earning actions and prize items get an `is_active`
   flag. Historical rows must keep pointing at valid records.
+- **Whether somebody played is recorded, not derived.** `attendance.played` is
+  the only place the day and the fact meet: the play award is a ledger row, and
+  the ledger carries no attendance date. **Null means not recorded**, from before
+  the column existed — never treat it as false, or a day of tournament players
+  reads as a day of spectators.
 - **Derive, do not store.** Division comes from birth year. Loyalty week count
   comes from counting distinct attendance dates. Release membership comes from the
   date falling inside the release window. Consent in force comes from the flag
@@ -256,6 +261,12 @@ is applied to the production database.** There is no confirmation step.
   attendance point, and no play award. Judging is not playing. A judge who also
   played is in the file already, so their box is ticked and locked rather than
   offering to add them twice.
+- **Ask how many other attendees there were** — parents, siblings, anyone in the
+  room without a Player ID. They earn nothing and are never recorded by name.
+  The count is per **day**, not per file: two files from one Sunday are one
+  roomful, so a second entry replaces rather than adds, and the box says so and
+  shows what is already recorded. The manual attendance screen asks the same
+  question, or a day recorded by hand would read as nobody having come.
 
 ---
 
@@ -316,6 +327,20 @@ than skipping ahead.
    Trainer Card, players, events and reference data.
 7. **Printable lists.** Loyalty tiers for the store, pre-registration for the
    desk. Print stylesheets, professor-only.
+
+`admin/attendance-history.html` reads all of it back: how many came each week,
+split by played, attended and age division, and who was there on any given day.
+**Total** — players plus everybody without a Player ID — leads the table, because
+Players at the left with Others at the far right got read as the total, which it
+is not. A day nobody counted shows `11+`, a floor rather than a number. The
+division headings are `JR`, `SR` and `MA`: spelled out they are the three widest
+columns on a table that already scrolls on a phone.
+It writes nothing. Both figures come from `attendance_by_day()` and
+`attendance_on()` rather than from queries in page code, because the division
+split needs birth years and a birth year is a protected field — a professor may
+read one, but shipping several hundred to a browser to bucket them is handing out
+protected data to do arithmetic SQL can do. Full names and divisions put it
+behind the sign-in with the printable lists.
 
 Running alongside phase 1: deploy a minimal static shell to GitHub Pages — one
 page and a nav, confirmed live. This proves the deploy chain works while nothing
@@ -397,6 +422,40 @@ A premier event carries the World Championships mark in its top right corner.
 `is_premier` is the flag, and it is set on exactly the League Cups and
 Challenges.
 
+### Charts
+
+One chart exists: the stacked column on the attendance history page. Inline SVG
+built in page code — there is no charting library, because there is no build step
+and no dependency budget, and a stacked column is a handful of rectangles.
+
+- **Stacked, because the question is part-to-whole.** The height of a column is
+  everybody who was there; inside it the divisions stack darkest first with
+  Others on top.
+- **One hue in four ordinal steps, not four categorical hues.** Divisions are age
+  bands, and an age band is ordinal: the order means something, so it belongs in
+  the colour. Master `#5c430b`, Senior `#8a6410`, Junior `#b08420`, Others
+  `#d9a32c` — three of them existing tokens. Validated together as a ramp:
+  monotone lightness, a visible step between each pair, and the light end still
+  readable on the card. Gold against graphite was tried first and fails — a grey
+  light enough to sit in the band is too close to gold to tell apart.
+- **The total is a line, not a segment**, in `--ink-soft` graphite so it does not
+  read as a fifth band. It **breaks where nobody counted the others**: on those
+  days the total is a floor, and joining across would draw a dip that came from
+  nobody counting rather than from anybody staying home. A hollow dot marks
+  those days; a filled one marks a known total.
+- **A 2px gap in the surface colour separates the segments.** Never a stroke
+  around a mark: a border is ink that is not data.
+- Marks cap at 24px wide; the data end is rounded 4px and the baseline is square.
+  Gridlines are hairline, solid and recessive. Text wears text tokens, never the
+  series colour.
+- **A legend is always present** once there are two series, and one direct label
+  rides the endpoint. A number on every column would go unread.
+- **Hover and keyboard focus show the same tooltip**, and it is clamped so the
+  last columns do not push it off the edge. It never gates anything: every figure
+  is in the table underneath.
+- On a narrow screen the wrapper scrolls rather than the chart shrinking into
+  illegibility, the same as `.table-wrap`.
+
 ### Badges
 
 A badge carries its own art and its own colours on its row: `image_path`,
@@ -453,9 +512,14 @@ last season's badges have to stay earnable while the new list goes up.
 - **Rank is the best any running season gives** — `best_player_rank()`, with
   `best_rank_season()` naming which one. Judging on the newest alone would demote
   everybody the moment a new badge list appeared.
-- **Elite 4 and Champion stay on the newest running season** and count only that
-  season's badges. There is one ladder, not one per badge list, and two
+- **Elite 4 and Champion belong to one season each**, and during an overlap the
+  Trainer Card asks which. The picker defaults to the newest running season and
+  is only shown when there is a choice. Without it the award lands silently on
+  the wrong year, which is how a set of 2026 Champions became 2027 ones.
+- **The Champion badge threshold counts the chosen season's badges alone.** Two
   half-finished lists must not add up to one Champion.
+- The picker does **not** govern badges. A badge carries its own season on its
+  row, so every running season is shown together and needs no telling.
 - The prize discount counts badges **per season and takes the best**, for the
   same reason.
 - A professor cannot retire the only season still running. That would leave no

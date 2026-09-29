@@ -14,7 +14,7 @@ import { el } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import {
   ATTEND_LABEL, loadActions, actionField, status, playerPicker,
-  recordAttendance, outcomeNodes, describeFailure
+  recordAttendance, outcomeNodes, describeFailure, otherAttendeesField
 } from './attendance-core.js';
 
 const gate = document.querySelector('#gate');
@@ -102,6 +102,8 @@ function awardField() {
 
 function render() {
   const dateInput = el('input', { type: 'date', id: 'attended-on', value: today() });
+  const others = otherAttendeesField(dateInput.value);
+  dateInput.addEventListener('change', () => others.setDate(dateInput.value));
   const award = awardField();
   const result = el('div', { id: 'result' });
   const go = el('button', { type: 'submit', className: 'button', text: 'Record attendance' });
@@ -123,6 +125,7 @@ function render() {
       el('a', { href: 'points.html', text: 'points' }),
       el('span', { text: '.' })
     ]),
+    ...others.nodes,
     newCount ? el('div', { className: 'warn-block' }, [
       el('p', { text: `${newCount} of them ${newCount === 1 ? 'is' : 'are'} new and `
         + `will be created when you record this. They are not listed publicly, and `
@@ -137,6 +140,7 @@ function render() {
     commit({
       attendedOn: dateInput.value,
       attendActionId: award.value(),
+      otherAttendees: others.value(),
       resultNode: result,
       button: go
     });
@@ -160,7 +164,7 @@ function redraw() {
   app.replaceChildren(...render());
 }
 
-async function commit({ attendedOn, attendActionId, resultNode, button }) {
+async function commit({ attendedOn, attendActionId, otherAttendees, resultNode, button }) {
   button.disabled = true;
   status(resultNode, 'Recording.');
 
@@ -175,7 +179,8 @@ async function commit({ attendedOn, attendActionId, resultNode, button }) {
       createMissing: true,
       professor,
       actions,
-      source: 'manual'
+      source: 'manual',
+      otherAttendees
     });
 
     resultNode.className = 'form-status is-good';

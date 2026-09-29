@@ -363,8 +363,9 @@ Each season has its own badge list. Names may repeat year to year.
 - **Rank is never stored, for any season.** Badges persist and carry their
   season, so 2026's rank is still derivable in 2030. A badge corrected years
   later corrects the history with it.
-- **Champion and Elite 4 stay on the newest running season.** There is one
-  ladder, not one per badge list.
+- **Champion and Elite 4 belong to one season each**, and during an overlap the
+  Trainer Card asks which. There is one ladder, not one per badge list, but which
+  year a player is climbing it for is a question only a professor can answer.
 - **Champion is a table**, one row per season won, which is what lets a two-time
   Champion show two stars.
 - **`elite_four_wins` records wins only.** A lost attempt leaves no trace and can
@@ -414,6 +415,77 @@ shortcut only on the home page, where a professor lands after an event.
 Building the bar is separate from deciding to show it, so it can be rendered and
 looked at without a session. A thing only visible after signing in is a thing
 nobody checks.
+
+### Attendance history
+
+`admin/attendance-history.html` is the only screen that reads attendance back:
+week by week, split by played, attended and age division, with the other-attendee
+headcount alongside; and a date picker, or a click on any day in the table, for
+who was there. **It writes nothing** — no confirmations, no buttons that change
+anything.
+
+**Total leads the table.** Players plus Others is how many people were actually
+there; Played, Attended and the three divisions are two
+ways of splitting Players and do not include Others. Players used to sit at the
+left with Others at the far right, which read as a total and a footnote — and on
+a narrow screen the room figure was the first thing to scroll out of sight. A day
+nobody counted shows `11+`: a floor, not a number.
+
+Above the table is a **stacked column chart with a total line**, one column per
+league day, broken down by division with Others on top. Inline SVG in page code —
+no charting library, because there is no build step and a stacked column is a
+handful of rectangles.
+
+The divisions take **one hue in four ordinal steps** rather than four categorical
+hues: an age band is ordinal, so the order belongs in the colour. Master, Senior,
+Junior, Others, darkest to lightest, three of them existing tokens, validated
+together as a ramp for monotone lightness, step size and contrast against the
+card. Gold against graphite was the first attempt and failed — a grey light
+enough to sit in the readable band measures too close to gold to tell apart.
+
+The total rides over the columns as a graphite line so it does not read as a
+fifth band, and it **breaks where nobody counted the others**: on those days the
+total is a floor, and joining across would draw a dip that came from nobody
+counting rather than from anybody staying home. Hollow dots mark those days.
+
+Hover and keyboard focus give the same tooltip, and clicking a column loads that
+day below. The division headings in the table are `JR`, `SR` and `MA` — spelled
+out they are the three widest columns on a table that already scrolls on a
+phone.
+
+Two gaps had to be filled before it could be honest.
+
+**Whether somebody played was not recorded.** `attendance` says who was there on
+what day. The play award is a `point_ledger` row, and the ledger carries no
+attendance date — only `created_at`, which is when a professor pressed the
+button, so a file uploaded on Monday for Sunday would put the play award on
+Monday. `attendance.played` records it at the point the day and the fact meet.
+It is **nullable on purpose**: null means recorded before the column existed, and
+the page prints "not recorded" rather than a zero. A zero would look exactly like
+a day nobody played.
+
+**People without player records were not counted at all.** Parents and siblings
+fill the room and earn nothing, correctly — no Player ID, no points — but the
+room was fuller than the table said. `other_attendees` holds **one headcount per
+day**, replaced rather than added to, because it counts a room and not an event:
+two files from one Sunday are one roomful. Both recording screens ask, and the
+box shows what is already recorded for that date so a professor is correcting a
+number they can see.
+
+Both figures come from `attendance_by_day()` and `attendance_on()`, security
+definer, professor-gated. Not from queries in page code: the division split needs
+birth years, and a birth year is protected. A professor may read one, but
+shipping several hundred to a browser to bucket them into three groups is handing
+out protected data to do arithmetic the database can do itself. Divisions are
+worked out **as at the attendance date**, so a player who has had a birthday
+since is still counted in the division they actually played in.
+
+A player who turns up in the morning and plays in the afternoon already has a row
+saying they did not play, and `ignoreDuplicates` leaves it alone. `played` is
+promoted to true afterwards, one direction only — a day's play is not undone by a
+later upload that happens not to list them. That promotion is why the migration
+grants `UPDATE (played)`: `UPDATE` on `attendance` is granted per column and
+`played` was not in the list.
 
 ### TDF upload
 
@@ -722,10 +794,23 @@ own colours, taken from its artwork when the picture is uploaded, so a badge a
 professor adds is coloured like every other.
 
 Only Elite 4 **wins** are recorded. A lost battle is nothing and a player may
-retry as often as they like, so there is no attempt to store. Elite 4 and
-Champion belong to the newest running season and count only that season's badges,
-so two half-finished lists cannot add up to one Champion. Past seasons stay on
-the player's record.
+retry as often as they like, so there is no attempt to store. Past seasons stay
+on the player's record.
+
+**Which season Elite 4 and Champion are recorded against is a choice**, shown
+only while more than one season is running. It defaults to the newest, which is
+right nearly always. Without it the award lands silently on the newest year, and
+a player finishing last season's ladder during a changeover gets the wrong one —
+which is exactly what happened the first Sunday after the 2027 list went up.
+
+The picker governs Elite 4, Champion, and the badge count the Champion threshold
+is measured against, so two half-finished lists cannot add up to one Champion. It
+does **not** govern badges: a badge carries its own season on its row, so the
+badge panel shows every running season together and needs no telling.
+
+Correcting a Champion recorded against the wrong year needs no migration. Pick
+the wrong year, take the award back, pick the right one, record it. Nothing is
+edited in place, which is why that works.
 
 Recording a Champion who does not yet meet the threshold is **warned about, not
 blocked** — `player_rank()` does not check eligibility either, and a professor

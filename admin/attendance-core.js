@@ -233,7 +233,8 @@ function newPlayerForm(onPick) {
 // two differ in the ordinary case and the screen has to report the difference.
 export async function recordAttendance({
   attendees, known, attendedOn, attendActionId, playActionId,
-  createMissing, professor, actions, source, reason, skipPlayFor
+  createMissing, professor, actions, source, reason, skipPlayFor,
+  otherAttendees
 }) {
   const missing = attendees.filter((p) => !known.has(p.player_id));
   let created = [];
@@ -281,6 +282,10 @@ export async function recordAttendance({
       player_id: p.player_id,
       attended_on: attendedOn,
       source,
+      // Recorded here rather than worked out later. The play award is a ledger
+      // row, and the ledger carries no attendance date, so this is the only
+      // place the day and the fact meet.
+      played: !!p.played,
       created_by: professor.userId
     })), { onConflict: 'player_id,attended_on', ignoreDuplicates: true })
     .select('player_id');
@@ -290,6 +295,25 @@ export async function recordAttendance({
   // go to everyone who played, because two events in a day are two things played
   // even though they are one loyalty week.
   const newlyPresent = new Set((inserted || []).map((r) => r.player_id));
+
+  // Somebody who turned up in the morning and played in the afternoon already
+  // has a row, and ignoreDuplicates left it saying they did not play. One row a
+  // day means that row has to carry the truth for the whole day.
+  //
+  // Only ever false or null to true. A day's play is not undone by a later
+  // upload that happens not to list them.
+  const playedAgain = eligible
+    .filter((p) => p.played && !newlyPresent.has(p.player_id))
+    .map((p) => p.player_id);
+
+  if (playedAgain.length) {
+    const { error: promoteErr } = await supabase.from('attendance')
+      .update({ played: true })
+      .eq('attended_on', attendedOn)
+      .in('player_id', playedAgain)
+      .not('played', 'is', true);
+    if (promoteErr) { promoteErr.stage = 'attendance'; throw promoteErr; }
+  }
 
   const ledger = [];
   for (const p of eligible) {
@@ -321,6 +345,7 @@ export async function recordAttendance({
   // Every attendee already had the day recorded, and there is no play award to
   // pay twice. Nothing to write, and saying so beats an empty insert.
   if (!ledger.length) {
+    await writeOtherAttendees(attendedOn, otherAttendees, professor);
     return {
       created, eligibleCount: eligible.length, newCount: newlyPresent.size,
       repeatCount: eligible.length - newlyPresent.size, ledgerCount: 0,
@@ -330,6 +355,8 @@ export async function recordAttendance({
 
   const { error: ledErr } = await supabase.from('point_ledger').insert(ledger);
   if (ledErr) { ledErr.stage = 'points'; throw ledErr; }
+
+  await writeOtherAttendees(attendedOn, otherAttendees, professor);
 
   return {
     created,
@@ -359,6 +386,86 @@ export async function recordAttendance({
 // Matched on the reason already written, which names the tournament. It is the
 // only record of which tournament a point came from, since nothing links a
 // ledger row to a TDF.
+// The headcount of everybody without a player record: parents, siblings, anyone
+// watching. One row per day, replaced rather than added to, because it counts a
+// room rather than an event -- two files from one Sunday are one roomful.
+//
+// A failure here does not fail the recording. The attendance and the points are
+// the part that matters, and a missing headcount is a number somebody can type
+// again, not a player left unpaid.
+async function writeOtherAttendees(attendedOn, headcount, professor) {
+  if (headcount === null || headcount === undefined) return;
+
+  const { error } = await supabase.from('other_attendees')
+    .upsert({
+      attended_on: attendedOn,
+      headcount,
+      recorded_by: professor.userId,
+      recorded_at: new Date().toISOString()
+    }, { onConflict: 'attended_on' });
+
+  if (error) console.warn('The other-attendee count did not save:', error.message);
+}
+
+// What is already recorded for a day, so the box can show it rather than invite
+// a professor to overwrite a number they cannot see.
+export async function otherAttendeesOn(attendedOn) {
+  const { data, error } = await supabase.from('other_attendees')
+    .select('headcount').eq('attended_on', attendedOn).maybeSingle();
+  if (error) return null;
+  return data ? data.headcount : null;
+}
+
+// The box both recording screens carry, so the wording and the behaviour cannot
+// drift apart. It looks up what is already recorded for the day on screen, so a
+// professor is correcting a number they can see rather than overwriting one they
+// cannot.
+export function otherAttendeesField(initialDate) {
+  const input = el('input', {
+    type: 'number', id: 'other-attendees', min: '0', step: '1',
+    inputmode: 'numeric', placeholder: '0'
+  });
+  const note = el('p', { className: 'form-status', role: 'status' });
+
+  let existing = null;
+
+  async function look(day) {
+    if (!day) { status(note, ''); return; }
+    existing = await otherAttendeesOn(day);
+    if (existing === null) {
+      status(note, '');
+      return;
+    }
+    status(note, `${existing} already recorded for this day. Leave the box empty `
+      + 'to keep that number, or type a new one to replace it.');
+  }
+
+  look(initialDate);
+
+  return {
+    nodes: [
+      el('p', { className: 'field' }, [
+        el('label', { for: input.id, text: 'Other attendees' }), input
+      ]),
+      el('p', { className: 'field-help',
+        text: 'How many people were here without a Player ID: parents, siblings, '
+            + 'anyone watching. They earn nothing, and this is only so the '
+            + 'history knows how full the room was.' }),
+      el('p', { className: 'field-help',
+        text: 'Once per day, not once per file. If a number is already recorded '
+            + 'for this day, anything you type here replaces it rather than '
+            + 'adding to it.' }),
+      note
+    ],
+    // Re-read when the date field changes, or the note would describe a
+    // different day from the one about to be written.
+    setDate: look,
+    // Empty means "leave whatever is there", which is not the same as zero.
+    // Zero is a professor saying nobody else came.
+    value: () => (input.value.trim() === '' ? null : Math.max(0, Number(input.value) || 0))
+  };
+}
+
 export async function alreadyPaidFor(reason, playerIds) {
   if (!reason || !playerIds.length) return new Set();
 
