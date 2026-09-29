@@ -176,8 +176,9 @@ const BANDS = [
   { key: 'junior', label: 'JR', long: 'Junior', fill: '#b08420' },   // --gold-lift
   { key: 'division_unknown', label: 'No birth year', long: 'No birth year',
     fill: '#b8b5ad', optional: true },
-  { key: 'others', label: 'Others', long: 'Others, without a Player ID',
-    fill: '#d9a32c' }                                                // --amber
+  // Just "Others". What it means is on the footnote under the table, and a
+  // legend key is a name rather than a definition.
+  { key: 'others', label: 'Others', long: 'Others', fill: '#d9a32c' }  // --amber
 ];
 
 // The line is not a series in the ramp. It is the sum of the stack, so it wears
