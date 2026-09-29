@@ -2420,8 +2420,44 @@ h1.event-name + .event-when {
   border-radius: 3px;
   flex: none;
 }
-.chart-key-players { background: #8a6410; }
-.chart-key-others { background: #d9a32c; }
+/* The total is a line, so its key is a stroke rather than a filled block: the
+   legend mirrors the mark it stands for. */
+.chart-key-line {
+  height: 0;
+  border-top: 2px solid #33363b;
+  border-radius: 0;
+}
+
+/* 2px, round join and cap. Over the columns, so it carries a surface-coloured
+   halo to stay legible where it crosses a dark segment. */
+.chart-total-line {
+  fill: none;
+  stroke: #33363b;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  paint-order: stroke;
+}
+.chart-total-dot {
+  fill: #33363b;
+  /* The 2px surface ring, so a dot stays legible where it sits on a segment. */
+  stroke: var(--card);
+  stroke-width: 2;
+}
+/* A day nobody counted: the total is a floor, so the dot is hollow. */
+.chart-total-dot.is-floor {
+  fill: var(--card);
+  stroke: #33363b;
+}
+
+/* A key inside a tooltip row, smaller than the legend's. */
+.chart-tip .chart-key {
+  width: 0.6rem;
+  height: 0.6rem;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 0.35rem;
+}
 
 .chart-tip {
   position: absolute;

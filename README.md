@@ -424,22 +424,34 @@ headcount alongside; and a date picker, or a click on any day in the table, for
 who was there. **It writes nothing** — no confirmations, no buttons that change
 anything.
 
-**"In the room" is the total and it leads the table.** Players plus Others is how
-many people were actually there; Played, Attended and the three divisions are two
+**Total leads the table.** Players plus Others is how many people were actually
+there; Played, Attended and the three divisions are two
 ways of splitting Players and do not include Others. Players used to sit at the
 left with Others at the far right, which read as a total and a footnote — and on
 a narrow screen the room figure was the first thing to scroll out of sight. A day
 nobody counted shows `11+`: a floor, not a number.
 
-Above the table is a **stacked column chart**, one column per league day, height
-equal to the room. Inline SVG in page code — no charting library, because there
-is no build step and a stacked column is a handful of rectangles. Two steps of
-one hue (`--gold` under `--amber`) rather than two hues, since players and others
-are a whole and a part of it rather than rival categories; the pair was validated
-as an ordinal ramp for lightness, step size and contrast against the card. Gold
-against graphite was the first attempt and failed: a grey light enough to sit in
-the band measures too close to gold to tell apart. Hover and keyboard focus give
-the same tooltip, and clicking a column loads that day below.
+Above the table is a **stacked column chart with a total line**, one column per
+league day, broken down by division with Others on top. Inline SVG in page code —
+no charting library, because there is no build step and a stacked column is a
+handful of rectangles.
+
+The divisions take **one hue in four ordinal steps** rather than four categorical
+hues: an age band is ordinal, so the order belongs in the colour. Master, Senior,
+Junior, Others, darkest to lightest, three of them existing tokens, validated
+together as a ramp for monotone lightness, step size and contrast against the
+card. Gold against graphite was the first attempt and failed — a grey light
+enough to sit in the readable band measures too close to gold to tell apart.
+
+The total rides over the columns as a graphite line so it does not read as a
+fifth band, and it **breaks where nobody counted the others**: on those days the
+total is a floor, and joining across would draw a dip that came from nobody
+counting rather than from anybody staying home. Hollow dots mark those days.
+
+Hover and keyboard focus give the same tooltip, and clicking a column loads that
+day below. The division headings in the table are `JR`, `SR` and `MA` — spelled
+out they are the three widest columns on a table that already scrolls on a
+phone.
 
 Two gaps had to be filled before it could be honest.
 

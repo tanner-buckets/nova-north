@@ -330,10 +330,11 @@ than skipping ahead.
 
 `admin/attendance-history.html` reads all of it back: how many came each week,
 split by played, attended and age division, and who was there on any given day.
-**"In the room" is the total** — players plus everybody without a Player ID — and
-it leads the table, because Players at the left with Others at the far right got
-read as the total, which it is not. A day nobody counted shows the room as `11+`,
-a floor rather than a number.
+**Total** — players plus everybody without a Player ID — leads the table, because
+Players at the left with Others at the far right got read as the total, which it
+is not. A day nobody counted shows `11+`, a floor rather than a number. The
+division headings are `JR`, `SR` and `MA`: spelled out they are the three widest
+columns on a table that already scrolls on a phone.
 It writes nothing. Both figures come from `attendance_by_day()` and
 `attendance_on()` rather than from queries in page code, because the division
 split needs birth years and a birth year is a protected field — a professor may
@@ -428,13 +429,20 @@ built in page code — there is no charting library, because there is no build s
 and no dependency budget, and a stacked column is a handful of rectangles.
 
 - **Stacked, because the question is part-to-whole.** The height of a column is
-  the room; the split inside it is players and everybody else.
-- **Two steps of one hue, not two hues.** `--gold` `#8a6410` under `--amber`
-  `#d9a32c`. They are a whole and a part of it, not rival categories, and this
-  site has one accent colour. The pair was validated as an ordinal ramp: monotone
-  lightness, a visible step between them, and the light end still readable on the
-  card. Gold against graphite was tried first and fails — a grey light enough to
-  sit in the band is too close to gold to tell apart.
+  everybody who was there; inside it the divisions stack darkest first with
+  Others on top.
+- **One hue in four ordinal steps, not four categorical hues.** Divisions are age
+  bands, and an age band is ordinal: the order means something, so it belongs in
+  the colour. Master `#5c430b`, Senior `#8a6410`, Junior `#b08420`, Others
+  `#d9a32c` — three of them existing tokens. Validated together as a ramp:
+  monotone lightness, a visible step between each pair, and the light end still
+  readable on the card. Gold against graphite was tried first and fails — a grey
+  light enough to sit in the band is too close to gold to tell apart.
+- **The total is a line, not a segment**, in `--ink-soft` graphite so it does not
+  read as a fifth band. It **breaks where nobody counted the others**: on those
+  days the total is a floor, and joining across would draw a dip that came from
+  nobody counting rather than from anybody staying home. A hollow dot marks
+  those days; a filled one marks a known total.
 - **A 2px gap in the surface colour separates the segments.** Never a stroke
   around a mark: a border is ink that is not data.
 - Marks cap at 24px wide; the data end is rounded 4px and the baseline is square.

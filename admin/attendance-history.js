@@ -77,10 +77,9 @@ function weekRow(d, onPick) {
   // the sum and gets a column of its own. Reading Players as the total was the
   // obvious mistake to make when it was the leftmost number and Others sat at
   // the far end looking like a footnote.
-  // The room leads. It is the number somebody means by "how many came", and at
-  // the far right it was both the easiest to miss and the first to scroll off a
-  // narrow screen -- which is how Players got read as the total in the first
-  // place. Everything after it is a way of breaking it down.
+  // The total leads. At the far right it was both the easiest to miss and the
+  // first to scroll off a narrow screen, which is how Players got read as the
+  // total in the first place. Everything after it breaks it down.
   return el('tr', {}, [
     el('th', { scope: 'row' }, [link]),
     el('td', { className: 'count room-count' }, [
@@ -127,21 +126,23 @@ function weekTable(onPick) {
         el('thead', {}, [
           el('tr', {}, [
             el('th', { scope: 'col', text: 'Day' }),
-            el('th', { scope: 'col', text: 'In the room' }),
+            el('th', { scope: 'col', text: 'Total' }),
             el('th', { scope: 'col', text: 'Players' }),
             el('th', { scope: 'col', text: 'Others' }),
             el('th', { scope: 'col', text: 'Played' }),
             el('th', { scope: 'col', text: 'Attended' }),
-            el('th', { scope: 'col', text: DIVISION_LABEL.junior || 'Junior' }),
-            el('th', { scope: 'col', text: DIVISION_LABEL.senior || 'Senior' }),
-            el('th', { scope: 'col', text: DIVISION_LABEL.master || 'Master' })
+            // Abbreviated, because the full division names are the three widest
+            // headings on a table that already has to scroll on a phone.
+            el('th', { scope: 'col', title: 'Junior', text: 'JR' }),
+            el('th', { scope: 'col', title: 'Senior', text: 'SR' }),
+            el('th', { scope: 'col', title: 'Master', text: 'MA' })
           ])
         ]),
         el('tbody', {}, days.map((d) => weekRow(d, onPick)))
       ])
     ]),
     el('p', { className: 'field-help',
-      text: 'In the room is Players plus Others, which is how many people were '
+      text: 'Total is Players plus Others, which is how many people were '
           + 'actually there. Players are the people with a record; Others are '
           + 'the parents, siblings and anyone else without a Player ID, counted '
           + 'by a professor on the day. Played and Attended, and the three '
@@ -156,19 +157,32 @@ function weekTable(onPick) {
 
 // --- The chart ----------------------------------------------------------------
 
-// A stacked column per league day: players at the bottom, everybody else on top,
-// so the height of the column is the room. Stacked rather than two charts
-// because the question is part-to-whole, and the thing that was unclear in the
-// table is exactly what a stack makes obvious.
+// A stacked column per league day, broken down by division with everybody
+// without a Player ID on top, and a line across the totals.
 //
-// Two steps of one hue rather than two hues. Players and Others are not rival
-// categories competing for identity; they are a whole and a part of it, and this
-// site has one accent colour. Both fills are existing tokens, and the pair
-// passes the ordinal checks: monotone lightness, a visible step between them,
-// and the light end still readable against the card.
+// The divisions are age bands, so they take a one-hue ordinal ramp rather than
+// four categorical hues: the order means something, and a ramp puts that order
+// in the colour. Others sits outside the age scale and takes the lightest step
+// of the same ramp, because it is still part of the same whole.
+//
+// The four steps were validated together: monotone lightness, a visible step
+// between each pair, and the light end still readable against the card. Three
+// of them are existing site tokens.
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const FILL_PLAYERS = '#8a6410';   // --gold
-const FILL_OTHERS = '#d9a32c';    // --amber, a background colour, which is what this is
+
+const BANDS = [
+  { key: 'master', label: 'MA', long: 'Master', fill: '#5c430b' },
+  { key: 'senior', label: 'SR', long: 'Senior', fill: '#8a6410' },   // --gold
+  { key: 'junior', label: 'JR', long: 'Junior', fill: '#b08420' },   // --gold-lift
+  { key: 'division_unknown', label: 'No birth year', long: 'No birth year',
+    fill: '#b8b5ad', optional: true },
+  { key: 'others', label: 'Others', long: 'Others, without a Player ID',
+    fill: '#d9a32c' }                                                // --amber
+];
+
+// The line is not a series in the ramp. It is the sum of the stack, so it wears
+// a text token rather than a colour that would read as a fifth category.
+const TOTAL_STROKE = '#33363b';   // --ink-soft
 
 function svg(tag, attrs = {}) {
   const node = document.createElementNS(SVG_NS, tag);
@@ -185,8 +199,10 @@ function shortDay(value) {
   return value ? SHORT.format(new Date(String(value).slice(0, 10) + 'T12:00:00Z')) : '';
 }
 
-// Clean axis steps. The axis carries the values that are not directly labelled,
-// so it has to land on numbers somebody would say out loud.
+const bandValue = (d, key) => (key === 'others' ? (d.other_attendees || 0) : (d[key] || 0));
+
+// Clean axis steps. The axis carries the values no label is riding, so it has to
+// land on numbers somebody would say out loud.
 function ticksTo(max) {
   const step = max <= 10 ? 2 : max <= 25 ? 5 : max <= 60 ? 10 : 20;
   const top = Math.ceil(max / step) * step || step;
@@ -201,9 +217,15 @@ function chart(onPick) {
   // Oldest on the left: time runs left to right whatever order the table is in.
   const rows = [...days].reverse();
 
-  const PAD = { top: 18, right: 12, bottom: 44, left: 40 };
+  // A band with nothing in it anywhere is not drawn and not in the legend. A
+  // legend entry for a segment that never appears is a colour to learn for
+  // nothing.
+  const bands = BANDS.filter((b) =>
+    !b.optional || rows.some((d) => bandValue(d, b.key) > 0));
+
+  const PAD = { top: 20, right: 14, bottom: 44, left: 40 };
   const W = PAD.left + PAD.right + rows.length * 46;
-  const H = 250;
+  const H = 260;
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
 
@@ -218,11 +240,10 @@ function chart(onPick) {
     viewBox: '0 0 ' + W + ' ' + H,
     width: W, height: H, role: 'img',
     'aria-label': 'Attendance across the last ' + rows.length
-      + ' league days. Every figure is in the table below.'
+      + ' league days, broken down by division, with a line across the totals. '
+      + 'Every figure is in the table below.'
   });
 
-  // Hairline gridlines, recessive, and the ticks that carry the values no label
-  // is riding.
   for (const t of tickInfo.out) {
     root.append(svg('line', {
       x1: PAD.left, x2: W - PAD.right, y1: y(t), y2: y(t),
@@ -235,36 +256,37 @@ function chart(onPick) {
 
   const tip = el('div', { className: 'chart-tip', role: 'status', hidden: 'hidden' });
 
-  // Values lead, labels follow: the reader already knows which day they are on.
+  // Values lead, labels follow: the reader has the day and wants the numbers.
   function show(d, cx) {
+    const lines = bands
+      .filter((b) => bandValue(d, b.key) > 0 || b.key === 'others')
+      .map((b) => el('p', {}, [
+        el('span', { className: 'chart-key', style: 'background:' + b.fill }),
+        el('span', { className: 'chart-tip-value',
+          text: b.key === 'others' && !roomKnown(d) ? '—' : bandValue(d, b.key) }),
+        el('span', { text: ' ' + (b.key === 'others' && !roomKnown(d)
+          ? 'others, nobody counted' : b.long) })
+      ]));
+
     tip.replaceChildren(
       el('p', { className: 'chart-tip-day', text: day(d.attended_on) }),
-      el('p', {}, [
-        el('span', { className: 'chart-tip-value', text: d.total }),
-        el('span', { text: ' players' })
-      ]),
-      el('p', {}, [
-        el('span', { className: 'chart-tip-value',
-          text: roomKnown(d) ? d.other_attendees : '—' }),
-        el('span', { text: roomKnown(d) ? ' others' : ' others, nobody counted' })
-      ]),
+      ...lines,
       el('p', { className: 'chart-tip-room' }, [
         el('span', { className: 'chart-tip-value',
           text: room(d) + (roomKnown(d) ? '' : '+') }),
-        el('span', { text: ' in the room' })
+        el('span', { text: ' in total' })
       ])
     );
     tip.hidden = false;
 
-    // Clamped to the plot, or the last few columns push it off the right edge
-    // and the reader loses the numbers they went there for. Measured after it
-    // is visible, because its width depends on the text just put in it.
+    // Clamped to the plot, or the last few columns push it off the edge and the
+    // reader loses the numbers they went there for. Measured after it is
+    // visible, because its width depends on the text just put in it.
     const wrap = tip.parentElement;
     const scale = wrap.clientWidth / W || 1;
     const half = tip.offsetWidth / 2;
     const want = cx * scale;
-    const left = Math.min(Math.max(want, half + 4), wrap.clientWidth - half - 4);
-    tip.style.left = left + 'px';
+    tip.style.left = Math.min(Math.max(want, half + 4), wrap.clientWidth - half - 4) + 'px';
   }
 
   const hide = () => { tip.hidden = true; };
@@ -272,36 +294,36 @@ function chart(onPick) {
   rows.forEach((d, i) => {
     const cx = PAD.left + band * i + band / 2;
     const x = cx - barW / 2;
-    const others = d.other_attendees || 0;
-    const playersTop = y(d.total);
 
     const group = svg('g', {
       class: 'chart-col', tabindex: '0', role: 'button',
-      'aria-label': day(d.attended_on) + ': ' + d.total + ' players'
-        + (roomKnown(d)
-            ? ', ' + others + ' others, ' + room(d) + ' in the room'
-            : ', others not counted')
+      'aria-label': day(d.attended_on) + ': '
+        + bands.map((b) => bandValue(d, b.key) + ' ' + b.long).join(', ')
+        + (roomKnown(d) ? ', ' + room(d) + ' in total'
+                        : ', others not counted, at least ' + room(d) + ' in total')
     });
 
-    // The 2px gap is the surface doing the separating. No stroke around a mark:
-    // a border is ink that is not data.
-    if (others > 0) {
-      const otop = y(room(d));
-      group.append(svg('rect', {
-        x: x, y: otop, width: barW,
-        height: Math.max(1, playersTop - otop - 2),
-        rx: 4, fill: FILL_OTHERS
-      }));
-    }
+    // Bottom up, darkest first, so the column settles rather than floats. The
+    // 2px gap is the surface doing the separating; never a stroke around a mark.
+    let base = 0;
+    for (const b of bands) {
+      const v = bandValue(d, b.key);
+      if (v <= 0) continue;
 
-    group.append(svg('rect', {
-      x: x, y: playersTop, width: barW,
-      height: Math.max(1, y(0) - playersTop),
-      // Rounded at the data end, square at the baseline. Only the top segment
-      // has a data end, so a column with others on top is square here.
-      rx: others > 0 ? 0 : 4,
-      fill: FILL_PLAYERS
-    }));
+      const topY = y(base + v);
+      const bottomY = y(base);
+      const isTop = base + v >= room(d) - 0.001;
+      const height = Math.max(1, bottomY - topY - (base > 0 ? 2 : 0));
+
+      group.append(svg('rect', {
+        x: x, y: topY, width: barW, height: height,
+        // Rounded at the data end, square at the baseline. Only the topmost
+        // segment has a data end.
+        rx: isTop ? 4 : 0,
+        fill: b.fill
+      }));
+      base += v;
+    }
 
     // A hit target the width of the band, so nobody has to aim at a 24px column.
     group.append(svg('rect', {
@@ -332,34 +354,77 @@ function chart(onPick) {
     root.append(group);
   });
 
+  // The total line, over the columns.
+  //
+  // It breaks wherever nobody counted the others, because on those days the
+  // total is not known -- it is a floor. Drawing straight through would put a
+  // dip in the line that is an artefact of nobody counting rather than of
+  // anybody staying home, which is the kind of thing a line chart is believed
+  // about.
+  const pts = rows.map((d, i) => ({
+    x: PAD.left + band * i + band / 2,
+    y: y(room(d)),
+    known: roomKnown(d)
+  }));
+
+  let run = [];
+  const flush = () => {
+    if (run.length > 1) {
+      root.append(svg('polyline', {
+        class: 'chart-total-line',
+        points: run.map((p) => p.x + ',' + p.y).join(' ')
+      }));
+    }
+    run = [];
+  };
+  for (const p of pts) {
+    if (p.known) run.push(p); else flush();
+  }
+  flush();
+
+  for (const p of pts) {
+    root.append(svg('circle', {
+      cx: p.x, cy: p.y, r: 4,
+      class: p.known ? 'chart-total-dot' : 'chart-total-dot is-floor'
+    }));
+  }
+
   // One direct label, on the endpoint, which is the figure a reader looks for
   // first. A number on all eleven would be chaos and would go unread.
   const last = rows[rows.length - 1];
-  const lastX = PAD.left + band * (rows.length - 1) + band / 2;
   const cap = svg('text', {
-    x: lastX, y: y(room(last)) - 8, class: 'chart-cap', 'text-anchor': 'middle'
+    x: PAD.left + band * (rows.length - 1) + band / 2,
+    y: y(room(last)) - 12, class: 'chart-cap', 'text-anchor': 'middle'
   });
   cap.textContent = room(last) + (roomKnown(last) ? '' : '+');
   root.append(cap);
 
+  const anyFloor = pts.some((p) => !p.known);
+
   return el('section', { className: 'card' }, [
     el('h2', { text: 'How many came' }),
     el('p', { className: 'field-help',
-      text: 'One column per league day, oldest first. The height of the column '
-          + 'is everybody who was in the room. Click a column for who was there.' }),
+      text: 'One column per league day, oldest first, broken down by division '
+          + 'with everybody who has no Player ID on top. The line is the total. '
+          + 'Click a column for who was there.' }),
     // A legend is always present once there are two series: identity never rests
     // on colour alone.
-    el('ul', { className: 'chart-legend' }, [
-      el('li', {}, [
-        el('span', { className: 'chart-key chart-key-players' }),
-        el('span', { text: 'Players' })
-      ]),
-      el('li', {}, [
-        el('span', { className: 'chart-key chart-key-others' }),
-        el('span', { text: 'Others, without a Player ID' })
-      ])
-    ]),
-    el('div', { className: 'chart-wrap' }, [root, tip])
+    el('ul', { className: 'chart-legend' },
+      [el('li', {}, [
+        el('span', { className: 'chart-key chart-key-line' }),
+        el('span', { text: 'Total' })
+      ])].concat(bands.slice().reverse().map((b) => el('li', {}, [
+        el('span', { className: 'chart-key', style: 'background:' + b.fill }),
+        el('span', { text: b.long })
+      ])))),
+    el('div', { className: 'chart-wrap' }, [root, tip]),
+    anyFloor
+      ? el('p', { className: 'field-help',
+          text: 'The line breaks where nobody counted the others: on those days '
+              + 'the total is a floor rather than a figure, and a hollow dot '
+              + 'marks it. Joining across would show a dip that came from '
+              + 'nobody counting rather than from anybody staying home.' })
+      : null
   ]);
 }
 
