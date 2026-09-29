@@ -416,6 +416,48 @@ Building the bar is separate from deciding to show it, so it can be rendered and
 looked at without a session. A thing only visible after signing in is a thing
 nobody checks.
 
+### Attendance history
+
+`admin/attendance-history.html` is the only screen that reads attendance back:
+week by week, split by played, attended and age division, with the other-attendee
+headcount alongside; and a date picker, or a click on any day in the table, for
+who was there. **It writes nothing** — no confirmations, no buttons that change
+anything.
+
+Two gaps had to be filled before it could be honest.
+
+**Whether somebody played was not recorded.** `attendance` says who was there on
+what day. The play award is a `point_ledger` row, and the ledger carries no
+attendance date — only `created_at`, which is when a professor pressed the
+button, so a file uploaded on Monday for Sunday would put the play award on
+Monday. `attendance.played` records it at the point the day and the fact meet.
+It is **nullable on purpose**: null means recorded before the column existed, and
+the page prints "not recorded" rather than a zero. A zero would look exactly like
+a day nobody played.
+
+**People without player records were not counted at all.** Parents and siblings
+fill the room and earn nothing, correctly — no Player ID, no points — but the
+room was fuller than the table said. `other_attendees` holds **one headcount per
+day**, replaced rather than added to, because it counts a room and not an event:
+two files from one Sunday are one roomful. Both recording screens ask, and the
+box shows what is already recorded for that date so a professor is correcting a
+number they can see.
+
+Both figures come from `attendance_by_day()` and `attendance_on()`, security
+definer, professor-gated. Not from queries in page code: the division split needs
+birth years, and a birth year is protected. A professor may read one, but
+shipping several hundred to a browser to bucket them into three groups is handing
+out protected data to do arithmetic the database can do itself. Divisions are
+worked out **as at the attendance date**, so a player who has had a birthday
+since is still counted in the division they actually played in.
+
+A player who turns up in the morning and plays in the afternoon already has a row
+saying they did not play, and `ignoreDuplicates` leaves it alone. `played` is
+promoted to true afterwards, one direction only — a day's play is not undone by a
+later upload that happens not to list them. That promotion is why the migration
+grants `UPDATE (played)`: `UPDATE` on `attendance` is granted per column and
+`played` was not in the list.
+
 ### TDF upload
 
 `admin/upload.html` is how attendance is normally recorded, and the main way new

@@ -17,7 +17,7 @@ import { currentProfessor } from '../auth.js';
 import {
   ATTEND_LABEL, CASUAL_LABEL, PREMIER_LABEL,
   loadActions, actionField, status, playerPicker, recordAttendance, outcomeNodes,
-  describeFailure, alreadyPaidFor
+  describeFailure, alreadyPaidFor, otherAttendeesField
 } from './attendance-core.js';
 
 const gate = document.querySelector('#gate');
@@ -280,6 +280,8 @@ function recordCard() {
   const unknown = attendees.filter((p) => !known.has(p.player_id));
 
   const dateInput = el('input', { type: 'date', id: 'attended-on', value: parsed.attendedOn });
+  const others = otherAttendeesField(dateInput.value);
+  dateInput.addEventListener('change', () => others.setDate(dateInput.value));
   const premier = el('input', { type: 'checkbox', id: 'premier' });
   const attendField = actionField(actions, 'attend-action', 'Award for attending', ATTEND_LABEL);
   const playField = actionField(actions, 'play-action', 'Award for playing', CASUAL_LABEL);
@@ -312,6 +314,7 @@ function recordCard() {
           + 'attendance point only — the file is what says somebody played.' }),
     attendField,
     playField,
+    ...others.nodes,
 
     alreadyPaid.size ? el('div', { className: 'warn-block' }, [
       el('p', {}, [
@@ -364,6 +367,7 @@ function recordCard() {
       playActionId: playField.querySelector('select').value,
       createMissing: createMissing.checked,
       payAnyway: payAnyway.checked,
+      otherAttendees: others.value(),
       resultNode: result,
       button: go
     });
@@ -428,7 +432,8 @@ function redraw() {
 
 // --- Writing -----------------------------------------------------------------
 
-async function commit({ attendedOn, attendActionId, playActionId, createMissing, payAnyway, resultNode, button }) {
+async function commit({ attendedOn, attendActionId, playActionId, createMissing,
+                        payAnyway, otherAttendees, resultNode, button }) {
   button.disabled = true;
   status(resultNode, 'Recording.');
 
@@ -444,6 +449,7 @@ async function commit({ attendedOn, attendActionId, playActionId, createMissing,
       actions,
       source: 'tdf',
       reason: playReason(),
+      otherAttendees,
       // Detection is worth having; refusing is not the professor's decision to
       // lose. Playing in two tournaments earns two lots of points, and only the
       // day itself is counted once.

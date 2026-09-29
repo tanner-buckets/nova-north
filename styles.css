@@ -2338,3 +2338,14 @@ h1.event-name + .event-when {
 .judge-list .field {
   margin: 0;
 }
+
+/* The attendance history table. Days and counts do not wrap: "Sun, Sep 27,"
+   over two lines reads as two dates, and a wrapped number reads as two
+   numbers. The wrapper scrolls instead on a narrow screen. */
+.attendance-table th,
+.attendance-table td {
+  white-space: nowrap;
+}
+.attendance-table .link-button {
+  white-space: nowrap;
+}

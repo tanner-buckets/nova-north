@@ -167,6 +167,11 @@ is applied to the production database.** There is no confirmation step.
   references the original. Never update or delete a ledger row.
 - **Retire, never delete.** Earning actions and prize items get an `is_active`
   flag. Historical rows must keep pointing at valid records.
+- **Whether somebody played is recorded, not derived.** `attendance.played` is
+  the only place the day and the fact meet: the play award is a ledger row, and
+  the ledger carries no attendance date. **Null means not recorded**, from before
+  the column existed — never treat it as false, or a day of tournament players
+  reads as a day of spectators.
 - **Derive, do not store.** Division comes from birth year. Loyalty week count
   comes from counting distinct attendance dates. Release membership comes from the
   date falling inside the release window. Consent in force comes from the flag
@@ -256,6 +261,12 @@ is applied to the production database.** There is no confirmation step.
   attendance point, and no play award. Judging is not playing. A judge who also
   played is in the file already, so their box is ticked and locked rather than
   offering to add them twice.
+- **Ask how many other attendees there were** — parents, siblings, anyone in the
+  room without a Player ID. They earn nothing and are never recorded by name.
+  The count is per **day**, not per file: two files from one Sunday are one
+  roomful, so a second entry replaces rather than adds, and the box says so and
+  shows what is already recorded. The manual attendance screen asks the same
+  question, or a day recorded by hand would read as nobody having come.
 
 ---
 
@@ -316,6 +327,15 @@ than skipping ahead.
    Trainer Card, players, events and reference data.
 7. **Printable lists.** Loyalty tiers for the store, pre-registration for the
    desk. Print stylesheets, professor-only.
+
+`admin/attendance-history.html` reads all of it back: how many came each week,
+split by played, attended and age division, and who was there on any given day.
+It writes nothing. Both figures come from `attendance_by_day()` and
+`attendance_on()` rather than from queries in page code, because the division
+split needs birth years and a birth year is a protected field — a professor may
+read one, but shipping several hundred to a browser to bucket them is handing out
+protected data to do arithmetic SQL can do. Full names and divisions put it
+behind the sign-in with the printable lists.
 
 Running alongside phase 1: deploy a minimal static shell to GitHub Pages — one
 page and a nav, confirmed live. This proves the deploy chain works while nothing
