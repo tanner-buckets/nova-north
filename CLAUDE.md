@@ -453,9 +453,14 @@ last season's badges have to stay earnable while the new list goes up.
 - **Rank is the best any running season gives** — `best_player_rank()`, with
   `best_rank_season()` naming which one. Judging on the newest alone would demote
   everybody the moment a new badge list appeared.
-- **Elite 4 and Champion stay on the newest running season** and count only that
-  season's badges. There is one ladder, not one per badge list, and two
+- **Elite 4 and Champion belong to one season each**, and during an overlap the
+  Trainer Card asks which. The picker defaults to the newest running season and
+  is only shown when there is a choice. Without it the award lands silently on
+  the wrong year, which is how a set of 2026 Champions became 2027 ones.
+- **The Champion badge threshold counts the chosen season's badges alone.** Two
   half-finished lists must not add up to one Champion.
+- The picker does **not** govern badges. A badge carries its own season on its
+  row, so every running season is shown together and needs no telling.
 - The prize discount counts badges **per season and takes the best**, for the
   same reason.
 - A professor cannot retire the only season still running. That would leave no

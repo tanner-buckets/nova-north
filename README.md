@@ -363,8 +363,9 @@ Each season has its own badge list. Names may repeat year to year.
 - **Rank is never stored, for any season.** Badges persist and carry their
   season, so 2026's rank is still derivable in 2030. A badge corrected years
   later corrects the history with it.
-- **Champion and Elite 4 stay on the newest running season.** There is one
-  ladder, not one per badge list.
+- **Champion and Elite 4 belong to one season each**, and during an overlap the
+  Trainer Card asks which. There is one ladder, not one per badge list, but which
+  year a player is climbing it for is a question only a professor can answer.
 - **Champion is a table**, one row per season won, which is what lets a two-time
   Champion show two stars.
 - **`elite_four_wins` records wins only.** A lost attempt leaves no trace and can
@@ -722,10 +723,23 @@ own colours, taken from its artwork when the picture is uploaded, so a badge a
 professor adds is coloured like every other.
 
 Only Elite 4 **wins** are recorded. A lost battle is nothing and a player may
-retry as often as they like, so there is no attempt to store. Elite 4 and
-Champion belong to the newest running season and count only that season's badges,
-so two half-finished lists cannot add up to one Champion. Past seasons stay on
-the player's record.
+retry as often as they like, so there is no attempt to store. Past seasons stay
+on the player's record.
+
+**Which season Elite 4 and Champion are recorded against is a choice**, shown
+only while more than one season is running. It defaults to the newest, which is
+right nearly always. Without it the award lands silently on the newest year, and
+a player finishing last season's ladder during a changeover gets the wrong one —
+which is exactly what happened the first Sunday after the 2027 list went up.
+
+The picker governs Elite 4, Champion, and the badge count the Champion threshold
+is measured against, so two half-finished lists cannot add up to one Champion. It
+does **not** govern badges: a badge carries its own season on its row, so the
+badge panel shows every running season together and needs no telling.
+
+Correcting a Champion recorded against the wrong year needs no migration. Pick
+the wrong year, take the award back, pick the right one, record it. Nothing is
+edited in place, which is why that works.
 
 Recording a Champion who does not yet meet the threshold is **warned about, not
 blocked** — `player_rank()` does not check eligibility either, and a professor

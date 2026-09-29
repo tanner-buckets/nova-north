@@ -8,8 +8,13 @@
 //
 // More than one season can be running at once, because a season ends when a
 // professor retires it rather than when a later one appears. Every badge in
-// every running season is awardable here. Elite 4 and Champion stay on the
-// newest running season: there is one ladder, not one per list.
+// every running season is awardable here.
+//
+// Elite 4 and Champion belong to one season each, so during an overlap the
+// screen has to ask which. It defaults to the newest running season, which is
+// right nearly always, and offers the others: a player finishing last season's
+// ladder during the changeover is a real thing, and without the choice the
+// award silently lands on the wrong year.
 //
 // Rank is not stored and not computed here. best_player_rank() decides it from
 // the badges, the ranks table and any Champion award, taking the best any
@@ -23,14 +28,17 @@ const gate = document.querySelector('#gate');
 const app = document.querySelector('#app');
 
 let professor = null;
-let season = null;
+let season = null;         // newest running season, the default
+let workingSeason = null;  // the season Elite 4 and Champion are being recorded against
 let badges = [];        // every active season's badges, newest first
 let activeSeasons = [];
 let ranks = [];
 let player = null;
 
 // Set by the local demo so the panels can render without a session.
-export function _setCard(s, b, r, p) { season = s; badges = b; ranks = r; player = p; }
+export function _setCard(s, b, r, p) {
+  season = s; workingSeason = s; badges = b; ranks = r; player = p;
+}
 
 const BATTLES = [1, 2, 3, 4];
 
@@ -49,7 +57,7 @@ async function loadState(playerId) {
     supabase.from('player_badges')
       .select('id, badge_id, awarded_on').eq('player_id', playerId),
     supabase.from('elite_four_wins')
-      .select('id, battle_number, won_on').eq('player_id', playerId).eq('season_year', season),
+      .select('id, battle_number, won_on').eq('player_id', playerId).eq('season_year', workingSeason),
     supabase.from('champion_awards')
       .select('id, season_year, awarded_on').eq('player_id', playerId),
     supabase.rpc('best_player_rank', { p_player_id: playerId }),
@@ -63,11 +71,47 @@ async function loadState(playerId) {
     // and are listed separately.
     held: byBadge,
     elite: new Map((elite.data || []).map((r) => [r.battle_number, r])),
-    champion: (champion.data || []).find((r) => r.season_year === season) || null,
+    champion: (champion.data || []).find((r) => r.season_year === workingSeason) || null,
     championSeasons: (champion.data || []).map((r) => r.season_year).sort((a, b) => b - a),
     rank: rank.data || null,
     rankSeason: rankSeason.data || null
   };
+}
+
+// --- Which season -------------------------------------------------------------
+
+// Only when there is a choice. A picker with one option is furniture.
+//
+// It governs Elite 4 and Champion, not badges: a badge carries its own season on
+// its row, so the badge panel shows every running season at once and needs no
+// telling.
+function seasonCard() {
+  if (activeSeasons.length < 2) return null;
+
+  const select = el('select', { id: 'working-season' },
+    activeSeasons.map((y) => el('option', { value: y, text: `Season ${y}` })));
+  select.value = String(workingSeason);
+
+  select.addEventListener('change', async () => {
+    workingSeason = Number(select.value);
+    await show(player.player_id);
+  });
+
+  return el('section', { className: 'card' }, [
+    el('h3', { text: 'Which season' }),
+    el('p', { className: 'field' }, [
+      el('label', { for: select.id, text: 'Recording against' }), select
+    ]),
+    el('p', { className: 'field-help',
+      text: 'Elite 4 and Champion below are read from and written to this '
+          + 'season. Badges are not affected: a badge carries its own season, so '
+          + 'every running season is shown together above.' }),
+    workingSeason !== season
+      ? el('p', { className: 'field-help is-warning',
+          text: `This is not the newest running season. Anything recorded below `
+              + `lands on ${workingSeason}, not ${season}.` })
+      : null
+  ]);
 }
 
 // --- Badges ------------------------------------------------------------------
@@ -180,7 +224,7 @@ export function elitePanel(state) {
           ? await supabase.from('elite_four_wins').delete().eq('id', row.id)
           : await supabase.from('elite_four_wins').insert({
               player_id: player.player_id,
-              season_year: season,
+              season_year: workingSeason,
               battle_number: n,
               recorded_by: professor.userId
             });
@@ -197,7 +241,9 @@ export function elitePanel(state) {
   });
 
   return el('section', { className: 'card' }, [
-    el('h3', { text: `Elite 4 (${won} of 4)` }),
+    el('h3', { text: activeSeasons.length > 1
+      ? `Elite 4, season ${workingSeason} (${won} of 4)`
+      : `Elite 4 (${won} of 4)` }),
     el('p', { className: 'field-help',
       text: 'Only wins are recorded. A lost battle is nothing, and a player may '
           + 'try again as many times as they like, so there is no attempt to '
@@ -215,7 +261,7 @@ export function championPanel(state) {
   // This season's badges only. Champion is recorded against one season, so two
   // half-finished lists must not add up to one.
   const earnedBadges = badges
-    .filter((b) => b.season_year === season && state.held.has(b.id)).length;
+    .filter((b) => b.season_year === workingSeason && state.held.has(b.id)).length;
   const eliteWon = state.elite.size;
 
   // Read from the ranks table rather than written in here, so the threshold
@@ -253,7 +299,7 @@ export function championPanel(state) {
         ? await supabase.from('champion_awards').delete().eq('id', state.champion.id)
         : await supabase.from('champion_awards').insert({
             player_id: player.player_id,
-            season_year: season,
+            season_year: workingSeason,
             awarded_by: professor.userId
           });
       if (error) throw error;
@@ -273,7 +319,7 @@ export function championPanel(state) {
     // missing and asks.
     go.hidden = true;
     confirmRow.hidden = false;
-    status(note, `They have ${earnedBadges} of the ${needBadges} season ${season} `
+    status(note, `They have ${earnedBadges} of the ${needBadges} season ${workingSeason} `
       + `badges needed and ${eliteWon} of 4 Elite 4 battles. Record it only if `
       + 'you saw them earn it.');
   });
@@ -281,14 +327,14 @@ export function championPanel(state) {
   yes.addEventListener('click', record);
 
   return el('section', { className: 'card' }, [
-    el('h3', { text: `Champion, season ${season}` }),
+    el('h3', { text: `Champion, season ${workingSeason}` }),
     state.champion
       ? el('p', { className: 'live-state is-on',
-          text: `League Champion for ${season}, recorded ${day(state.champion.awarded_on)}. `
+          text: `League Champion for ${workingSeason}, recorded ${day(state.champion.awarded_on)}. `
               + 'That is one star on their card.' })
       : el('p', { className: 'field-help',
           text: `${top ? top.name : 'The top rank'} needs all four Elite 4 battles `
-              + `and ${needBadges} badges from season ${season}. They have `
+              + `and ${needBadges} badges from season ${workingSeason}. They have `
               + `${earnedBadges} of those and ${eliteWon} battles.` }),
 
     state.championSeasons.length
@@ -342,6 +388,7 @@ async function show(playerId) {
               + 'below.' })
       ]),
       badgePanel(state),
+      seasonCard(),
       elitePanel(state),
       championPanel(state)
     );
@@ -365,6 +412,8 @@ async function show(playerId) {
   try {
     const { data: s } = await supabase.rpc('current_badge_season');
     season = s;
+    // The default, and the only value unless a professor changes it below.
+    workingSeason = s;
 
     // Every season still being awarded, not just the newest. During a
     // changeover a professor has to be able to give out last season's badges,
