@@ -502,9 +502,21 @@ creating; a professor who corrected one by hand outranks a file.
 
 Each attendee gets two things: an `attendance` row, and point ledger entries for
 attending and for playing. The screen asks one question, "was this a premier
-event?", which switches the play award between the casual and championship
-actions. Both dropdowns stay editable, because point values are defaults a
-professor may override.
+event?", which decides which play action the ledger row points at.
+
+**The point values are two number boxes behind a disclosure**, not two dropdowns
+of every earning action. Point values are defaults a professor may override, and
+overriding them means changing the number — picking a different earning action to
+get a different number was the long way round. The action still goes on the
+ledger row so history keeps a label; the box decides how many. A note beside each
+box says what the number normally is, and follows the premier checkbox.
+
+**The fields on that card are built once per file, not once per render.**
+`redraw()` replaces the whole screen and runs every time somebody is added by hand
+or a judge is ticked. Rebuilding the fields along with it silently reverted them:
+tick "this was a premier event", add one person, and premier was off again and
+everybody earned a point less, with nothing saying so. The same went for "add them
+as players" and for a number typed into the other-attendee box.
 
 Between the roster and the button it asks two questions, both open rather than
 folded away, because a collapsed disclosure is the same as not asking.
@@ -519,7 +531,10 @@ ticked and locked instead of offering to add them twice. Failing to load the
 list does not block the upload — it says so and points at the search below.
 
 **"Was anyone else here?"** — a free search, for anyone who turned up without
-entering the tournament.
+entering the tournament, and the **other-attendee count**. That box used to sit
+at the end of the point awards, which is the wrong card and the wrong place on
+it: last field on a long form, and it went unanswered. It is a question about
+who was in the room, so it belongs with the other one.
 
 Both routes produce the same thing: the loyalty week and the attendance point,
 and **no play award**. The file is the claim that a tournament was played; a

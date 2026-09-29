@@ -234,8 +234,17 @@ function newPlayerForm(onPick) {
 export async function recordAttendance({
   attendees, known, attendedOn, attendActionId, playActionId,
   createMissing, professor, actions, source, reason, skipPlayFor,
-  otherAttendees
+  otherAttendees, attendPoints, playPoints
 }) {
+  // A screen may hand over the number of points itself rather than let the
+  // earning action decide. Point values are defaults a professor can change at
+  // entry time, and the upload screen now asks for the number directly instead
+  // of making them pick a different action to change it. A screen that passes
+  // nothing keeps the action's own value.
+  const attendDelta = Number.isFinite(attendPoints)
+    ? attendPoints : pointsFor(actions, attendActionId);
+  const playDelta = Number.isFinite(playPoints)
+    ? playPoints : pointsFor(actions, playActionId);
   const missing = attendees.filter((p) => !known.has(p.player_id));
   let created = [];
 
@@ -319,7 +328,7 @@ export async function recordAttendance({
   for (const p of eligible) {
     if (newlyPresent.has(p.player_id)) {
       ledger.push({
-        player_id: p.player_id, delta: pointsFor(actions, attendActionId),
+        player_id: p.player_id, delta: attendDelta,
         earning_action_id: attendActionId, created_by: professor.userId
       });
     }
@@ -334,7 +343,7 @@ export async function recordAttendance({
     // two routes agreeing.
     if (playActionId && p.played && !(skipPlayFor && skipPlayFor.has(p.player_id))) {
       ledger.push({
-        player_id: p.player_id, delta: pointsFor(actions, playActionId),
+        player_id: p.player_id, delta: playDelta,
         earning_action_id: playActionId, created_by: professor.userId,
         // Public through get_player_summary(). Never write anything private here.
         reason: reason || null
