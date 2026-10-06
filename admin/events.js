@@ -491,6 +491,32 @@ function closingPanel(event) {
   ]);
 }
 
+// The two screens a professor goes to next, from the event they are already
+// looking at. Both take the event in the URL, so neither needs picking out of a
+// list a second time.
+//
+// Only when the event takes registration: the drop screen loads events that
+// take it or have a request waiting, and the printable list loads only the
+// former, so for anything else both links would land on a page the event is not
+// on. Better to say why than to send somebody there.
+function eventShortcuts(event) {
+  if (!event.registration_open) {
+    return el('p', { className: 'field-help',
+      text: 'This event does not take registration, so it has nobody to drop and '
+          + 'no list to print. Turn registration on above to get both.' });
+  }
+
+  const id = encodeURIComponent(event.id);
+  return el('nav', {
+    className: 'event-shortcuts', 'aria-label': 'This event on other screens'
+  }, [
+    el('a', { className: 'button button-quiet',
+      href: `drops.html?event=${id}`, text: 'Drops and waiting list' }),
+    el('a', { className: 'button button-quiet',
+      href: `print.html?event=${id}`, text: 'Player list to print' })
+  ]);
+}
+
 // The link a professor posts. An absolute URL, because it is going into a
 // Discord message or a text, where a relative path means nothing.
 //
@@ -575,6 +601,7 @@ async function eventRow(event) {
     body.replaceChildren(el('p', { className: 'notice', text: 'Loading.' }));
     const caps = await loadCapacities(event.id);
     body.replaceChildren(
+      eventShortcuts(event),
       eventForm(event, { onSaved: refresh }),
       event.registration_open
         ? capacityPanel(event.id, caps)

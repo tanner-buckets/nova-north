@@ -778,6 +778,16 @@ and has not.
 Reopening an event that has already started reports back that it changed nothing
 visible, rather than reporting success: the clock refuses it either way.
 
+Opening an event also shows the two screens it leads to: **Drops and waiting
+list** and **Player list to print**, both passing `?event=<id>` so neither has to
+be picked out of a list again. `admin/drops.html` opens straight onto that event
+and "All events" still goes back to the list; `admin/print.html` preselects it in
+the dropdown but does not build the sheet, because building opens the print
+dialog and a dialog nobody asked for gets dismissed without reading what was
+behind it. Both links appear only where the event takes registration — neither
+page lists an event that does not, and each says so rather than sending somebody
+to a page their event is missing from.
+
 Opening an event on this screen shows a **Link to post** — the absolute URL of
 that event's own page, with a copy button. The field is readable and selectable
 as well as copyable, because clipboard access can be refused and a professor

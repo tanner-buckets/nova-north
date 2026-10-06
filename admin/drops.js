@@ -226,11 +226,34 @@ async function showEvent(event) {
 
 // --- Start -------------------------------------------------------------------
 
+// An event asked for in the URL, from the events screen. Read once and used
+// once: pressing "All events" has to get back to the list rather than bouncing
+// straight into the same event again.
+let wanted = new URLSearchParams(location.search).get('event');
+
 async function start() {
   app.replaceChildren(el('p', { className: 'notice', text: 'Loading events.' }));
 
   try {
     const events = await loadEvents();
+
+    let missing = null;
+    if (wanted) {
+      const asked = events.find((e) => e.event_id === wanted);
+      wanted = null;
+      if (asked) {
+        await showEvent(asked);
+        return;
+      }
+      // Only events that take registration or have a request waiting are
+      // loaded, so one that is on neither footing is genuinely not here.
+      // Saying so beats dropping somebody on a list and letting them wonder
+      // why they are not where they expected to be.
+      missing = el('p', { className: 'notice notice-problem',
+        text: 'That event is not taking registration and has no drop requests '
+            + 'waiting, so there is nothing to confirm on it. Everything that '
+            + 'does is below.' });
+    }
 
     // Anything with a request waiting is listed whatever its state. Registration
     // closes, and a request made before it closed still has to be confirmable --
@@ -243,7 +266,8 @@ async function start() {
     const open = events.filter((e) =>
       e.registration_open && !Number(e.drop_requested_count));
 
-    app.replaceChildren(
+    app.replaceChildren(...[
+      missing,
       pending.length
         ? el('section', { className: 'card' }, [
             el('h2', { text: 'Waiting for you' }),
@@ -270,7 +294,7 @@ async function start() {
           el('span', { text: '.' })
         ])
       ])
-    );
+    ].filter(Boolean));
   } catch (err) {
     console.error(err);
     app.replaceChildren(problem('The events'));

@@ -215,6 +215,12 @@ is applied to the production database.** There is no confirmation step.
 - **A drop request is never refused by a closing.** A player who cannot come must
   always be able to say so, and never more than once their place could go to
   somebody waiting.
+- **An event carries its own links to the two screens it leads to.** The events
+  screen puts a drops button and a printable-player-list button at the top of
+  each expanded event, both passing `?event=<id>`, so neither screen has to be
+  picked out of a list a second time. Only where the event takes registration:
+  the drop screen and the printable list both load registration-taking events, so
+  for anything else the links would land on a page the event is not on.
 - **An event that takes registration has a page of its own**, `event.html?e=<id>`,
   so a professor has a link to post that is one event rather than the whole
   schedule. It reads what the schedule reads and nothing more: places left and

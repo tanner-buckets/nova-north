@@ -601,6 +601,12 @@ main {
   border-radius: 6px;
   padding: 0.6rem 1.1rem;
   cursor: pointer;
+  /* An anchor wearing this class is a button, so it loses the underline and
+     takes the padding and centring a <button> gets for free. Both are no-ops on
+     a real <button>. */
+  display: inline-block;
+  text-decoration: none;
+  text-align: center;
 }
 
 .button:hover { background: var(--teal-lift); }
@@ -2494,3 +2500,15 @@ h1.event-name + .event-when {
 
 /* The room total is the column the eye should land on. */
 .room-count { font-weight: 700; }
+
+/* The two screens an event leads to, at the top of its row on the events page.
+   Buttons rather than links: they are where a professor is going next, not a
+   footnote about where they could go. */
+.event-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--line);
+}

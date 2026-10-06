@@ -271,7 +271,14 @@ function registrationPanel(events) {
       text: `${ev.name} — ${formatEventDay(ev.starts_at)}`
     })));
   const note = el('p', { className: 'form-status', role: 'status' });
-  const go = el('button', { type: 'submit', className: 'button', text: 'Build the desk list' });
+  const go = el('button', { type: 'submit', className: 'button', text: 'Build the player list' });
+
+  // Arrived from the events screen with an event already in mind. The sheet is
+  // not built automatically: building opens the print dialog, and a print
+  // dialog nobody asked for is a print dialog somebody dismisses without
+  // reading what was behind it.
+  const wanted = new URLSearchParams(location.search).get('event');
+  if (wanted && events.some((ev) => ev.id === wanted)) select.value = wanted;
 
   const form = el('form', {}, [
     el('p', { className: 'field' }, [
@@ -281,6 +288,12 @@ function registrationPanel(events) {
       text: 'For the desk. Registered players by division and the wait list in '
           + 'order, with a column to tick people off as they arrive. Building it '
           + 'opens the print dialog.' }),
+    wanted && !events.some((ev) => ev.id === wanted)
+      ? el('p', { className: 'field-help is-warning',
+          text: 'The event you came from is not in this list, which means it has '
+              + 'stopped taking registration. Turn it back on from the events '
+              + 'screen, or pick another event.' })
+      : null,
     el('p', {}, [go]),
     note
   ]);
