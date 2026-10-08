@@ -65,6 +65,8 @@ const TOOLS = [
     note: 'Turn a player\u2019s listing on or off. Every change is logged.' },
   { href: 'drops.html', name: 'Drop requests',
     note: 'Confirm a cancellation and promote the next person off the waiting list.' },
+  { href: 'gallery-review.html', name: 'Gallery review',
+    note: 'Photos people have sent in. Nothing reaches the gallery page until it is approved here, and a published photo can be taken down from the same screen.' },
   { href: 'points.html', name: 'Points',
     note: 'Award points for anything else earned, and record what is spent at the prize wall. Corrections are reversing entries, never edits.' },
   { href: 'trainer-card.html', name: 'Trainer Card',
@@ -78,7 +80,9 @@ const TOOLS = [
   { href: 'reference.html', name: 'Reference data',
     note: 'Badges, Trainer Card ranks, and releases with their loyalty tiers.' },
   { href: 'print.html', name: 'Printable lists',
-    note: 'Loyalty tiers for the store and pre-registration for the desk. Print stylesheets, never public.' }
+    note: 'Loyalty tiers for the store and pre-registration for the desk. Print stylesheets, never public.' },
+  { href: 'resources.html', name: 'Resources',
+    note: 'The outside links we reach for most: the rules, the penalty sheet, Play! Tools, a round timer and a raffle wheel.' }
 ];
 
 async function render() {

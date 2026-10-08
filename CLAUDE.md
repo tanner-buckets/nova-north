@@ -42,8 +42,8 @@ Many players are children. Privacy rules in this file are not negotiable.
 - **One third-party embed exists**, the Google map in the home page's meeting
   details, asked about and approved. It loads outside content on a page children
   use, which is why it was a question rather than a decision. The Discord join is
-  a plain link, not an embed, and loads nothing. Do not add a second embed
-  without asking.
+  a plain link, not an embed, and loads nothing, and neither does anything on the
+  Resources page. Do not add a second embed without asking.
 
 If a task seems to need a framework or a build step, stop and ask. Do not add one.
 
@@ -128,6 +128,34 @@ A returning player is not restored automatically. A professor re-confirms consen
 Never invent a third form. Never render a partial name, an initial, or a
 truncated ID as a substitute.
 
+### Photographs
+
+A photograph is the one thing on this site that shows a child's face, and the
+consent model above cannot help with it: there is no flag on a picture and no
+way to tell from the file who is in it. A person decides, every time.
+
+- **Nothing is visible until a professor approves it**, and that is enforced in
+  the database, not the page. The `gallery` bucket is **private** — unlike
+  `badge-art` there is no public URL — so a file can only be fetched through a
+  signed URL, and anon may only sign an object an approved row points at. A
+  photograph waiting for review is unreadable even to somebody holding its exact
+  path.
+- **A published photograph carries no identity.** No name, no Player ID, no
+  division, no date beyond the day it was sent. The submitter is recorded so a
+  professor knows who to ask, and `approved_gallery()` does not return that
+  column.
+- **The caption is the leak.** It is the one place a submitter can type a child's
+  name onto a public page, so a professor can rewrite or clear it before
+  approving, and the form asks people not to put names in it.
+- **Taking one down is the same action as turning one down.** A parent changing
+  their mind is the likeliest request this will ever get, and it must not be a
+  different button somewhere else. Both delete the files and keep the row.
+- **Camera and location data never reach the server.** A phone photograph
+  carries EXIF, very often including the GPS coordinates of the room. The page
+  resizes and re-encodes to a canvas before uploading, which keeps the pixels
+  and nothing else — the stripping is a consequence of resizing rather than a
+  step that can be forgotten.
+
 ### Implementation rules
 
 - **Row Level Security is row-level, not column-level.** Hiding a column requires
@@ -149,8 +177,8 @@ When in doubt about whether something can be shown publicly: it cannot.
 - `.env` and `.env.local` are gitignored. Never commit them.
 - **Every table gets RLS enabled and at least one policy in the same migration
   that creates it.** A table without a policy is a bug.
-- Public write access exists only for event registration and drop requests.
-  Everything else requires an authenticated professor.
+- Public write access exists only for event registration, drop requests and
+  gallery submissions. Everything else requires an authenticated professor.
 - Professor identity is checked against the `professors` table by `auth.uid()`.
 
 ### Migrations deploy automatically
@@ -226,6 +254,17 @@ is applied to the production database.** There is no confirmation step.
   picked out of a list a second time. Only where the event takes registration:
   the drop screen and the printable list both load registration-taking events, so
   for anything else the links would land on a page the event is not on.
+- **The same two links are on the public schedule, for a signed-in professor.**
+  A professor arriving at league opens the schedule like everybody else, and
+  that is the page with the event they want on it. The pair lives in
+  `supabase-client.js` beside `playerLinks()` and takes a `prefix`, because the
+  schedule sits at the root and the events screen inside `admin/`; two copies
+  would drift. Like every other professor-only thing on a public page, this
+  decides what to **show** and not what is allowed -- the admin pages are static
+  files anyone can fetch, and row level security is what refuses the data. On
+  the schedule the links are simply absent for an event that takes no
+  registration; the explainer that says to turn registration on belongs on the
+  screen where that is one checkbox away.
 - **An event that takes registration has a page of its own**, `event.html?e=<id>`,
   so a professor has a link to post that is one event rather than the whole
   schedule. It reads what the schedule reads and nothing more: places left and
@@ -311,6 +350,11 @@ is applied to the production database.** There is no confirmation step.
 
 - **The map is the keyless embed**, `maps.google.com/maps?q=...&output=embed`.
   No API key, so there is none to keep, rotate or leak from a public repository.
+- **The query is the street address alone, with no business name.** Searching
+  "Continental Cards" matches the shop's own Google listing, which is a different
+  place from the tournament room: it sent people to the shop. Both the map and
+  the directions link ask for `21140 Ashburn Crossing Dr #110` and nothing else,
+  so what the map shows is what the page prints.
 - **Its box has a definite height, not an aspect ratio.** The embed measures its
   box once, on load, and draws the map to whatever it finds. With `aspect-ratio`
   the height was not resolved at that moment, so it drew a thin strip of map and
@@ -330,8 +374,75 @@ is applied to the production database.** There is no confirmation step.
 - **The join button wears Discord's blurple**, `#5865f2`, which is the one colour
   on the site outside the palette. A gold button would read as ours, and that
   server is the store's room rather than ours. White on it clears 4.5:1.
+- **What the Discord is actually for**: a Pokémon channel carrying product and
+  tournament announcements, and somewhere to ask a question between Sundays.
+  Pairings are **not** posted there, so do not write that they are. The page says
+  nothing about pairings either way: raising them only to rule them out sends a
+  reader looking for something the page cannot help with.
 
 ---
+
+## The gallery
+
+`gallery.html` shows approved photographs newest first and carries the form that
+sends one in. `admin/gallery-review.html` is where they are approved. The
+privacy rules are above, under **Photographs**; these are the mechanics.
+
+- **Two renditions per photograph**, 1600px and 480px, both JPEG, both made in
+  the browser by `image-file.js`. A grid of thumbnails on store wifi must not be
+  twenty full-size pictures, and a 480px thumbnail is not enough for a professor
+  to see who is in a picture, so the review screen can open the full one.
+- **The decoded size is what is guarded, not the file size.** A JPEG is
+  compressed, so bytes say almost nothing about what it costs to open: a 200KB
+  file can decode to 8000 by 8000 and ask for half a gigabyte. The check is on
+  `naturalWidth * naturalHeight`, after `decode()` and before any canvas exists.
+  It lives in `image-file.js` and there is **one copy of it**, which is why that
+  module is shared with the prize wall rather than copied for it.
+- **A submission is not anonymous.** Player ID and first name together, the same
+  proof a drop request asks for, and **one refusal covers both** a wrong ID and
+  a wrong name — telling them apart would make the form a way to test which
+  Player IDs exist.
+- **The files are uploaded before the row is written.** Either order strands
+  something when the other half fails, and this is the half that fails
+  harmlessly: two objects nothing points at, in a bucket nothing lists. The
+  other way round puts a photograph with no picture into a professor's queue,
+  which costs a person's time rather than a few kilobytes.
+- **Anybody can put a file in the bucket.** The insert policy checks the path
+  shape and nothing else, so somebody could upload and never create a row. The
+  size limit and the one-item mime list keep that to disk rather than to the
+  page, and an orphan is invisible because every screen reads rows. This is the
+  same trade registration made: detection beats prevention when prevention means
+  refusing real people.
+- **Ordering is by when it was sent, not when it was approved.** A professor
+  clearing a backlog in one sitting should not scramble a Sunday into whatever
+  order they happened to click.
+- **Paging is keyset on `(submitted_at, id)`**, not an offset, so a photograph
+  approved while somebody is part way down the page cannot shift the rest and
+  show one of them twice.
+
+## Resources
+
+`admin/resources.html` is the outside links professors reach for most, grouped
+by when they are reached for: the rules, running a league day, and the professor
+programme. It is static HTML with no module and no database call, because it is
+a list of links to other people's websites.
+
+- **It does not gate on sign-in.** There is nothing to sign in for. The other
+  tools gate because they read data, not because of the folder they live in, and
+  a gate here would be theatre.
+- **Every card says where it goes**, as the bare host under the description. The
+  whole page is somebody else's website, and a professor about to tap one should
+  be able to see which one without a status bar, which a phone does not have.
+  The one that is a file says `PDF` as well.
+- **The page says which links are official and which are not.** The pokemon.com
+  ones are; a timer, a raffle wheel and a community forum are not. Listing them
+  together without saying so would imply an endorsement nobody gave, which is
+  the same rule as everywhere else here.
+- **Descriptions are written here, not copied.** Nothing on this page is lifted
+  from an official source.
+- Official documents move. The page says so, and points at the rules hub as the
+  way to find where one went, rather than leaving a dead link looking like a
+  mistake in this site.
 
 ## Printing
 
@@ -354,9 +465,12 @@ schedule.html       upcoming events
 event.html          one event, by ?e=<id>, for a link that can be posted
 prizes.html         prize wall catalog
 players.html        player lookup by Player ID
+gallery.html        approved photographs, and the form that sends one in
 admin/              professor-only pages
 data/source/*.csv   spreadsheet exports used to seed reference tables
 event-registration.js  the register and cancel forms, shared by both pages
+image-file.js       resizing, re-encoding and the decoded-size guard
+gallery-store.js    the gallery bucket and its signed URLs
 supabase-client.js  the client, league time, and the DOM helpers
 styles.css          all styles
 supabase/migrations/  schema, one file per change
@@ -558,6 +672,36 @@ professor clicks to award a badge, so removing them would remove awarding.
 and the task, because those are what somebody reads down the list for. The tile
 has no label there: the name is already the first cell, and repeating it would
 read twice to a screen reader. `badgeTile(badge, { withName: false })`.
+
+### A prize wall item can carry a picture
+
+The wall is a price list, and that is the right shape for reading down and the
+wrong shape for "which booster box is that". `prize_items.image_path` is the
+same arrangement as badge art: null means no picture, a path names an object in
+a public bucket, and the page builds the URL with `prizeArtUrl()`.
+
+- **The `prize-art` bucket is public**, like `badge-art` and unlike `gallery`. A
+  prize picture is a photograph of a box on a shelf: nobody is in it, there is
+  nothing to approve, and the page it appears on is open to everybody. Signing a
+  URL per item would be work and latency bought for no privacy at all.
+- **Only a professor puts one there.** A picture on the prize wall is the league
+  saying what is on the wall, so unlike the gallery there is no public write.
+- **The picture is at the end of the row**, the same placement the programs page
+  gives a badge and for the same reason: the name and the cost are what somebody
+  reads down the list for. `alt` is empty, because the name is the first cell of
+  the same row and a screen reader has already read it.
+- **The column only exists once something has a picture.** A column of empty
+  cells on a wall nobody has photographed yet is a column of nothing.
+- **The upload happens before the row is updated**, and the old object is
+  deleted only once the row has stopped pointing at it. If the update fails, the
+  picture that was just uploaded is deleted: nothing points at it, so it is
+  litter rather than history.
+- **The preview on the professor screen is bigger than the cell it is bound
+  for.** The question being answered there is "is this the right box", and a
+  56px square does not answer it.
+- The field is on prize items and not on ways to earn. One component drives both
+  lists, so that is a flag on the config rather than two components; an action is
+  not a thing, and there is nothing to photograph.
 
 ### Seasons end by decision, not by succession
 

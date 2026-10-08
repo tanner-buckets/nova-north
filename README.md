@@ -242,8 +242,9 @@ Built so far:
 | `schedule.html` | Schedule | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
 | `event.html` | no — reached by link | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
 | `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers`, `active_badge_seasons()` |
-| `prize-items.html` | no | `prize_items` |
+| `prize-items.html` | no | `prize_items`, the `prize-art` bucket |
 | `players.html` | Players | `get_player_summary()`, `public_players` |
+| `gallery.html` | Gallery | `approved_gallery()`, `submit_gallery_photo()`, the `gallery` bucket |
 | `id_help.html` | no | nothing — static copy |
 
 All the public pages are built.
@@ -258,6 +259,11 @@ directions** button. The embed is the keyless form — no API key to keep, rotat
 or leak from a public repo. The directions button is `maps/dir/?api=1`, Google's
 documented URL, which opens the Maps app on a phone; nothing loads from Google
 until it is tapped.
+
+Both ask for **the street address alone, with no business name**. Searching
+"Continental Cards" matches the shop's Google listing, which is a different place
+from the tournament room, and it was sending people to the shop. Asking for
+`21140 Ashburn Crossing Dr #110` means the map shows what the page prints.
 
 The map's box has a **definite height rather than an aspect ratio**. The embed
 measures its box once, on load, and draws to whatever it finds — with
@@ -277,6 +283,65 @@ button into a dead end with nothing on the page saying so. The first invite
 offered for this expired 30 days out; the one in the page was checked against
 `discord.com/api/v10/invites/<code>?with_expiration=true` and returns
 `expires_at: null`. Check a replacement the same way.
+
+### The gallery
+
+`gallery.html` shows approved photographs newest first, and carries the form
+that sends one in. `admin/gallery-review.html` is where a professor approves
+them. It is the third public write surface on the site, after registration and
+drop requests, and the only one that publishes anything.
+
+**Nothing is visible until a professor approves it, and the database is what
+says so.** The `gallery` bucket is **private** -- unlike `badge-art` there is no
+public URL for an object in it. A file is only ever fetched through a signed
+URL, and signing one needs `select` on `storage.objects`, which anon holds only
+for an object an approved row points at. A photograph waiting for review is not
+merely unlisted; it is unreadable to anybody without a professor session, even
+holding its exact path.
+
+**A published photograph carries no identity.** No name, no Player ID, no
+division. The submitter is recorded so a professor knows who to ask, and
+`approved_gallery()` does not return that column. The caption is the one place a
+submitter could put a name onto a public page, so a professor can rewrite or
+clear it at approval and the form asks people not to.
+
+**Turning one down and taking one down are the same action.** Both set the row
+to rejected and delete the two files; the row stays, because "somebody sent this
+and it was turned down" is worth keeping and the picture is not. A parent asking
+for a photograph of their child to come off the page is the likeliest request
+this screen will ever get, and it should not be a different button somewhere
+else.
+
+Two renditions are made in the browser, 1600px and 480px, both JPEG:
+
+- **Re-encoding is what strips the EXIF.** A phone photograph carries the time,
+  the camera and very often the GPS coordinates of the room. Drawing to a canvas
+  keeps the pixels and nothing else, so the stripping is a consequence of
+  resizing rather than a step somebody can forget.
+- **The guard is on the decoded size, not the file size.** A 200KB JPEG can
+  decode to 8000 by 8000 and ask for half a gigabyte before anything is drawn.
+  The check is on `naturalWidth * naturalHeight`, after `decode()` and before
+  any canvas exists.
+
+**A submission is not anonymous**: Player ID and first name, the same proof a
+drop request asks for, and **one refusal covers both** a wrong ID and a wrong
+name -- telling them apart would make the form a way to test which Player IDs
+exist. There is a cap of twenty submissions per player per day.
+
+**The files are uploaded before the row is written.** Either order strands
+something when the other half fails, and this is the half that fails harmlessly:
+two objects nothing points at, in a bucket nothing lists. The other way round
+puts a photograph with no picture into a professor's queue, which costs a
+person's time rather than a few kilobytes. The insert policy on the bucket
+checks the path shape and nothing else, so somebody can upload without ever
+creating a row -- the size limit and the single allowed mime type keep that to
+disk, and every screen reads rows rather than the bucket.
+
+Ordering is by **when it was sent**, not when it was approved: a professor
+clearing a backlog in one sitting should not scramble a Sunday into whatever
+order they happened to click. Paging is keyset on `(submitted_at, id)` rather
+than an offset, so a photograph approved while somebody is part way down the
+page cannot shift the rest and show one of them twice.
 
 ### One event, on a page of its own
 
@@ -724,6 +789,36 @@ The earning list is also what attendance depends on: the upload and the manual
 screen both look for the attendance award **by name**, and fall back to a
 dropdown rather than a wrong value if it has been renamed.
 
+**A prize item can carry a picture**, and a way to earn cannot — an action is not
+a thing, and there is nothing to photograph. One component still drives both
+lists, so that is a flag on the config.
+
+The picture is chosen on the item's own form: a file input, a preview bigger than
+the cell it is bound for (the question is "is this the right box", and a 56px
+square does not answer it), and a **Remove the picture** link. It is resized to
+an 800px JPEG in the browser by `image-file.js` — the same module the gallery
+uses, so the guard on the decoded size exists once rather than twice.
+
+The upload happens **before** the row is updated, and the old object is deleted
+only once the row has stopped pointing at it. If the update fails, the picture
+just uploaded is deleted too: nothing points at it, so it is litter rather than
+history.
+
+`prize_items.image_path` is the same arrangement as badge art — null means no
+picture, a path names an object in the public `prize-art` bucket, and the page
+builds the URL with `prizeArtUrl()`. The bucket is **public**, like `badge-art`
+and unlike `gallery`: a photograph of a box on a shelf has nobody in it and
+nothing to approve, so signing a URL per item would be work bought for no
+privacy. Only a professor can write to it — a picture on the prize wall is the
+league saying what is on the wall.
+
+On `prize-items.html` the picture sits at the **end of the row**, after the name
+and the cost, the same placement the programs page gives a badge and for the same
+reason. `alt` is empty: the name is the first cell of that row and a screen
+reader has already read it. The column only appears once something has a picture,
+because a column of empty cells on a wall nobody has photographed yet is a column
+of nothing.
+
 ### Reference data
 
 `admin/reference.html` covers badges, Trainer Card ranks, and releases with their
@@ -776,6 +871,26 @@ the public schedule: it groups flights for the desk and means nothing to a
 player.
 
 New events prefill to the next Sunday at 2:00, which is when league meets.
+
+**An expanded event carries a link to each of the two screens it leads to** --
+drops and the printable player list -- both passing `?event=<id>`, so neither
+has to be picked out of a list a second time.
+
+**The same pair is on the public schedule, for a signed-in professor.** A
+professor arriving at league opens the schedule like everybody else, and that is
+the page with the event on it; the two screens they want next were otherwise
+three clicks away through the tools menu and a second event picker. They sit at
+the foot of the card under a `PROFESSOR` eyebrow and a rule, set apart rather
+than blended in, so a professor showing the schedule to a player can see at a
+glance which part of the card is theirs.
+
+The links live in `supabase-client.js` beside `playerLinks()` and take a
+`prefix`, because the schedule is at the root and the events screen is inside
+`admin/`. Like everything else `auth.js` gates, this decides what to *show* and
+not what is allowed: the admin pages are static files anyone can fetch, and row
+level security is what refuses the data. On the schedule the block is simply
+absent for an event that takes no registration -- the note explaining how to fix
+that belongs on the screen where it is one checkbox away.
 
 ### Two ways registration closes
 
@@ -923,6 +1038,25 @@ stranded.
 These lists are never public. Full names are shown for the same reason they
 appear on a printed desk list.
 
+### Gallery review
+
+`admin/gallery-review.html` is the whole of the privacy control on the gallery:
+three tabs -- waiting, on the page, turned down -- and on each card the
+thumbnail, a link that signs and opens the full picture, who sent it, the pixel
+size, an editable caption and a note.
+
+A 480px thumbnail is not enough to see who is in a photograph, which is why the
+full one is a click away. Approving saves whatever the caption box says, so
+rewriting it is part of approving rather than a separate save. Turning one down
+asks for confirmation, deletes both objects, and stamps `files_removed_at`;
+after that the row can never be approved, because there is nothing left to show.
+
+The screen deletes the files itself, because storage is an HTTP API rather than
+something SQL can reach. If the decision saves and the delete then fails, it
+says so plainly: the photograph is off the page either way -- the storage policy
+stops signing it the moment the status changes -- but a file nobody meant to
+keep is still sitting there and somebody should know.
+
 ### Visibility consent
 
 `admin/consent.html` is the only screen that can make a player public, and it
@@ -1069,6 +1203,31 @@ a later one cannot pre-empt an earlier one.
 One consequence worth knowing: the visibility gate used to double as an existence
 check, since an unknown ID is never visible. A professor passes that gate, so an
 unknown ID is now refused on its own.
+
+### Resources
+
+`admin/resources.html` is a page of outside links, grouped by when a professor
+reaches for them: **Rules** (the Play! Pokémon rules and resources hub, and the
+clipboard penalty sheet), **Running a league day** (Play! Tools, a full-screen
+round timer, a raffle wheel), and **Professors, and keeping up** (the Professor
+Program, Professor University, PokéGym).
+
+Static HTML, no module, no database call — it is a list of links to other
+people's websites. It does not gate on sign-in either: there is nothing to sign
+in for, the other tools gate because they read data rather than because of the
+folder they live in, and a gate here would be theatre.
+
+Each card carries the bare host under its description, and `PDF` where the link
+is a file. The whole page is somebody else's website and a professor about to tap
+one should be able to see which one — a phone has no status bar to tell them.
+
+**The page says which links are official and which are not.** The pokemon.com
+ones are; a timer, a raffle wheel and a community forum are not. Listing them
+together without saying so would imply an endorsement nobody gave. Every
+description is written here rather than copied from an official source, and the
+page notes that official documents get moved, pointing at the rules hub as the
+way to find where one went rather than leaving a dead link looking like a fault
+in this site.
 
 ### Printable lists
 

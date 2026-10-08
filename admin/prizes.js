@@ -10,9 +10,10 @@
 // entries hold foreign keys to both tables and history has to keep naming what
 // somebody earned or took. Deleting would either orphan those rows or be refused
 // outright. Retiring is reversible; deleting would not be.
-import { supabase, el, problem } from '../supabase-client.js';
+import { supabase, el, problem, prizeArtUrl } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status } from './attendance-core.js';
+import { prizeArtField, uploadPrizeArt, removePrizeArt } from './prize-art.js';
 
 const gate = document.querySelector('#gate');
 const app = document.querySelector('#app');
@@ -40,7 +41,10 @@ const PRIZES = {
             + 'keep it, and you can put it back whenever you like.',
   retiredHelp: 'Kept, not deleted. Every past redemption still points at these, '
              + 'and any of them can go back on the wall.',
-  extra: null
+  extra: null,
+  // Only the wall. A way to earn points is an action, and there is nothing to
+  // photograph.
+  photo: true
 };
 
 const EARNING = {
@@ -66,7 +70,8 @@ const EARNING = {
             + 'like.',
   retiredHelp: 'Kept, not deleted. Points already awarded still point at these, '
              + 'and any of them can be offered again.',
-  extra: { field: 'eligibility_note', label: 'Who can earn it, optional' }
+  extra: { field: 'eligibility_note', label: 'Who can earn it, optional' },
+  photo: false
 };
 
 const SECTIONS = [PRIZES, EARNING];
@@ -90,6 +95,9 @@ export function referenceRow(config, row) {
   const notes = el('input', { value: row.notes ?? '' });
   const order = el('input', { type: 'number', step: '1', value: row.sort_order });
   const note = el('p', { className: 'form-status', role: 'status' });
+  const art = config.photo
+    ? prizeArtField(row, { currentUrl: prizeArtUrl(row) })
+    : null;
 
   const save = el('button', { type: 'submit', className: 'button button-quiet', text: 'Save' });
 
@@ -150,6 +158,7 @@ export function referenceRow(config, row) {
     extra ? field(config.extra.label, extra) : null,
     field('Note, optional', notes),
     field('Sort order', order),
+    ...(art ? art.nodes : []),
     el('p', { className: 'item-actions' }, [save, toggle, confirmRow]),
     note
   ]);
@@ -177,8 +186,28 @@ export function referenceRow(config, row) {
       };
       if (config.extra) patch[config.extra.field] = extra.value.trim() || null;
 
+      // The picture is uploaded before the row is updated, so a failure here
+      // leaves the item pointing at the picture it already had rather than at
+      // a path with nothing behind it.
+      const picked = art ? art.chosen() : null;
+      let uploaded = null;
+      if (picked) {
+        uploaded = await uploadPrizeArt(picked.blob);
+        patch.image_path = uploaded;
+      } else if (art && art.cleared()) {
+        patch.image_path = null;
+      }
+
       const { error } = await supabase.from(config.table).update(patch).eq('id', row.id);
-      if (error) throw error;
+      if (error) {
+        // Nothing points at it, so it is litter rather than history.
+        await removePrizeArt(uploaded);
+        throw error;
+      }
+
+      // Only once the row has stopped pointing at it.
+      if ('image_path' in patch) await removePrizeArt(row.image_path);
+      if (art) art.release();
       await refresh();
     } catch (err) {
       console.error(err);
@@ -208,6 +237,7 @@ export function addPanel(config, existing = []) {
   const extra = config.extra ? el('input', {}) : null;
   const notes = el('input', {});
   const note = el('p', { className: 'form-status', role: 'status' });
+  const art = config.photo ? prizeArtField(null) : null;
   const go = el('button', { type: 'submit', className: 'button', text: config.addButton });
 
   const field = (text, input) =>
@@ -219,6 +249,7 @@ export function addPanel(config, existing = []) {
     el('p', { className: 'field-help', text: config.addHelp }),
     extra ? field(config.extra.label, extra) : null,
     field('Note, optional', notes),
+    ...(art ? art.nodes : []),
     el('p', {}, [go]),
     note
   ]);
@@ -249,8 +280,19 @@ export function addPanel(config, existing = []) {
       };
       if (config.extra) record[config.extra.field] = extra.value.trim() || null;
 
+      const picked = art ? art.chosen() : null;
+      let uploaded = null;
+      if (picked) {
+        uploaded = await uploadPrizeArt(picked.blob);
+        record.image_path = uploaded;
+      }
+
       const { error } = await supabase.from(config.table).insert(record);
-      if (error) throw error;
+      if (error) {
+        await removePrizeArt(uploaded);
+        throw error;
+      }
+      if (art) art.release();
       form.reset();
       go.disabled = false;
       await refresh();

@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Prize wall items — LoCo League</title>
-    <meta name="description" content="Everything on the prize wall and what it costs in prize points.">
+    <title>Gallery — LoCo League</title>
+    <meta name="description" content="Photographs from league days at Continental Cards, and a way to send us your own.">
     <link rel="icon" href="images/icon-32.png" sizes="32x32">
     <link rel="apple-touch-icon" href="images/icon-180.png">
     <link rel="stylesheet" href="styles.css">
-    <script type="module" src="prize-items.js"></script>
+    <script type="module" src="gallery.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -30,29 +30,40 @@
             <li><a href="schedule.html">Schedule</a></li>
             <li><a href="league_programs.html">League programs</a></li>
             <li><a href="players.html">Players</a></li>
-            <li><a href="gallery.html">Gallery</a></li>
+            <li><a href="gallery.html" aria-current="page">Gallery</a></li>
         </ul>
       </nav>
     </header>
 
     <main id="main">
-      <p><a class="back-link" href="league_programs.html">Back to league programs</a></p>
-
-      <h1>Prize wall items</h1>
+      <h1>Gallery</h1>
 
       <p class="lede">
-        Everything on the prize wall and what it costs in prize points. Ask a
-        professor to check your balance and hand over your prize.
+        Photographs from league days at Continental Cards. Newest first.
       </p>
 
-      <div id="item-list" aria-busy="true" data-content-name="The prize wall items">
-        <p class="notice">Loading the prize wall.</p>
+      <div id="gallery" aria-busy="true" data-content-name="The gallery">
+        <p class="notice">Loading the gallery.</p>
       </div>
 
-      <p class="section-note">
-        Costs are the standard price; a professor may set a different one. Stock
-        changes, so ask what is on the wall today. Prize points never reset.
-      </p>
+      <section class="panel" id="submit" aria-labelledby="submit-heading">
+        <h2 id="submit-heading">Send us a photo</h2>
+
+        <p>
+          Got a good one from a Sunday? Send it over and a professor will take a
+          look. <strong>Nothing appears on this page until a professor has
+          approved it</strong>, so it will not be here the moment you send it.
+        </p>
+
+        <p class="section-note">
+          Please only send photos you took yourself, and ask first before
+          sending one where somebody else’s child is recognisable. If a photo of
+          you or your child is already up and you would like it taken down, tell
+          a professor at league and it will come down the same day.
+        </p>
+
+        <div id="submit-form"></div>
+      </section>
     </main>
 
     <footer class="site-footer">

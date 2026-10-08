@@ -1,11 +1,24 @@
 import {
-  supabase, el, problem, formatEventDay, formatEventTime, leagueDayKey
+  supabase, el, problem, formatEventDay, formatEventTime, leagueDayKey,
+  eventShortcuts
 } from './supabase-client.js';
 import {
   TYPE_LABELS, spotsHost, fillSpots, registrationBlock, eventPath
 } from './event-registration.js';
+import { currentProfessor } from './auth.js';
 
 const list = document.querySelector('#event-list');
+
+// Whether to put the professor links on each card. Resolved once, with the
+// events, and null for everybody else -- which is almost everybody, and costs
+// them nothing: currentProfessor() answers from the local session and never
+// reaches the network without one.
+//
+// This decides what to *show*, not what is allowed. The admin pages are static
+// files anyone can fetch and row level security is what refuses the data; the
+// point of the check is that a player has no use for two links to screens they
+// cannot read.
+let professor = null;
 
 // event id -> the element holding that card's places left. Rebuilt on every full
 // render, and refilled on its own after somebody registers so the form keeps the
@@ -48,6 +61,19 @@ function eventCard(event, counts) {
   if (event.registration_open) {
     body.push(el('p', { className: 'event-permalink' }, [
       el('a', { href: eventPath(event), text: 'Open this event on its own page' })
+    ]));
+  }
+
+  // The desk, from the schedule. A professor arriving at league opens this page
+  // like everybody else, and the two screens they want next -- who has dropped,
+  // and the list to print -- were three clicks away through the tools menu and
+  // a second event picker. The prefix is what makes the same links work from a
+  // page at the root rather than inside admin/.
+  const shortcuts = professor ? eventShortcuts(event, { prefix: 'admin/' }) : null;
+  if (shortcuts) {
+    body.push(el('div', { className: 'event-prof' }, [
+      el('span', { className: 'eyebrow', text: 'Professor' }),
+      shortcuts
     ]));
   }
 
@@ -109,11 +135,14 @@ async function refresh() {
 
     const nowIso = new Date().toISOString();
 
-    const [{ data: events, error: eventError }, { data: counts, error: countError }] =
+    const [{ data: events, error: eventError }, { data: counts, error: countError }, who] =
       await Promise.all([
         supabase.from('events').select('*').gte('starts_at', nowIso).order('starts_at'),
-        supabase.from('public_event_counts').select('*')
+        supabase.from('public_event_counts').select('*'),
+        currentProfessor()
       ]);
+
+    professor = who;
 
     if (eventError || countError) throw eventError || countError;
 

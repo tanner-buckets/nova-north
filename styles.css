@@ -2564,3 +2564,345 @@ h1.event-name + .event-when {
   color: #fff;
 }
 .discord-join:hover { background: #4752c4; }
+
+/* --- Gallery ----------------------------------------------------------------- */
+
+/* Square tiles, cropped. Photographs come in every shape a phone can hold, and
+   a grid that honours each one is a ragged edge down the right of the page.
+   The crop is only the thumbnail: the viewer shows the whole picture. */
+.photo-grid {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.6rem;
+}
+
+.photo-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.photo-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--line);
+  cursor: pointer;
+  aspect-ratio: 1;
+}
+
+.photo-open:focus-visible {
+  outline: 3px solid var(--gold-line);
+  outline-offset: 2px;
+}
+
+.photo-thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.15s ease;
+}
+
+.photo-open:hover .photo-thumb { transform: scale(1.03); }
+
+.photo-caption {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.photo-more {
+  margin: 0 0 1.5rem;
+  text-align: center;
+}
+
+@media (min-width: 46rem) {
+  .photo-grid { grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); }
+}
+
+/* --- The viewer --------------------------------------------------------------- */
+
+/* One dialog, filling the screen. The backdrop is deliberately heavy: a
+   photograph read against the page behind it is a photograph read badly. */
+.viewer {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+}
+
+.viewer::backdrop { background: rgba(20, 21, 24, 0.9); }
+
+.viewer-frame {
+  position: absolute;
+  inset: 3.5rem 0.75rem 6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Constrained, never stretched. The frame is a fixed box and the picture fits
+   inside whatever shape it happens to be, which is the one rule that works for
+   a landscape photo and a portrait one without knowing which is coming. */
+.viewer-img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  border-radius: 6px;
+}
+
+/* Text sits on a solid strip rather than over the picture. White on a
+   photograph is white on whatever that photograph happens to be. */
+.viewer-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--ink);
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.viewer-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.viewer-caption {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.viewer-count {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #c9c6bf;          /* 8.4:1 on --ink */
+}
+
+.viewer-step,
+.viewer-close {
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: transparent;
+  border: 1px solid #6a6d74;
+  border-radius: 6px;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+}
+
+.viewer-step:hover:not(:disabled),
+.viewer-close:hover { background: #3a3d43; }
+
+.viewer-step:disabled { opacity: 0.4; cursor: default; }
+
+.viewer-step:focus-visible,
+.viewer-close:focus-visible {
+  outline: 3px solid var(--gold-line);
+  outline-offset: 2px;
+}
+
+.viewer-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: var(--ink);
+}
+
+/* --- Sending one in ----------------------------------------------------------- */
+
+.submit-preview { margin: 0 0 0.8rem; }
+
+.submit-preview-img {
+  display: block;
+  max-width: 14rem;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+/* --- Gallery review ----------------------------------------------------------- */
+
+.review-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+}
+
+.review-tab {
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  cursor: pointer;
+}
+
+.review-tab.is-open {
+  color: var(--card);
+  background: var(--teal);
+  border-color: var(--teal);
+}
+
+.review-tab:focus-visible {
+  outline: 3px solid var(--gold-line);
+  outline-offset: 2px;
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.review-art { margin: 0; }
+
+.review-art p { margin: 0.3rem 0 0; }
+
+.review-thumb {
+  display: block;
+  width: 100%;
+  max-width: 15rem;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.review-missing {
+  margin: 0;
+  padding: 1.2rem 0.8rem;
+  text-align: center;
+  color: var(--muted);
+  background: var(--paper);
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}
+
+.review-body { flex: 1; min-width: 0; }
+
+.review-who {
+  margin: 0 0 0.2rem;
+  font-weight: 600;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.review-body .field textarea,
+.review-body .field input { max-width: 28rem; }
+
+.review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.8rem 0 0;
+}
+
+@media (min-width: 46rem) {
+  .review-card { flex-direction: row; align-items: flex-start; }
+  .review-art { width: 15rem; flex: none; }
+}
+
+/* --- Professor links on a public card ---------------------------------------- */
+
+/* The two desk screens, on the schedule card, for a signed-in professor only.
+   Set apart by a rule and an eyebrow rather than blended in: a professor
+   showing the schedule to a player should be able to see at a glance which part
+   of the card is theirs and which part is the player's. */
+.event-prof {
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+}
+
+/* The same nav inside the events screen sits above a form and needs the rule
+   underneath it. Here it is the last thing on the card. */
+.event-prof .event-shortcuts {
+  margin: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+/* --- Prize wall pictures ------------------------------------------------------ */
+
+/* At the end of the row, like a badge on the programs table: the name and the
+   cost are what somebody reads down the list for. */
+.data-table .prize-cell {
+  width: 1%;
+  padding-left: 0.75rem;
+  text-align: right;
+  vertical-align: middle;
+}
+
+.prize-art {
+  display: block;
+  width: 3.5rem;
+  height: 3.5rem;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+@media (min-width: 42rem) {
+  .prize-art { width: 4.5rem; height: 4.5rem; }
+}
+
+/* The preview on the professor screen is bigger than the cell it is bound for.
+   The question being answered is "is this the right box", and a 56px square
+   does not answer it. */
+.prize-art-preview { margin: 0 0 0.6rem; }
+
+.prize-art-preview-img {
+  display: block;
+  width: 100%;
+  max-width: 12rem;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+/* --- Resources --------------------------------------------------------------- */
+
+.resource-group { margin: 0 0 1.75rem; }
+
+/* Where the link goes, said plainly. The whole page is other people's websites,
+   and a professor about to tap one should be able to see which one without
+   reading the status bar -- which a phone does not have. */
+.tool-host {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
