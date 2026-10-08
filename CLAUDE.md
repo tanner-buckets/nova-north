@@ -128,6 +128,34 @@ A returning player is not restored automatically. A professor re-confirms consen
 Never invent a third form. Never render a partial name, an initial, or a
 truncated ID as a substitute.
 
+### Photographs
+
+A photograph is the one thing on this site that shows a child's face, and the
+consent model above cannot help with it: there is no flag on a picture and no
+way to tell from the file who is in it. A person decides, every time.
+
+- **Nothing is visible until a professor approves it**, and that is enforced in
+  the database, not the page. The `gallery` bucket is **private** — unlike
+  `badge-art` there is no public URL — so a file can only be fetched through a
+  signed URL, and anon may only sign an object an approved row points at. A
+  photograph waiting for review is unreadable even to somebody holding its exact
+  path.
+- **A published photograph carries no identity.** No name, no Player ID, no
+  division, no date beyond the day it was sent. The submitter is recorded so a
+  professor knows who to ask, and `approved_gallery()` does not return that
+  column.
+- **The caption is the leak.** It is the one place a submitter can type a child's
+  name onto a public page, so a professor can rewrite or clear it before
+  approving, and the form asks people not to put names in it.
+- **Taking one down is the same action as turning one down.** A parent changing
+  their mind is the likeliest request this will ever get, and it must not be a
+  different button somewhere else. Both delete the files and keep the row.
+- **Camera and location data never reach the server.** A phone photograph
+  carries EXIF, very often including the GPS coordinates of the room. The page
+  resizes and re-encodes to a canvas before uploading, which keeps the pixels
+  and nothing else — the stripping is a consequence of resizing rather than a
+  step that can be forgotten.
+
 ### Implementation rules
 
 - **Row Level Security is row-level, not column-level.** Hiding a column requires
@@ -149,8 +177,8 @@ When in doubt about whether something can be shown publicly: it cannot.
 - `.env` and `.env.local` are gitignored. Never commit them.
 - **Every table gets RLS enabled and at least one policy in the same migration
   that creates it.** A table without a policy is a bug.
-- Public write access exists only for event registration and drop requests.
-  Everything else requires an authenticated professor.
+- Public write access exists only for event registration, drop requests and
+  gallery submissions. Everything else requires an authenticated professor.
 - Professor identity is checked against the `professors` table by `auth.uid()`.
 
 ### Migrations deploy automatically
@@ -343,6 +371,42 @@ is applied to the production database.** There is no confirmation step.
 
 ---
 
+## The gallery
+
+`gallery.html` shows approved photographs newest first and carries the form that
+sends one in. `admin/gallery-review.html` is where they are approved. The
+privacy rules are above, under **Photographs**; these are the mechanics.
+
+- **Two renditions per photograph**, 1600px and 480px, both JPEG, both made in
+  the browser. A grid of thumbnails on store wifi must not be twenty full-size
+  pictures, and a 480px thumbnail is not enough for a professor to see who is
+  in a picture, so the review screen can open the full one.
+- **The decoded size is what is guarded, not the file size.** A JPEG is
+  compressed, so bytes say almost nothing about what it costs to open: a 200KB
+  file can decode to 8000 by 8000 and ask for half a gigabyte. The check is on
+  `naturalWidth * naturalHeight`, after `decode()` and before any canvas exists.
+- **A submission is not anonymous.** Player ID and first name together, the same
+  proof a drop request asks for, and **one refusal covers both** a wrong ID and
+  a wrong name — telling them apart would make the form a way to test which
+  Player IDs exist.
+- **The files are uploaded before the row is written.** Either order strands
+  something when the other half fails, and this is the half that fails
+  harmlessly: two objects nothing points at, in a bucket nothing lists. The
+  other way round puts a photograph with no picture into a professor's queue,
+  which costs a person's time rather than a few kilobytes.
+- **Anybody can put a file in the bucket.** The insert policy checks the path
+  shape and nothing else, so somebody could upload and never create a row. The
+  size limit and the one-item mime list keep that to disk rather than to the
+  page, and an orphan is invisible because every screen reads rows. This is the
+  same trade registration made: detection beats prevention when prevention means
+  refusing real people.
+- **Ordering is by when it was sent, not when it was approved.** A professor
+  clearing a backlog in one sitting should not scramble a Sunday into whatever
+  order they happened to click.
+- **Paging is keyset on `(submitted_at, id)`**, not an offset, so a photograph
+  approved while somebody is part way down the page cannot shift the rest and
+  show one of them twice.
+
 ## Printing
 
 Printable outputs are **print stylesheets**, not generated files. Use
@@ -364,9 +428,12 @@ schedule.html       upcoming events
 event.html          one event, by ?e=<id>, for a link that can be posted
 prizes.html         prize wall catalog
 players.html        player lookup by Player ID
+gallery.html        approved photographs, and the form that sends one in
 admin/              professor-only pages
 data/source/*.csv   spreadsheet exports used to seed reference tables
 event-registration.js  the register and cancel forms, shared by both pages
+gallery-image.js    resizing, re-encoding and the decoded-size guard
+gallery-store.js    the gallery bucket and its signed URLs
 supabase-client.js  the client, league time, and the DOM helpers
 styles.css          all styles
 supabase/migrations/  schema, one file per change

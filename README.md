@@ -244,6 +244,7 @@ Built so far:
 | `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers`, `active_badge_seasons()` |
 | `prize-items.html` | no | `prize_items` |
 | `players.html` | Players | `get_player_summary()`, `public_players` |
+| `gallery.html` | Gallery | `approved_gallery()`, `submit_gallery_photo()`, the `gallery` bucket |
 | `id_help.html` | no | nothing — static copy |
 
 All the public pages are built.
@@ -282,6 +283,65 @@ button into a dead end with nothing on the page saying so. The first invite
 offered for this expired 30 days out; the one in the page was checked against
 `discord.com/api/v10/invites/<code>?with_expiration=true` and returns
 `expires_at: null`. Check a replacement the same way.
+
+### The gallery
+
+`gallery.html` shows approved photographs newest first, and carries the form
+that sends one in. `admin/gallery-review.html` is where a professor approves
+them. It is the third public write surface on the site, after registration and
+drop requests, and the only one that publishes anything.
+
+**Nothing is visible until a professor approves it, and the database is what
+says so.** The `gallery` bucket is **private** -- unlike `badge-art` there is no
+public URL for an object in it. A file is only ever fetched through a signed
+URL, and signing one needs `select` on `storage.objects`, which anon holds only
+for an object an approved row points at. A photograph waiting for review is not
+merely unlisted; it is unreadable to anybody without a professor session, even
+holding its exact path.
+
+**A published photograph carries no identity.** No name, no Player ID, no
+division. The submitter is recorded so a professor knows who to ask, and
+`approved_gallery()` does not return that column. The caption is the one place a
+submitter could put a name onto a public page, so a professor can rewrite or
+clear it at approval and the form asks people not to.
+
+**Turning one down and taking one down are the same action.** Both set the row
+to rejected and delete the two files; the row stays, because "somebody sent this
+and it was turned down" is worth keeping and the picture is not. A parent asking
+for a photograph of their child to come off the page is the likeliest request
+this screen will ever get, and it should not be a different button somewhere
+else.
+
+Two renditions are made in the browser, 1600px and 480px, both JPEG:
+
+- **Re-encoding is what strips the EXIF.** A phone photograph carries the time,
+  the camera and very often the GPS coordinates of the room. Drawing to a canvas
+  keeps the pixels and nothing else, so the stripping is a consequence of
+  resizing rather than a step somebody can forget.
+- **The guard is on the decoded size, not the file size.** A 200KB JPEG can
+  decode to 8000 by 8000 and ask for half a gigabyte before anything is drawn.
+  The check is on `naturalWidth * naturalHeight`, after `decode()` and before
+  any canvas exists.
+
+**A submission is not anonymous**: Player ID and first name, the same proof a
+drop request asks for, and **one refusal covers both** a wrong ID and a wrong
+name -- telling them apart would make the form a way to test which Player IDs
+exist. There is a cap of twenty submissions per player per day.
+
+**The files are uploaded before the row is written.** Either order strands
+something when the other half fails, and this is the half that fails harmlessly:
+two objects nothing points at, in a bucket nothing lists. The other way round
+puts a photograph with no picture into a professor's queue, which costs a
+person's time rather than a few kilobytes. The insert policy on the bucket
+checks the path shape and nothing else, so somebody can upload without ever
+creating a row -- the size limit and the single allowed mime type keep that to
+disk, and every screen reads rows rather than the bucket.
+
+Ordering is by **when it was sent**, not when it was approved: a professor
+clearing a backlog in one sitting should not scramble a Sunday into whatever
+order they happened to click. Paging is keyset on `(submitted_at, id)` rather
+than an offset, so a photograph approved while somebody is part way down the
+page cannot shift the rest and show one of them twice.
 
 ### One event, on a page of its own
 
@@ -927,6 +987,25 @@ stranded.
 
 These lists are never public. Full names are shown for the same reason they
 appear on a printed desk list.
+
+### Gallery review
+
+`admin/gallery-review.html` is the whole of the privacy control on the gallery:
+three tabs -- waiting, on the page, turned down -- and on each card the
+thumbnail, a link that signs and opens the full picture, who sent it, the pixel
+size, an editable caption and a note.
+
+A 480px thumbnail is not enough to see who is in a photograph, which is why the
+full one is a click away. Approving saves whatever the caption box says, so
+rewriting it is part of approving rather than a separate save. Turning one down
+asks for confirmation, deletes both objects, and stamps `files_removed_at`;
+after that the row can never be approved, because there is nothing left to show.
+
+The screen deletes the files itself, because storage is an HTTP API rather than
+something SQL can reach. If the decision saves and the delete then fails, it
+says so plainly: the photograph is off the page either way -- the storage policy
+stops signing it the moment the status changes -- but a file nobody meant to
+keep is still sitting there and somebody should know.
 
 ### Visibility consent
 
