@@ -1204,6 +1204,31 @@ One consequence worth knowing: the visibility gate used to double as an existenc
 check, since an unknown ID is never visible. A professor passes that gate, so an
 unknown ID is now refused on its own.
 
+### Resources
+
+`admin/resources.html` is a page of outside links, grouped by when a professor
+reaches for them: **Rules** (the Play! Pokémon rules and resources hub, and the
+clipboard penalty sheet), **Running a league day** (Play! Tools, a full-screen
+round timer, a raffle wheel), and **Professors, and keeping up** (the Professor
+Program, Professor University, PokéGym).
+
+Static HTML, no module, no database call — it is a list of links to other
+people's websites. It does not gate on sign-in either: there is nothing to sign
+in for, the other tools gate because they read data rather than because of the
+folder they live in, and a gate here would be theatre.
+
+Each card carries the bare host under its description, and `PDF` where the link
+is a file. The whole page is somebody else's website and a professor about to tap
+one should be able to see which one — a phone has no status bar to tell them.
+
+**The page says which links are official and which are not.** The pokemon.com
+ones are; a timer, a raffle wheel and a community forum are not. Listing them
+together without saying so would imply an endorsement nobody gave. Every
+description is written here rather than copied from an official source, and the
+page notes that official documents get moved, pointing at the rules hub as the
+way to find where one went rather than leaving a dead link looking like a fault
+in this site.
+
 ### Printable lists
 
 `admin/print.html`. Loyalty tiers to hand to the store, and pre-registration to

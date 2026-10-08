@@ -42,8 +42,8 @@ Many players are children. Privacy rules in this file are not negotiable.
 - **One third-party embed exists**, the Google map in the home page's meeting
   details, asked about and approved. It loads outside content on a page children
   use, which is why it was a question rather than a decision. The Discord join is
-  a plain link, not an embed, and loads nothing. Do not add a second embed
-  without asking.
+  a plain link, not an embed, and loads nothing, and neither does anything on the
+  Resources page. Do not add a second embed without asking.
 
 If a task seems to need a framework or a build step, stop and ask. Do not add one.
 
@@ -419,6 +419,30 @@ privacy rules are above, under **Photographs**; these are the mechanics.
 - **Paging is keyset on `(submitted_at, id)`**, not an offset, so a photograph
   approved while somebody is part way down the page cannot shift the rest and
   show one of them twice.
+
+## Resources
+
+`admin/resources.html` is the outside links professors reach for most, grouped
+by when they are reached for: the rules, running a league day, and the professor
+programme. It is static HTML with no module and no database call, because it is
+a list of links to other people's websites.
+
+- **It does not gate on sign-in.** There is nothing to sign in for. The other
+  tools gate because they read data, not because of the folder they live in, and
+  a gate here would be theatre.
+- **Every card says where it goes**, as the bare host under the description. The
+  whole page is somebody else's website, and a professor about to tap one should
+  be able to see which one without a status bar, which a phone does not have.
+  The one that is a file says `PDF` as well.
+- **The page says which links are official and which are not.** The pokemon.com
+  ones are; a timer, a raffle wheel and a community forum are not. Listing them
+  together without saying so would imply an endorsement nobody gave, which is
+  the same rule as everywhere else here.
+- **Descriptions are written here, not copied.** Nothing on this page is lifted
+  from an official source.
+- Official documents move. The page says so, and points at the rules hub as the
+  way to find where one went, rather than leaving a dead link looking like a
+  mistake in this site.
 
 ## Printing
 

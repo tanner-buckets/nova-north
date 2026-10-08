@@ -2891,3 +2891,18 @@ h1.event-name + .event-when {
   border-radius: 8px;
   border: 1px solid var(--line);
 }
+
+/* --- Resources --------------------------------------------------------------- */
+
+.resource-group { margin: 0 0 1.75rem; }
+
+/* Where the link goes, said plainly. The whole page is other people's websites,
+   and a professor about to tap one should be able to see which one without
+   reading the status bar -- which a phone does not have. */
+.tool-host {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

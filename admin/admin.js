@@ -80,7 +80,9 @@ const TOOLS = [
   { href: 'reference.html', name: 'Reference data',
     note: 'Badges, Trainer Card ranks, and releases with their loyalty tiers.' },
   { href: 'print.html', name: 'Printable lists',
-    note: 'Loyalty tiers for the store and pre-registration for the desk. Print stylesheets, never public.' }
+    note: 'Loyalty tiers for the store and pre-registration for the desk. Print stylesheets, never public.' },
+  { href: 'resources.html', name: 'Resources',
+    note: 'The outside links we reach for most: the rules, the penalty sheet, Play! Tools, a round timer and a raffle wheel.' }
 ];
 
 async function render() {
