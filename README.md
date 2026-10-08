@@ -842,6 +842,26 @@ player.
 
 New events prefill to the next Sunday at 2:00, which is when league meets.
 
+**An expanded event carries a link to each of the two screens it leads to** --
+drops and the printable player list -- both passing `?event=<id>`, so neither
+has to be picked out of a list a second time.
+
+**The same pair is on the public schedule, for a signed-in professor.** A
+professor arriving at league opens the schedule like everybody else, and that is
+the page with the event on it; the two screens they want next were otherwise
+three clicks away through the tools menu and a second event picker. They sit at
+the foot of the card under a `PROFESSOR` eyebrow and a rule, set apart rather
+than blended in, so a professor showing the schedule to a player can see at a
+glance which part of the card is theirs.
+
+The links live in `supabase-client.js` beside `playerLinks()` and take a
+`prefix`, because the schedule is at the root and the events screen is inside
+`admin/`. Like everything else `auth.js` gates, this decides what to *show* and
+not what is allowed: the admin pages are static files anyone can fetch, and row
+level security is what refuses the data. On the schedule the block is simply
+absent for an event that takes no registration -- the note explaining how to fix
+that belongs on the screen where it is one checkbox away.
+
 ### Two ways registration closes
 
 **It closes on its own when the event starts.** `register_for_event()` refuses

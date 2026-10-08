@@ -2832,3 +2832,23 @@ h1.event-name + .event-when {
   .review-card { flex-direction: row; align-items: flex-start; }
   .review-art { width: 15rem; flex: none; }
 }
+
+/* --- Professor links on a public card ---------------------------------------- */
+
+/* The two desk screens, on the schedule card, for a signed-in professor only.
+   Set apart by a rule and an eyebrow rather than blended in: a professor
+   showing the schedule to a player should be able to see at a glance which part
+   of the card is theirs and which part is the player's. */
+.event-prof {
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+}
+
+/* The same nav inside the events screen sits above a form and needs the rule
+   underneath it. Here it is the last thing on the card. */
+.event-prof .event-shortcuts {
+  margin: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}

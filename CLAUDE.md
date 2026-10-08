@@ -254,6 +254,17 @@ is applied to the production database.** There is no confirmation step.
   picked out of a list a second time. Only where the event takes registration:
   the drop screen and the printable list both load registration-taking events, so
   for anything else the links would land on a page the event is not on.
+- **The same two links are on the public schedule, for a signed-in professor.**
+  A professor arriving at league opens the schedule like everybody else, and
+  that is the page with the event they want on it. The pair lives in
+  `supabase-client.js` beside `playerLinks()` and takes a `prefix`, because the
+  schedule sits at the root and the events screen inside `admin/`; two copies
+  would drift. Like every other professor-only thing on a public page, this
+  decides what to **show** and not what is allowed -- the admin pages are static
+  files anyone can fetch, and row level security is what refuses the data. On
+  the schedule the links are simply absent for an event that takes no
+  registration; the explainer that says to turn registration on belongs on the
+  screen where that is one checkbox away.
 - **An event that takes registration has a page of its own**, `event.html?e=<id>`,
   so a professor has a link to post that is one event rather than the whole
   schedule. It reads what the schedule reads and nothing more: places left and

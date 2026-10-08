@@ -126,6 +126,41 @@ export function playerLinks(playerId, { prefix = '', current = null } = {}) {
     })));
 }
 
+// --- Moving one event between screens ----------------------------------------
+
+// The two professor screens an event leads to, both taking it in the URL so
+// neither has to be picked out of a list a second time. The same pair appears on
+// the events screen and on the public schedule, where it is rendered only for a
+// signed-in professor -- so it lives here rather than in either page.
+//
+// Only where the event takes registration: the drop screen loads events that
+// take it or have a request waiting, and the printable list loads only the
+// former, so for anything else both links would land on a page the event is not
+// on.
+//
+// `explain` says what to do about that instead of saying nothing. It is for the
+// editing screen, where turning registration on is one checkbox away. On the
+// schedule there is nothing to act on, so the block is simply absent.
+export function eventShortcuts(event, { prefix = '', explain = false } = {}) {
+  if (!event.registration_open) {
+    return explain
+      ? el('p', { className: 'field-help',
+          text: 'This event does not take registration, so it has nobody to drop '
+              + 'and no list to print. Turn registration on above to get both.' })
+      : null;
+  }
+
+  const id = encodeURIComponent(event.id);
+  return el('nav', {
+    className: 'event-shortcuts', 'aria-label': `${event.name} on other screens`
+  }, [
+    el('a', { className: 'button button-quiet',
+      href: `${prefix}drops.html?event=${id}`, text: 'Drops and waiting list' }),
+    el('a', { className: 'button button-quiet',
+      href: `${prefix}print.html?event=${id}`, text: 'Player list to print' })
+  ]);
+}
+
 // --- Badges -------------------------------------------------------------------
 
 // One tile, used by the public player card and by the Trainer Card screen, so a
