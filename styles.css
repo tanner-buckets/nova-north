@@ -2512,3 +2512,55 @@ h1.event-name + .event-when {
   padding-bottom: 0.9rem;
   border-bottom: 1px solid var(--line);
 }
+
+/* --- Where we meet, with the map ------------------------------------------- */
+
+/* One column on a phone, two once there is room. The map goes under the details
+   rather than beside them on a narrow screen: squeezed into half of 390px it is
+   a grey square with no road names on it. */
+.meets-split {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+.meets-map {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  /* A definite height, not an aspect ratio. The embed measures its box once, on
+     load, and draws the map to whatever it finds -- with aspect-ratio the height
+     was not resolved yet, so it drew a thin strip and left the rest grey. */
+  height: 17rem;
+}
+.meets-map iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+@media (min-width: 46rem) {
+  .meets-split {
+    grid-template-columns: 1fr minmax(16rem, 22rem);
+    gap: 1.5rem;
+  }
+  .meets-map { height: 22rem; }
+}
+
+/* --- Discord ---------------------------------------------------------------- */
+
+.discord-note {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+/* Discord's own blurple, because a join button that is gold reads as ours and
+   this is somebody else's room. It is the one place on the site that is not the
+   palette, and that is the point. */
+.discord-join {
+  background: #5865f2;
+  color: #fff;
+}
+.discord-join:hover { background: #4752c4; }

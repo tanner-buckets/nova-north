@@ -54,16 +54,61 @@
 
       <section class="panel" id="meets" aria-labelledby="meets-heading">
         <h2 id="meets-heading">When and where we meet</h2>
-        <p class="meets-when">Sundays at 2:00 PM</p>
-        <p class="meets-deadline">Sign-in closes at 2:30 PM. Arrive before then to play.</p>
-        <address class="meets-where">
-          <strong>Continental Cards Tournament Location</strong><br>
-          21140 Ashburn Crossing Dr #110<br>
-          Ashburn, VA 20147
-        </address>
+
+        <div class="meets-split">
+          <div class="meets-details">
+            <p class="meets-when">Sundays at 2:00 PM</p>
+            <p class="meets-deadline">Sign-in closes at 2:30 PM. Arrive before then to play.</p>
+            <address class="meets-where">
+              <strong>Continental Cards Tournament Location</strong><br>
+              21140 Ashburn Crossing Dr #110<br>
+              Ashburn, VA 20147
+            </address>
+            <p>
+              <!-- Google's documented directions URL. It needs no API key and
+                   opens the Maps app on a phone, the site on a desktop. -->
+              <a class="button"
+                 href="https://www.google.com/maps/dir/?api=1&amp;destination=Continental+Cards%2C+21140+Ashburn+Crossing+Dr+%23110%2C+Ashburn%2C+VA+20147"
+                 target="_blank" rel="noopener">Get directions</a>
+            </p>
+          </div>
+
+          <!-- The keyless embed, so there is no API key to keep or to leak. It
+               is lazy and the title is what a screen reader announces, because
+               an iframe with no title is announced as "frame". -->
+          <div class="meets-map">
+            <iframe
+              title="Map showing Continental Cards, 21140 Ashburn Crossing Drive, Ashburn"
+              src="https://maps.google.com/maps?q=Continental+Cards%2C+21140+Ashburn+Crossing+Dr+%23110%2C+Ashburn%2C+VA+20147&amp;output=embed"
+              loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+          </div>
+        </div>
+
         <p>
           A professor at the desk in the back will sign you in. If it is your first
           time, come a few minutes early so we can get you set up correctly.
+        </p>
+      </section>
+
+      <section class="panel" id="discord" aria-labelledby="discord-heading">
+        <h2 id="discord-heading">Connect with us on Discord</h2>
+        <p>
+          The store runs a Discord for everyone who plays there. It is where
+          pairings, last-minute changes and the week&rsquo;s plans get posted, and
+          where you can ask a question between Sundays.
+        </p>
+        <p class="discord-note">
+          Parents are welcome to join and keep an eye on it. It is the store&rsquo;s
+          server rather than ours, so it covers everything Continental Cards runs,
+          not only league.
+        </p>
+        <p>
+          <!-- Set to never expire, and checked as such before it went in. A
+               Discord invite can carry an expiry or a use limit, and either one
+               turns this button into a dead end without anything on the page
+               changing. Verify a replacement the same way before swapping it. -->
+          <a class="button discord-join" href="https://discord.gg/8ssYm6v3Xr"
+             target="_blank" rel="noopener">Join the Discord</a>
         </p>
       </section>
 
