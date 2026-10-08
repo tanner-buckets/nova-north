@@ -337,9 +337,9 @@ is applied to the production database.** There is no confirmation step.
   server is the store's room rather than ours. White on it clears 4.5:1.
 - **What the Discord is actually for**: a Pokémon channel carrying product and
   tournament announcements, and somewhere to ask a question between Sundays.
-  **Pairings are not posted there** — they are called at the desk on the day.
-  Do not describe it as more than it is; a player who goes looking for pairings
-  and finds none is worse off than one who was never told.
+  Pairings are **not** posted there, so do not write that they are. The page says
+  nothing about pairings either way: raising them only to rule them out sends a
+  reader looking for something the page cannot help with.
 
 ---
 
