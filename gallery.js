@@ -7,7 +7,7 @@
 // early.
 import { supabase, el, problem } from './supabase-client.js';
 import { signedUrls, signedUrl, newSubmissionPaths, GALLERY_BUCKET } from './gallery-store.js';
-import { prepare, ACCEPT } from './gallery-image.js';
+import { prepare, ACCEPT } from './image-file.js';
 
 const PAGE = 24;
 

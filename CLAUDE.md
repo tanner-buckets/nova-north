@@ -389,13 +389,15 @@ sends one in. `admin/gallery-review.html` is where they are approved. The
 privacy rules are above, under **Photographs**; these are the mechanics.
 
 - **Two renditions per photograph**, 1600px and 480px, both JPEG, both made in
-  the browser. A grid of thumbnails on store wifi must not be twenty full-size
-  pictures, and a 480px thumbnail is not enough for a professor to see who is
-  in a picture, so the review screen can open the full one.
+  the browser by `image-file.js`. A grid of thumbnails on store wifi must not be
+  twenty full-size pictures, and a 480px thumbnail is not enough for a professor
+  to see who is in a picture, so the review screen can open the full one.
 - **The decoded size is what is guarded, not the file size.** A JPEG is
   compressed, so bytes say almost nothing about what it costs to open: a 200KB
   file can decode to 8000 by 8000 and ask for half a gigabyte. The check is on
   `naturalWidth * naturalHeight`, after `decode()` and before any canvas exists.
+  It lives in `image-file.js` and there is **one copy of it**, which is why that
+  module is shared with the prize wall rather than copied for it.
 - **A submission is not anonymous.** Player ID and first name together, the same
   proof a drop request asks for, and **one refusal covers both** a wrong ID and
   a wrong name — telling them apart would make the form a way to test which
@@ -443,7 +445,7 @@ gallery.html        approved photographs, and the form that sends one in
 admin/              professor-only pages
 data/source/*.csv   spreadsheet exports used to seed reference tables
 event-registration.js  the register and cancel forms, shared by both pages
-gallery-image.js    resizing, re-encoding and the decoded-size guard
+image-file.js       resizing, re-encoding and the decoded-size guard
 gallery-store.js    the gallery bucket and its signed URLs
 supabase-client.js  the client, league time, and the DOM helpers
 styles.css          all styles
@@ -646,6 +648,36 @@ professor clicks to award a badge, so removing them would remove awarding.
 and the task, because those are what somebody reads down the list for. The tile
 has no label there: the name is already the first cell, and repeating it would
 read twice to a screen reader. `badgeTile(badge, { withName: false })`.
+
+### A prize wall item can carry a picture
+
+The wall is a price list, and that is the right shape for reading down and the
+wrong shape for "which booster box is that". `prize_items.image_path` is the
+same arrangement as badge art: null means no picture, a path names an object in
+a public bucket, and the page builds the URL with `prizeArtUrl()`.
+
+- **The `prize-art` bucket is public**, like `badge-art` and unlike `gallery`. A
+  prize picture is a photograph of a box on a shelf: nobody is in it, there is
+  nothing to approve, and the page it appears on is open to everybody. Signing a
+  URL per item would be work and latency bought for no privacy at all.
+- **Only a professor puts one there.** A picture on the prize wall is the league
+  saying what is on the wall, so unlike the gallery there is no public write.
+- **The picture is at the end of the row**, the same placement the programs page
+  gives a badge and for the same reason: the name and the cost are what somebody
+  reads down the list for. `alt` is empty, because the name is the first cell of
+  the same row and a screen reader has already read it.
+- **The column only exists once something has a picture.** A column of empty
+  cells on a wall nobody has photographed yet is a column of nothing.
+- **The upload happens before the row is updated**, and the old object is
+  deleted only once the row has stopped pointing at it. If the update fails, the
+  picture that was just uploaded is deleted: nothing points at it, so it is
+  litter rather than history.
+- **The preview on the professor screen is bigger than the cell it is bound
+  for.** The question being answered there is "is this the right box", and a
+  56px square does not answer it.
+- The field is on prize items and not on ways to earn. One component drives both
+  lists, so that is a flag on the config rather than two components; an action is
+  not a thing, and there is nothing to photograph.
 
 ### Seasons end by decision, not by succession
 

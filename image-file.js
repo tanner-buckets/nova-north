@@ -1,4 +1,8 @@
-// Turning whatever came out of somebody's phone into two JPEGs we can store.
+// Turning whatever came out of somebody's phone into a JPEG we can store.
+//
+// Used by the gallery, where a visitor sends a photograph in, and by the prize
+// wall, where a professor puts a picture on an item. The two want different
+// sizes and nothing else, so they share this rather than keeping a guard each.
 //
 // Three things happen here, and only one of them is about file size.
 //
@@ -8,9 +12,9 @@
 //     publishing the picture. Drawing to a canvas and re-encoding keeps the
 //     pixels and nothing else, so the stripping is not a step that can be
 //     forgotten -- it is a consequence of resizing at all.
-//  2. **Two renditions.** A grid of thumbnails on store wifi should not be
-//     twenty full-size pictures. 480px for the grid, 1600px for the one
-//     somebody opened.
+//  2. **Sensible sizes.** A grid of thumbnails on store wifi should not be
+//     twenty full-size pictures, and a prize wall row does not need 1600px of
+//     booster box.
 //  3. **A guard on the decoded size, not the file size.** A JPEG is compressed,
 //     so bytes say almost nothing about what it costs to open: a 200KB file can
 //     decode to 8000 by 8000 and ask for half a gigabyte before a single pixel
@@ -23,10 +27,12 @@ const MAX_BYTES = 20 * 1024 * 1024;   // a phone photograph, generously
 const MAX_PIXELS = 24e6;              // about twice a current phone camera
 const MAX_SIDE = 10000;
 
-const FULL_EDGE = 1600;
-const THUMB_EDGE = 480;
-const FULL_QUALITY = 0.82;
-const THUMB_QUALITY = 0.72;
+// The sizes anything here asks for. A rendition is a longest edge and a JPEG
+// quality, and nothing else: everything is scaled to fit, never cropped, so a
+// caller never has to say which shape it is expecting.
+export const FULL = { edge: 1600, quality: 0.82 };
+export const THUMB = { edge: 480, quality: 0.72 };
+export const TILE = { edge: 800, quality: 0.8 };
 
 // The longest edge goes to `edge`, and nothing is ever enlarged: a small
 // picture stays small rather than being blown up into a soft one.
@@ -49,7 +55,7 @@ function toJpeg(canvas, quality) {
   });
 }
 
-function render(img, edge, quality) {
+function render(img, { edge, quality }) {
   const size = fit(img.naturalWidth, img.naturalHeight, edge);
   const canvas = document.createElement('canvas');
   canvas.width = size.width;
@@ -66,11 +72,10 @@ function render(img, edge, quality) {
   return toJpeg(canvas, quality).then((blob) => ({ blob, ...size }));
 }
 
-// Everything the submission form needs from a chosen file: the two blobs to
-// upload, the size to record, and a preview URL to show. The caller must call
-// release() when it is finished with the preview, or the decoded picture stays
-// in memory for the life of the page.
-export async function prepare(file) {
+// Everything up to the first canvas: the checks, the decode, and the guard.
+// Whatever happens, the caller must call done() -- the decoded picture is the
+// expensive thing in all of this, and it is held by the object URL.
+async function decoded(file) {
   if (!TYPES.includes(file.type)) {
     throw new Error('That needs to be a JPEG, a PNG or a WebP. '
       + 'A photo straight from a phone is usually a JPEG, and sharing it to '
@@ -93,19 +98,31 @@ export async function prepare(file) {
       + 'in a format this browser cannot read.');
   }
 
+  const done = () => { URL.revokeObjectURL(url); img.src = ''; };
+
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+
+  // Before any canvas exists. Past this point the picture is drawn, and a
+  // picture this large would be drawn into however much memory it takes.
+  if (!w || !h || w > MAX_SIDE || h > MAX_SIDE || w * h > MAX_PIXELS) {
+    done();
+    throw new Error(`That picture is ${w} by ${h}, which is larger than this `
+      + 'page can open. Scale it down and try again.');
+  }
+
+  return { img, done };
+}
+
+// The gallery's pair: the one somebody opens, and the one in the grid.
+//
+// The caller must call release() when it is finished with the preview, or the
+// decoded picture stays in memory for the life of the page.
+export async function prepare(file) {
+  const { img, done } = await decoded(file);
   try {
-    const w = img.naturalWidth;
-    const h = img.naturalHeight;
-
-    // Before any canvas exists. Past this point the picture is drawn, and a
-    // picture this large would be drawn into however much memory it takes.
-    if (!w || !h || w > MAX_SIDE || h > MAX_SIDE || w * h > MAX_PIXELS) {
-      throw new Error(`That picture is ${w} by ${h}, which is larger than this `
-        + 'page can open. Scale it down and try again.');
-    }
-
-    const full = await render(img, FULL_EDGE, FULL_QUALITY);
-    const thumb = await render(img, THUMB_EDGE, THUMB_QUALITY);
+    const full = await render(img, FULL);
+    const thumb = await render(img, THUMB);
 
     return {
       full: full.blob,
@@ -116,11 +133,25 @@ export async function prepare(file) {
       release() { URL.revokeObjectURL(this.previewUrl); }
     };
   } finally {
-    // The decoded picture is the expensive thing here, and it is held by this
-    // URL. Letting it go as soon as both renditions exist is the difference
-    // between one photograph in memory and every photograph somebody tried.
-    URL.revokeObjectURL(url);
-    img.src = '';
+    done();
+  }
+}
+
+// One rendition, for somewhere a second size would be a second file to keep
+// track of for no gain.
+export async function prepareOne(file, size = TILE) {
+  const { img, done } = await decoded(file);
+  try {
+    const out = await render(img, size);
+    return {
+      blob: out.blob,
+      width: out.width,
+      height: out.height,
+      previewUrl: URL.createObjectURL(out.blob),
+      release() { URL.revokeObjectURL(this.previewUrl); }
+    };
+  } finally {
+    done();
   }
 }
 

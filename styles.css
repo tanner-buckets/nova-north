@@ -2852,3 +2852,42 @@ h1.event-name + .event-when {
   padding-bottom: 0;
   border-bottom: 0;
 }
+
+/* --- Prize wall pictures ------------------------------------------------------ */
+
+/* At the end of the row, like a badge on the programs table: the name and the
+   cost are what somebody reads down the list for. */
+.data-table .prize-cell {
+  width: 1%;
+  padding-left: 0.75rem;
+  text-align: right;
+  vertical-align: middle;
+}
+
+.prize-art {
+  display: block;
+  width: 3.5rem;
+  height: 3.5rem;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+@media (min-width: 42rem) {
+  .prize-art { width: 4.5rem; height: 4.5rem; }
+}
+
+/* The preview on the professor screen is bigger than the cell it is bound for.
+   The question being answered is "is this the right box", and a 56px square
+   does not answer it. */
+.prize-art-preview { margin: 0 0 0.6rem; }
+
+.prize-art-preview-img {
+  display: block;
+  width: 100%;
+  max-width: 12rem;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}

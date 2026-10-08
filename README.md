@@ -242,7 +242,7 @@ Built so far:
 | `schedule.html` | Schedule | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
 | `event.html` | no — reached by link | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
 | `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers`, `active_badge_seasons()` |
-| `prize-items.html` | no | `prize_items` |
+| `prize-items.html` | no | `prize_items`, the `prize-art` bucket |
 | `players.html` | Players | `get_player_summary()`, `public_players` |
 | `gallery.html` | Gallery | `approved_gallery()`, `submit_gallery_photo()`, the `gallery` bucket |
 | `id_help.html` | no | nothing — static copy |
@@ -788,6 +788,36 @@ changes what everyone sees.
 The earning list is also what attendance depends on: the upload and the manual
 screen both look for the attendance award **by name**, and fall back to a
 dropdown rather than a wrong value if it has been renamed.
+
+**A prize item can carry a picture**, and a way to earn cannot — an action is not
+a thing, and there is nothing to photograph. One component still drives both
+lists, so that is a flag on the config.
+
+The picture is chosen on the item's own form: a file input, a preview bigger than
+the cell it is bound for (the question is "is this the right box", and a 56px
+square does not answer it), and a **Remove the picture** link. It is resized to
+an 800px JPEG in the browser by `image-file.js` — the same module the gallery
+uses, so the guard on the decoded size exists once rather than twice.
+
+The upload happens **before** the row is updated, and the old object is deleted
+only once the row has stopped pointing at it. If the update fails, the picture
+just uploaded is deleted too: nothing points at it, so it is litter rather than
+history.
+
+`prize_items.image_path` is the same arrangement as badge art — null means no
+picture, a path names an object in the public `prize-art` bucket, and the page
+builds the URL with `prizeArtUrl()`. The bucket is **public**, like `badge-art`
+and unlike `gallery`: a photograph of a box on a shelf has nobody in it and
+nothing to approve, so signing a URL per item would be work bought for no
+privacy. Only a professor can write to it — a picture on the prize wall is the
+league saying what is on the wall.
+
+On `prize-items.html` the picture sits at the **end of the row**, after the name
+and the cost, the same placement the programs page gives a badge and for the same
+reason. `alt` is empty: the name is the first cell of that row and a screen
+reader has already read it. The column only appears once something has a picture,
+because a column of empty cells on a wall nobody has photographed yet is a column
+of nothing.
 
 ### Reference data
 

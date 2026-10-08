@@ -180,6 +180,15 @@ export function badgeArtUrl(badge, prefix = '') {
   return `${prefix}images/badges/${badge.code}.png`;
 }
 
+// A prize wall item's picture, or null when it has none -- which is every item
+// until a professor adds one. No fallback to a committed file, unlike a badge:
+// no prize item has ever had artwork beside the page.
+export function prizeArtUrl(item) {
+  return item.image_path
+    ? `${SUPABASE_URL}/storage/v1/object/public/prize-art/${item.image_path}`
+    : null;
+}
+
 // One tile, used by the public player card and by the Trainer Card screen, so a
 // badge looks the same wherever it is shown.
 //
