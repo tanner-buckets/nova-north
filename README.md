@@ -238,7 +238,7 @@ Built so far:
 
 | File | In the nav | Reads from |
 |---|---|---|
-| `index.html` | Home | nothing — static copy |
+| `index.html` | Home | nothing — static copy, plus two outside links |
 | `schedule.html` | Schedule | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
 | `event.html` | no — reached by link | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
 | `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers`, `active_badge_seasons()` |
@@ -247,6 +247,36 @@ Built so far:
 | `id_help.html` | no | nothing — static copy |
 
 All the public pages are built.
+
+### The home page's outside links
+
+Two things on the home page reach outside the site, and both were asked about
+first because they load third-party content on a page children use.
+
+**A Google map** in the meeting details, beside the address, with a **Get
+directions** button. The embed is the keyless form — no API key to keep, rotate
+or leak from a public repo. The directions button is `maps/dir/?api=1`, Google's
+documented URL, which opens the Maps app on a phone; nothing loads from Google
+until it is tapped.
+
+The map's box has a **definite height rather than an aspect ratio**. The embed
+measures its box once, on load, and draws to whatever it finds — with
+`aspect-ratio` the height had not resolved by then, so it drew a thin strip of
+map and left the rest grey.
+
+**A Discord join button**, in its own section between the meeting details and the
+first-visit steps. It is a plain button, not Discord's embeddable widget: that
+widget needs the server owner to enable it, and the Continental Cards server has
+it off (`widget.json` returns `403 Widget Disabled`). The button wears Discord's
+blurple rather than the site's gold, because that server is the store's room and
+a gold button would read as ours.
+
+**The invite has to be one that never expires.** A Discord invite carries an
+expiry and a use limit unless it is made without them, and either turns the
+button into a dead end with nothing on the page saying so. The first invite
+offered for this expired 30 days out; the one in the page was checked against
+`discord.com/api/v10/invites/<code>?with_expiration=true` and returns
+`expires_at: null`. Check a replacement the same way.
 
 ### One event, on a page of its own
 

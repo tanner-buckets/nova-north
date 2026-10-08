@@ -39,6 +39,11 @@ Many players are children. Privacy rules in this file are not negotiable.
   already on the machine; a font file is a dependency and a request.
 - **ES modules via CDN only.** `supabase-js` is imported from a CDN URL. Nothing
   else is added without asking.
+- **One third-party embed exists**, the Google map in the home page's meeting
+  details, asked about and approved. It loads outside content on a page children
+  use, which is why it was a question rather than a decision. The Discord join is
+  a plain link, not an embed, and loads nothing. Do not add a second embed
+  without asking.
 
 If a task seems to need a framework or a build step, stop and ask. Do not add one.
 
@@ -299,6 +304,32 @@ is applied to the production database.** There is no confirmation step.
   hand or a judge is ticked. Rebuilding the fields with it silently reverted
   them: tick "this was a premier event", add one person, and premier was off
   again and everybody earned a point less, with nothing on screen saying so.
+
+---
+
+## The home page's outside links
+
+- **The map is the keyless embed**, `maps.google.com/maps?q=...&output=embed`.
+  No API key, so there is none to keep, rotate or leak from a public repository.
+- **Its box has a definite height, not an aspect ratio.** The embed measures its
+  box once, on load, and draws the map to whatever it finds. With `aspect-ratio`
+  the height was not resolved at that moment, so it drew a thin strip of map and
+  left the rest grey.
+- **Get directions is a link, not the embed.** `google.com/maps/dir/?api=1` is
+  Google's documented URL and opens the Maps app on a phone. Nothing loads from
+  Google until somebody taps it.
+- **The Discord join is a plain button, not a widget.** Discord's embeddable
+  widget needs the server owner to turn it on in Server Settings, and the
+  Continental Cards server has it off — `widget.json` answers
+  `403 Widget Disabled`. If that ever changes, a widget becomes possible.
+- **The invite must never expire.** A Discord invite carries an expiry and a use
+  limit unless it is created without them, and either one turns the button into a
+  dead end with nothing on the page changing to say so. Check a replacement
+  against `discord.com/api/v10/invites/<code>?with_expiration=true` before
+  swapping it in: `expires_at` has to be null.
+- **The join button wears Discord's blurple**, `#5865f2`, which is the one colour
+  on the site outside the palette. A gold button would read as ours, and that
+  server is the store's room rather than ours. White on it clears 4.5:1.
 
 ---
 
