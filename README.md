@@ -259,6 +259,11 @@ or leak from a public repo. The directions button is `maps/dir/?api=1`, Google's
 documented URL, which opens the Maps app on a phone; nothing loads from Google
 until it is tapped.
 
+Both ask for **the street address alone, with no business name**. Searching
+"Continental Cards" matches the shop's Google listing, which is a different place
+from the tournament room, and it was sending people to the shop. Asking for
+`21140 Ashburn Crossing Dr #110` means the map shows what the page prints.
+
 The map's box has a **definite height rather than an aspect ratio**. The embed
 measures its box once, on load, and draws to whatever it finds — with
 `aspect-ratio` the height had not resolved by then, so it drew a thin strip of

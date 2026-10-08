@@ -311,6 +311,11 @@ is applied to the production database.** There is no confirmation step.
 
 - **The map is the keyless embed**, `maps.google.com/maps?q=...&output=embed`.
   No API key, so there is none to keep, rotate or leak from a public repository.
+- **The query is the street address alone, with no business name.** Searching
+  "Continental Cards" matches the shop's own Google listing, which is a different
+  place from the tournament room: it sent people to the shop. Both the map and
+  the directions link ask for `21140 Ashburn Crossing Dr #110` and nothing else,
+  so what the map shows is what the page prints.
 - **Its box has a definite height, not an aspect ratio.** The embed measures its
   box once, on load, and draws the map to whatever it finds. With `aspect-ratio`
   the height was not resolved at that moment, so it drew a thin strip of map and
@@ -330,6 +335,11 @@ is applied to the production database.** There is no confirmation step.
 - **The join button wears Discord's blurple**, `#5865f2`, which is the one colour
   on the site outside the palette. A gold button would read as ours, and that
   server is the store's room rather than ours. White on it clears 4.5:1.
+- **What the Discord is actually for**: a Pokémon channel carrying product and
+  tournament announcements, and somewhere to ask a question between Sundays.
+  **Pairings are not posted there** — they are called at the desk on the day.
+  Do not describe it as more than it is; a player who goes looking for pairings
+  and finds none is worse off than one who was never told.
 
 ---
 
