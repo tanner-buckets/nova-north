@@ -24,8 +24,15 @@
 const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const MAX_BYTES = 20 * 1024 * 1024;   // a phone photograph, generously
-const MAX_PIXELS = 24e6;              // about twice a current phone camera
-const MAX_SIDE = 10000;
+
+// The guard is against a crafted file, not against a camera, so it has to sit
+// above every camera anybody will arrive with. A current iPhone shoots 5712 by
+// 4284 by default, which is 24.5MP: a limit of 24MP refused the most ordinary
+// photograph there is. 60MP clears a 50MP phone at full resolution and still
+// refuses the 8000 by 8000 square below. Check this against a real phone before
+// lowering it.
+const MAX_PIXELS = 60e6;
+const MAX_SIDE = 10000;               // a bomb is a long thin shape as often as a square
 
 // The sizes anything here asks for. A rendition is a longest edge and a JPEG
 // quality, and nothing else: everything is scaled to fit, never cropped, so a
@@ -108,7 +115,9 @@ async function decoded(file) {
   if (!w || !h || w > MAX_SIDE || h > MAX_SIDE || w * h > MAX_PIXELS) {
     done();
     throw new Error(`That picture is ${w} by ${h}, which is larger than this `
-      + 'page can open. Scale it down and try again.');
+      + 'page can open. A photo from a phone is well inside the limit; one this '
+      + 'size usually comes from a camera, and exporting a smaller copy of it '
+      + 'will work.');
   }
 
   return { img, done };

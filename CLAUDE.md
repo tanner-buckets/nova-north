@@ -398,6 +398,13 @@ privacy rules are above, under **Photographs**; these are the mechanics.
   `naturalWidth * naturalHeight`, after `decode()` and before any canvas exists.
   It lives in `image-file.js` and there is **one copy of it**, which is why that
   module is shared with the prize wall rather than copied for it.
+- **That limit guards against a crafted file, not against a camera**, so it has
+  to sit above every phone anybody will arrive with. It was first set at 24MP,
+  which refused a current iPhone's default 5712 by 4284 on the first test: the
+  guard caught the most ordinary photograph there is and nothing else. 60MP
+  clears a 50MP phone at full resolution and still refuses an 8000 by 8000
+  square. Test a change to it against a real phone photograph, not against
+  arithmetic.
 - **A submission is not anonymous.** Player ID and first name together, the same
   proof a drop request asks for, and **one refusal covers both** a wrong ID and
   a wrong name — telling them apart would make the form a way to test which
