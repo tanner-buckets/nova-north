@@ -2097,6 +2097,17 @@ a.player-button:hover .player-label {
 }
 .event-fee .count { font-weight: 700; color: var(--gold); }
 
+/* Directly under the start time, and deliberately quieter than it. Two times
+   the same size on one card is two things to read before knowing which one
+   matters, and the one that matters is when play starts. */
+.event-opens {
+  margin: -0.1rem 0 0.5rem;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* The Trainer Card screen shows the same tiles, as buttons. A professor
    awarding a badge should be looking at what the player will see. */
 .badge-grid-toggle { grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr)); }

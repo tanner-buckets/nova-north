@@ -25,6 +25,21 @@ let professor = null;
 // confirmation it just printed.
 const spots = new Map();
 
+// The desk opens before play does. The time above is when play starts -- it
+// used to be this one, which is how a player reading the schedule turned up
+// half an hour before anything happened.
+//
+// Null on an event nobody has set it for, and then the card says nothing rather
+// than guessing at half an hour.
+function opensLine(event) {
+  if (!event.registration_opens_at) return null;
+  return el('p', { className: 'event-opens' }, [
+    el('span', { text: 'Registration opens at ' }),
+    el('time', { datetime: event.registration_opens_at,
+                 text: formatEventTime(event.registration_opens_at) })
+  ]);
+}
+
 function eventCard(event, counts) {
   const badges = [el('li', {
     className: `badge badge-${event.event_type}`,
@@ -42,6 +57,7 @@ function eventCard(event, counts) {
       el('time', { datetime: event.starts_at, className: 'event-time',
                    text: formatEventTime(event.starts_at) })
     ]),
+    opensLine(event),
     el('h3', { className: 'event-name', text: event.name }),
     el('ul', { className: 'badges' }, badges),
     event.description ? el('p', { text: event.description }) : null,

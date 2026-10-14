@@ -77,6 +77,17 @@ function detail(event, counts, { onChange, heading, tag = 'div' }) {
       el('time', { datetime: event.starts_at, className: 'event-time',
                    text: `${formatEventDay(event.starts_at)}, ${formatEventTime(event.starts_at)}` })
     ]),
+    // The same line the schedule carries. This is a page somebody is sent
+    // straight to, so it is the one card they will see all day; leaving the
+    // desk time off it would send them half an hour early in exactly the way
+    // the schedule used to.
+    event.registration_opens_at
+      ? el('p', { className: 'event-opens' }, [
+          el('span', { text: 'Registration opens at ' }),
+          el('time', { datetime: event.registration_opens_at,
+                       text: formatEventTime(event.registration_opens_at) })
+        ])
+      : null,
     el('ul', { className: 'badges' }, badges),
     event.description ? el('p', { text: event.description }) : null,
     el('p', { className: 'event-fee' }, [

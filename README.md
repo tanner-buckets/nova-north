@@ -1,7 +1,7 @@
 # LoCo League
 
 Database and website for the LoCo League, a trading card game
-league that meets Sundays at 2:00 PM at Continental Cards Tournament Location,
+league that plays Sundays at 2:30 PM at Continental Cards Tournament Location,
 21140 Ashburn Crossing Dr #110, Ashburn, VA 20147.
 
 Read `CLAUDE.md` before changing anything — it is constraints, not suggestions.
@@ -870,7 +870,31 @@ worse than a refusal. The PIN appears on the professor event list and never on
 the public schedule: it groups flights for the desk and means nothing to a
 player.
 
-New events prefill to the next Sunday at 2:00, which is when league meets.
+New events prefill to the next Sunday at 2:30, which is when league plays.
+
+**An event carries two times.** `starts_at` is when play starts;
+`registration_opens_at` is when the desk opens on the day. Until October 2026
+there was only the first, and every event had been entered with the desk time
+in it, because that is the number a professor had in front of them. The
+schedule then printed it as the event time, so a player reading "2:00 PM"
+turned up at 2:00 and waited half an hour.
+`20261014120000_registration_opens.sql` moved every stored instant into the new
+column, past events included, and put play half an hour later.
+
+The new column is **displayed and nothing else**. It does not gate
+`register_for_event()`: pre-registration on the site is open from the moment
+the event exists and closes when play starts, which is the rule below and is
+unchanged. A check constraint keeps it before `starts_at` — immutable, so it
+can be a check rather than a trigger, which `at time zone` would have forced.
+
+The form asks for a **time and not a datetime**, and composes the date from the
+start time every time it saves, so the two can never end up on different days.
+It fills in half an hour earlier and follows the start time until a professor
+changes it; after that it is left alone, because an event deliberately opening
+an hour early should not have that undone by a later edit. Blank is allowed and
+means the card says nothing about it. The default start moved from 2:00 to 2:30
+for the same reason the migration exists: prefilling the desk time is how every
+event came to be half an hour early.
 
 **An expanded event carries a link to each of the two screens it leads to** --
 drops and the printable player list -- both passing `?event=<id>`, so neither

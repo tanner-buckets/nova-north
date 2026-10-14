@@ -18,8 +18,9 @@ Every page carries the strapline "A Play! Pokémon league at Continental Cards,
 Ashburn" under the name, so a visitor landing on any page knows what and where
 this is.
 
-League meets Sundays at 2:00 PM, registration closes 2:30 PM, at Continental
-Cards Tournament Location, 21140 Ashburn Crossing Dr #110, Ashburn, VA 20147.
+League plays Sundays at 2:30 PM and registration opens at 2:00 PM, at
+Continental Cards Tournament Location, 21140 Ashburn Crossing Dr #110, Ashburn,
+VA 20147.
 
 Many players are children. Privacy rules in this file are not negotiable.
 
@@ -265,6 +266,19 @@ is applied to the production database.** There is no confirmation step.
   the schedule the links are simply absent for an event that takes no
   registration; the explainer that says to turn registration on belongs on the
   screen where that is one checkbox away.
+- **An event carries two times, and they mean different things.** `starts_at` is
+  when play starts and is what every rule keys on: the registration cutoff, the
+  division calculation, the drop screen, the printable list.
+  `registration_opens_at` is when the desk opens on the day, and it is
+  **displayed and nothing else** — it does not gate `register_for_event()`.
+  Every event in the table was once entered half an hour early because the desk
+  time was the number a professor had in front of them, and the schedule printed
+  it as the event time; `20261014120000_registration_opens.sql` moved every
+  stored instant into the new column and put play half an hour later. The admin
+  form asks for a time rather than a datetime and composes the date from the
+  event, so the two cannot end up on different days, and the default start is
+  2:30 rather than 2:00 — prefilling the desk time is how this happened in the
+  first place.
 - **An event that takes registration has a page of its own**, `event.html?e=<id>`,
   so a professor has a link to post that is one event rather than the whole
   schedule. It reads what the schedule reads and nothing more: places left and
