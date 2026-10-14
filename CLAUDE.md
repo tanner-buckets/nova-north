@@ -18,7 +18,7 @@ Every page carries the strapline "A Play! Pokémon league at Continental Cards,
 Ashburn" under the name, so a visitor landing on any page knows what and where
 this is.
 
-League plays Sundays at 2:30 PM and registration opens at 2:00 PM, at
+League plays Sundays at 2:30 PM and sign-in opens at 2:00 PM, at
 Continental Cards Tournament Location, 21140 Ashburn Crossing Dr #110, Ashburn,
 VA 20147.
 
@@ -279,6 +279,13 @@ is applied to the production database.** There is no confirmation step.
   event, so the two cannot end up on different days, and the default start is
   2:30 rather than 2:00 — prefilling the desk time is how this happened in the
   first place.
+- **Every screen calls it sign-in, and only the column says registration.** The
+  line sits directly above a register form that works right now, and
+  "registration opens at 2:00 PM" over a working form reads as a refusal. The
+  column kept its name because that is what it is in the domain and renaming it
+  after the migration shipped would cost a second one; the mismatch is the
+  wording doing its job, not an oversight. Do not "fix" one to match the other
+  without changing both.
 - **An event that takes registration has a page of its own**, `event.html?e=<id>`,
   so a professor has a link to post that is one event rather than the whole
   schedule. It reads what the schedule reads and nothing more: places left and

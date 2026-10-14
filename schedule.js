@@ -31,10 +31,16 @@ const spots = new Map();
 //
 // Null on an event nobody has set it for, and then the card says nothing rather
 // than guessing at half an hour.
+//
+// "Sign-in" and not "registration", although the column is named for the latter.
+// This line can sit directly above a register form that works right now, and
+// "registration opens at 2:00 PM" over a working form reads as a refusal. The
+// two really are different things -- pre-registration on this site opens when
+// the event is created -- and the card is where that is most easily confused.
 function opensLine(event) {
   if (!event.registration_opens_at) return null;
   return el('p', { className: 'event-opens' }, [
-    el('span', { text: 'Registration opens at ' }),
+    el('span', { text: 'Sign-in opens at ' }),
     el('time', { datetime: event.registration_opens_at,
                  text: formatEventTime(event.registration_opens_at) })
   ]);

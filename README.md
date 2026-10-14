@@ -887,6 +887,13 @@ the event exists and closes when play starts, which is the rule below and is
 unchanged. A check constraint keeps it before `starts_at` — immutable, so it
 can be a check rather than a trigger, which `at time zone` would have forced.
 
+**Every screen calls it sign-in; only the column says registration.** The line
+can sit directly above a register form that works right now, and "registration
+opens at 2:00 PM" over a working form reads as a refusal. The column kept the
+domain word — it is when registration at the desk opens — and renaming it after
+the migration shipped would cost a second migration for a naming preference.
+The two words are deliberate, so changing one means changing the other.
+
 The form asks for a **time and not a datetime**, and composes the date from the
 start time every time it saves, so the two can never end up on different days.
 It fills in half an hour earlier and follows the start time until a professor

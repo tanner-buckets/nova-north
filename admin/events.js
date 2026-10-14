@@ -314,14 +314,15 @@ export function eventForm(event, { onSaved }) {
           + 'public schedule.' }),
 
     el('p', { className: 'field' }, [
-      el('label', { text: 'Registration opens' }, [opens])
+      el('label', { text: 'Sign-in opens' }, [opens])
     ]),
     el('p', { className: 'field-help',
-      text: 'A time on the same day, before play starts. It fills in half an '
-          + 'hour earlier and follows the start time until you change it; '
-          + 'blank means the schedule says nothing about it. This is the desk '
-          + 'on the day — pre-registration on this site is not affected by '
-          + 'it.' }),
+      text: 'When the desk opens on the day: a time before play starts. It '
+          + 'fills in half an hour earlier and follows the start time until '
+          + 'you change it; blank means the schedule says nothing about it. '
+          + 'Pre-registration on this site is not affected by it — that '
+          + 'opens as soon as the event exists and closes when play starts, '
+          + 'which is why the schedule calls this one sign-in.' }),
 
     el('p', { className: 'field' }, [el('label', { text: 'Entry fee' }, [fee])]),
     el('p', { className: 'field-help',
@@ -393,7 +394,7 @@ export function eventForm(event, { onSaved }) {
     // text compares them as times. The database refuses this too; catching it
     // here is what turns a constraint violation into a sentence.
     if (opens.value && opens.value >= timePart(starts.value)) {
-      status(note, 'Registration has to open before play starts. Play starts at '
+      status(note, 'Sign-in has to open before play starts. Play starts at '
         + `${formatEventTime(fromLocalInput(starts.value))}, so this needs to be `
         + 'earlier than that.', 'error');
       return;
