@@ -25,6 +25,27 @@ let professor = null;
 // confirmation it just printed.
 const spots = new Map();
 
+// The desk opens before play does. The time above is when play starts -- it
+// used to be this one, which is how a player reading the schedule turned up
+// half an hour before anything happened.
+//
+// Null on an event nobody has set it for, and then the card says nothing rather
+// than guessing at half an hour.
+//
+// "Sign-in" and not "registration", although the column is named for the latter.
+// This line can sit directly above a register form that works right now, and
+// "registration opens at 2:00 PM" over a working form reads as a refusal. The
+// two really are different things -- pre-registration on this site opens when
+// the event is created -- and the card is where that is most easily confused.
+function opensLine(event) {
+  if (!event.registration_opens_at) return null;
+  return el('p', { className: 'event-opens' }, [
+    el('span', { text: 'Sign-in opens at ' }),
+    el('time', { datetime: event.registration_opens_at,
+                 text: formatEventTime(event.registration_opens_at) })
+  ]);
+}
+
 function eventCard(event, counts) {
   const badges = [el('li', {
     className: `badge badge-${event.event_type}`,
@@ -42,6 +63,7 @@ function eventCard(event, counts) {
       el('time', { datetime: event.starts_at, className: 'event-time',
                    text: formatEventTime(event.starts_at) })
     ]),
+    opensLine(event),
     el('h3', { className: 'event-name', text: event.name }),
     el('ul', { className: 'badges' }, badges),
     event.description ? el('p', { text: event.description }) : null,

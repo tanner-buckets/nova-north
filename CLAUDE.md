@@ -18,8 +18,9 @@ Every page carries the strapline "A Play! Pokémon league at Continental Cards,
 Ashburn" under the name, so a visitor landing on any page knows what and where
 this is.
 
-League meets Sundays at 2:00 PM, registration closes 2:30 PM, at Continental
-Cards Tournament Location, 21140 Ashburn Crossing Dr #110, Ashburn, VA 20147.
+League plays Sundays at 2:30 PM and sign-in opens at 2:00 PM, at
+Continental Cards Tournament Location, 21140 Ashburn Crossing Dr #110, Ashburn,
+VA 20147.
 
 Many players are children. Privacy rules in this file are not negotiable.
 
@@ -265,6 +266,26 @@ is applied to the production database.** There is no confirmation step.
   the schedule the links are simply absent for an event that takes no
   registration; the explainer that says to turn registration on belongs on the
   screen where that is one checkbox away.
+- **An event carries two times, and they mean different things.** `starts_at` is
+  when play starts and is what every rule keys on: the registration cutoff, the
+  division calculation, the drop screen, the printable list.
+  `registration_opens_at` is when the desk opens on the day, and it is
+  **displayed and nothing else** — it does not gate `register_for_event()`.
+  Every event in the table was once entered half an hour early because the desk
+  time was the number a professor had in front of them, and the schedule printed
+  it as the event time; `20261014120000_registration_opens.sql` moved every
+  stored instant into the new column and put play half an hour later. The admin
+  form asks for a time rather than a datetime and composes the date from the
+  event, so the two cannot end up on different days, and the default start is
+  2:30 rather than 2:00 — prefilling the desk time is how this happened in the
+  first place.
+- **Every screen calls it sign-in, and only the column says registration.** The
+  line sits directly above a register form that works right now, and
+  "registration opens at 2:00 PM" over a working form reads as a refusal. The
+  column kept its name because that is what it is in the domain and renaming it
+  after the migration shipped would cost a second one; the mismatch is the
+  wording doing its job, not an oversight. Do not "fix" one to match the other
+  without changing both.
 - **An event that takes registration has a page of its own**, `event.html?e=<id>`,
   so a professor has a link to post that is one event rather than the whole
   schedule. It reads what the schedule reads and nothing more: places left and
@@ -398,6 +419,13 @@ privacy rules are above, under **Photographs**; these are the mechanics.
   `naturalWidth * naturalHeight`, after `decode()` and before any canvas exists.
   It lives in `image-file.js` and there is **one copy of it**, which is why that
   module is shared with the prize wall rather than copied for it.
+- **That limit guards against a crafted file, not against a camera**, so it has
+  to sit above every phone anybody will arrive with. It was first set at 24MP,
+  which refused a current iPhone's default 5712 by 4284 on the first test: the
+  guard caught the most ordinary photograph there is and nothing else. 60MP
+  clears a 50MP phone at full resolution and still refuses an 8000 by 8000
+  square. Test a change to it against a real phone photograph, not against
+  arithmetic.
 - **A submission is not anonymous.** Player ID and first name together, the same
   proof a drop request asks for, and **one refusal covers both** a wrong ID and
   a wrong name — telling them apart would make the form a way to test which

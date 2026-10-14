@@ -76,7 +76,31 @@ function nextLeagueSunday() {
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, '0');
   const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${day}T14:00`;
+  // Half past, because that is when play starts. The desk opens at two, and
+  // that is the registration time below, not this one -- prefilling 2:00 here
+  // is exactly how every event in the table came to be entered half an hour
+  // early in the first place.
+  return `${y}-${m}-${day}T14:30`;
+}
+
+// --- The desk time -----------------------------------------------------------
+
+// Both halves of a datetime-local value, so the two inputs can be taken apart
+// and put back together without parsing a date anywhere.
+function dayPart(localValue) { return (localValue || '').split('T')[0] || ''; }
+function timePart(localValue) { return (localValue || '').split('T')[1] || ''; }
+
+// Thirty minutes before whatever the start says, as HH:MM. Plain arithmetic on
+// the wall clock: both times are the same afternoon in league time, so there is
+// no zone or date to carry. Before midnight it clamps to 00:00 rather than
+// wrapping onto the previous day, which the constraint would refuse anyway.
+function halfHourBefore(localValue) {
+  const t = timePart(localValue);
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const mins = Math.max(0, h * 60 + m - 30);
+  return `${String(Math.floor(mins / 60)).padStart(2, '0')}:`
+    + `${String(mins % 60).padStart(2, '0')}`;
 }
 
 function fromLocalInput(value) {
@@ -222,6 +246,26 @@ export function eventForm(event, { onSaved }) {
     type: 'datetime-local',
     value: isNew ? nextLeagueSunday() : toLocalInput(event.starts_at)
   });
+
+  // A time and not a datetime: the desk opens on the day of the event, so
+  // asking for the date again is asking a professor to agree with themselves.
+  // The date is taken from the start time when this is saved, which is also
+  // what keeps the two from drifting apart if the event is moved.
+  const opens = el('input', { type: 'time' });
+  opens.value = event.registration_opens_at
+    ? timePart(toLocalInput(event.registration_opens_at))
+    : halfHourBefore(starts.value);
+
+  // Half an hour is right nearly every time, so it follows the start time --
+  // but only until a professor says otherwise. An event moved from 2:30 to
+  // 11:00 should bring its desk time along; one deliberately set to open an
+  // hour early should not have that quietly undone by a later edit.
+  let opensChosen = !!event.registration_opens_at;
+  opens.addEventListener('input', () => { opensChosen = true; });
+  starts.addEventListener('input', () => {
+    if (!opensChosen) opens.value = halfHourBefore(starts.value);
+  });
+
   const fee = el('input', { value: event.entry_fee ?? '' });
   const description = el('input', { value: event.description ?? '' });
 
@@ -263,10 +307,22 @@ export function eventForm(event, { onSaved }) {
     el('p', { className: 'field' }, [el('label', { text: 'Starts' }, [starts])]),
     el('p', { className: 'field-help',
       text: isNew
-        ? 'League time, shown on the public schedule. Prefilled with the next '
-          + 'Sunday at 2:00, which is when league meets; change it for anything '
-          + 'else.'
-        : 'League time. Shown on the public schedule.' }),
+        ? 'When play starts, not when the desk opens. League time, shown on the '
+          + 'public schedule. Prefilled with the next Sunday at 2:30, which is '
+          + 'when league plays; change it for anything else.'
+        : 'When play starts, not when the desk opens. League time. Shown on the '
+          + 'public schedule.' }),
+
+    el('p', { className: 'field' }, [
+      el('label', { text: 'Sign-in opens' }, [opens])
+    ]),
+    el('p', { className: 'field-help',
+      text: 'When the desk opens on the day: a time before play starts. It '
+          + 'fills in half an hour earlier and follows the start time until '
+          + 'you change it; blank means the schedule says nothing about it. '
+          + 'Pre-registration on this site is not affected by it — that '
+          + 'opens as soon as the event exists and closes when play starts, '
+          + 'which is why the schedule calls this one sign-in.' }),
 
     el('p', { className: 'field' }, [el('label', { text: 'Entry fee' }, [fee])]),
     el('p', { className: 'field-help',
@@ -334,6 +390,16 @@ export function eventForm(event, { onSaved }) {
     if (!name.value.trim()) { status(note, 'An event needs a name.', 'error'); return; }
     if (!starts.value) { status(note, 'An event needs a start time.', 'error'); return; }
 
+    // Both are HH:MM on the same day and zero padded, so comparing them as
+    // text compares them as times. The database refuses this too; catching it
+    // here is what turns a constraint violation into a sentence.
+    if (opens.value && opens.value >= timePart(starts.value)) {
+      status(note, 'Sign-in has to open before play starts. Play starts at '
+        + `${formatEventTime(fromLocalInput(starts.value))}, so this needs to be `
+        + 'earlier than that.', 'error');
+      return;
+    }
+
     const pin = linked.value.trim();
     if (pin && !/^[0-9]{4}$/.test(pin)) {
       status(note, 'A flight PIN is exactly four digits, or blank for a standalone '
@@ -355,6 +421,11 @@ export function eventForm(event, { onSaved }) {
         name: name.value.trim(),
         event_type: type.value,
         starts_at: fromLocalInput(starts.value),
+        // Composed from the start date every time it is saved, so the desk
+        // time cannot be left behind on a day the event is no longer on.
+        registration_opens_at: opens.value
+          ? fromLocalInput(`${dayPart(starts.value)}T${opens.value}`)
+          : null,
         entry_fee: fee.value.trim() || null,
         description: description.value.trim() || null,
         is_premier: premier.checked,
