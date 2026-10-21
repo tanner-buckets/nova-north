@@ -62,7 +62,7 @@ function badgeThreshold() {
 //
 // Counted per season and the best one wins, which is how rank is worked out
 // while more than one season is being awarded. Counting across seasons instead
-// would let four badges in each of two years buy a discount that neither year
+// would let three badges in each of two years buy a discount that neither year
 // earns.
 async function loadDiscount(playerId) {
   const threshold = badgeThreshold();

@@ -426,6 +426,12 @@ change without breaking anything:
   earned it keeps it.
 - The number of badges a rank needs is a column, not prose and not page code. If
   the list grows and Ace Trainer should need twelve, that is an `UPDATE`.
+  `20261021130000_rank_thresholds.sql` is that `UPDATE`: Cooltrainer moved from
+  4 badges to 3 and Ace Trainer from 8 to 6, and nothing else in the repository
+  had to change — `player_rank()` reads the column, and the prize discount takes
+  `max(badges_required)` from the same rows. **Rank is derived, so a change like
+  that is retroactive**: everyone already holding six badges in a season became
+  an Ace Trainer, with the discount, the moment it ran.
 
 **No rank is stored.** It derives from badges earned and league visits, plus the
 one fact that cannot be counted: `players.champion_awarded_on`, set when a
@@ -745,7 +751,7 @@ resets each season, having been Champion does not.
 
 Badges are counted **per season and the best one wins**, matching how rank is
 worked out while more than one season is being awarded. Adding the seasons
-together would let four badges in each of two years buy a discount that neither
+together would let three badges in each of two years buy a discount that neither
 year earns.
 
 The points screen says so next to the balance, and the price is already
