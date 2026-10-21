@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Trainer Card Creator — LoCo League</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" href="../images/icon-32.png" sizes="32x32">
+    <link rel="apple-touch-icon" href="../images/icon-180.png">
+    <link rel="stylesheet" href="../styles.css">
+    <script type="module" src="trainer-cards.js"></script>
+  </head>
+  <body class="print-page card-print">
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="masthead masthead-compact no-print">
+      <div class="masthead-top">
+        <img class="masthead-logo" src="../images/cc-logo.png"
+             width="131" height="197" alt="" decoding="async">
+        <div class="masthead-titles">
+          <a class="masthead-brand" href="../index.html">
+            <span class="masthead-name">LoCo League</span>
+          </a>
+          <p class="masthead-strap">A Play! Pokémon league at Continental Cards, Ashburn</p>
+        </div>
+      </div>
+      <nav class="masthead-nav" aria-label="Main">
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../schedule.html">Schedule</a></li>
+            <li><a href="../league_programs.html">League programs</a></li>
+            <li><a href="../players.html">Players</a></li>
+            <li><a href="../gallery.html">Gallery</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main id="main">
+      <div class="no-print">
+        <p><a class="back-link" href="index.html">Back to professor tools</a></p>
+
+        <h1>Trainer Card Creator</h1>
+
+        <p class="lede">
+          Build a list of players, check their ranks, then print. Eight cards to a
+          page, cut along the edges.
+        </p>
+
+        <p class="section-note">
+          A card carries a full name and a birth year. That is the player’s own
+          card, handed to the player — it is never shown on a public page, and
+          this screen is the only place those two appear together. Most of these
+          players are children, so hand a card to a person rather than leaving a
+          stack on a table.
+        </p>
+
+        <div id="gate"></div>
+        <div id="app"></div>
+      </div>
+
+      <div id="sheet" class="card-sheet"></div>
+    </main>
+
+    <footer class="site-footer no-print">
+      <p>
+        LoCo League meets at Continental Cards and is run by
+        volunteer professors.
+      </p>
+      <p class="footer-mark">
+        <img src="../images/play-pokemon.png" width="180" height="40"
+             alt="Play! Pokémon" loading="lazy" decoding="async">
+      </p>
+    </footer>
+  </body>
+</html>

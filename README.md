@@ -426,6 +426,12 @@ change without breaking anything:
   earned it keeps it.
 - The number of badges a rank needs is a column, not prose and not page code. If
   the list grows and Ace Trainer should need twelve, that is an `UPDATE`.
+  `20261021130000_rank_thresholds.sql` is that `UPDATE`: Cooltrainer moved from
+  4 badges to 3 and Ace Trainer from 8 to 6, and nothing else in the repository
+  had to change — `player_rank()` reads the column, and the prize discount takes
+  `max(badges_required)` from the same rows. **Rank is derived, so a change like
+  that is retroactive**: everyone already holding six badges in a season became
+  an Ace Trainer, with the discount, the moment it ran.
 
 **No rank is stored.** It derives from badges earned and league visits, plus the
 one fact that cannot be counted: `players.champion_awarded_on`, set when a
@@ -745,7 +751,7 @@ resets each season, having been Champion does not.
 
 Badges are counted **per season and the best one wins**, matching how rank is
 worked out while more than one season is being awarded. Adding the seasons
-together would let four badges in each of two years buy a discount that neither
+together would let three badges in each of two years buy a discount that neither
 year earns.
 
 The points screen says so next to the balance, and the price is already
@@ -1259,6 +1265,67 @@ description is written here rather than copied from an official source, and the
 page notes that official documents get moved, pointing at the rules hub as the
 way to find where one went rather than leaving a dead link looking like a fault
 in this site.
+
+### Trainer Card Creator
+
+`admin/trainer-cards.html` prints membership cards, eight to a Letter page.
+Build a list, check the ranks, print. A print stylesheet, not a generated file —
+the browser's own Save as PDF makes the PDF, and Margins must be set to None or
+the cards shift off the template.
+
+Three ways to build the list: **everyone active**, meaning attendance in the
+last three months — the same window consent uses everywhere else; **everyone
+without a card yet**; or search somebody up by Player ID or name. Each row
+carries a rank dropdown prefilled with what the season says, because a professor
+sometimes knows something the record does not.
+
+**The two seasons are deliberately different.** The rank and badges come from
+the season that has been played, while the print record is filed under the
+season the card is issued for — a card handed out at the start of 2027 shows
+what was earned in 2026. Both are constants at the top of `trainer-cards.js`,
+and `trainer_card_roster()`, `trainer_card_batch()` and
+`record_trainer_card_prints()` all take the season as a parameter so the pairing
+is visible in one place rather than baked into SQL.
+
+**A card is the only place a full name and a birth year appear together.** It is
+the player's own card, handed to the player. The roster that chooses who gets
+one carries no birth years at all; only the batch call does, and only for the
+players already chosen. That split is the point, not an accident of design.
+
+Measurements come from the supplied template PDF rather than from taste: a card
+is 251.97 by 158.70pt, columns start at 35.74pt and 319.43pt, rows repeat every
+181.3pt, and the three field boxes were measured off the artwork — each 10.03%
+tall, starting 27.54% across.
+
+Badges print as silhouettes riding the inside edge of the white circle, top to
+bottom: the artwork used as a CSS mask, filled with the `tile_color` already
+stored on the badge row. The circle is measured off the template rather than
+eyeballed — fitting its left edge gives centre (815.8, 225.6) and radius 350.5,
+to within half a pixel. `arcPlacement()` spreads them at a comfortable pitch
+until they would reach the name box, then compresses and shrinks just enough
+that all thirteen fit without touching.
+
+Several of the stored colours are nearly white — Friendship is `#fefec5`,
+Community `#ffcbde` — and they sit on a white circle, so each silhouette carries
+a hairline halo. It goes on the list rather than the item, or it outlines the
+square the mask was cut from instead of the shape.
+
+Three things were learned the hard way here. A third of a field box, the size
+first asked for, made every badge disappear — the art is mostly thin limbs and
+5.3pt leaves four stray pixels, so 8pt is the floor. A `url()` inside a CSS
+custom property resolves against the **stylesheet**, not the page, so a path
+written `../images/` for an admin page resolved above the site and 404ed in
+silence; the path is made absolute in page code first. And the sheet has to
+escape `main`, which is capped at 46rem — 552pt, narrower than the 612pt page it
+contains — or the browser shrinks every card to about 94% to make it fit, which
+still looks plausible on screen. `.card-print main` drops the cap in print, and
+the page box is a **named** `@page trainer-cards` so the other printable pages
+keep their margins.
+
+**A card counts as printed the moment the dialog opens.** Nothing tells a page
+whether the print went ahead, so a cancelled print still counts and those
+players drop off the "without a card" button. They can be searched up and
+printed again, and the screen says so.
 
 ### Printable lists
 

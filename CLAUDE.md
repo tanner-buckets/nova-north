@@ -483,6 +483,59 @@ professor-only pages.** Printed lists may show full names because they are hande
 to the store or used at the desk — this is a disclosure to the venue, not
 publication. Nothing printed is ever rendered on a public page.
 
+### The Trainer Card Creator
+
+`admin/trainer-cards.html` prints membership cards, eight to a Letter page. The
+same rule applies: a print stylesheet, and the browser's own Save as PDF is what
+makes the file.
+
+- **The measurements come from the supplied template, not from taste.** A page
+  is 612 by 792pt, a card is 251.97 by 158.70pt, the columns start at 35.74pt
+  and 319.43pt and the rows repeat every 181.3pt. The three field positions are
+  measured off the artwork itself — every box is 10.03% tall and starts 27.54%
+  across. Changing the artwork means re-measuring it, not nudging numbers until
+  it looks right.
+- **Two seasons, and they are deliberately different.** The rank and the badges
+  come from the season that has been *played*; the print record is filed under
+  the season the card is *issued for*. They are the two constants at the top of
+  `trainer-cards.js`, and every database function takes both as parameters so
+  the pairing stays visible rather than buried.
+- **A card is the one place a full name and a birth year appear together.** It
+  is the player's own card, handed to the player. The roster that chooses who
+  gets one deliberately carries **no** birth years — only `trainer_card_batch()`
+  does, and only for the handful already chosen.
+- **Badges are the artwork used as a mask, filled with the stored
+  `tile_color`.** Nothing is sampled at print time; the colour was extracted at
+  upload. A third of a field box was the first size tried and it made every
+  badge vanish — the art is mostly thin limbs, and at 5.3pt a silhouette is four
+  stray pixels. 8pt is the floor at which one still reads as a shape.
+- **They ride the inside edge of the white circle, top to bottom.** The circle
+  is measured off the artwork rather than eyeballed: fitting its left edge gives
+  centre (815.8, 225.6) and radius 350.5 on the template, to within half a
+  pixel. `arcPlacement()` spreads them at a comfortable pitch until they would
+  reach the name box, then compresses and shrinks just enough that thirteen
+  still fit without touching. The run stops above the name box because
+  everything inside the circle below that line is also inside the box.
+- **Several stored colours are nearly white** — Friendship is `#fefec5`,
+  Community `#ffcbde` — and they now sit on a white circle. A hairline halo on
+  the list keeps those readable. It belongs on the list rather than the item, or
+  it outlines the square the mask was cut from instead of the silhouette.
+- **The sheet escapes `main` when printing.** `main` is capped at 46rem, which
+  is 552pt — narrower than the 612pt page it contains, so the browser quietly
+  shrank every card to about 94% to make it fit, which still looked plausible.
+  `.card-print main` drops the cap and the padding. Scoped to that class so the
+  loyalty and registration sheets keep theirs.
+- **The page box is a NAMED page**, `@page trainer-cards`. A bare `@page` with
+  no margin would strip the margins off every other printable page too.
+- **A url() inside a CSS custom property resolves against the stylesheet, not
+  the page.** `styles.css` is at the root, so a badge path written `../images/`
+  for an admin page resolved above the site and 404ed silently, leaving every
+  silhouette blank with nothing in the console. The path is made absolute in
+  page code before it is handed to CSS.
+- **A card counts as printed when the dialog opens**, because nothing tells a
+  page whether the print went ahead. A cancelled print still counts. The screen
+  says so, and anybody can be searched for and printed again.
+
 ---
 
 ## File layout
