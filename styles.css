@@ -2917,3 +2917,159 @@ h1.event-name + .event-when {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* --- Trainer Cards ------------------------------------------------------------ */
+/* Laid out at the real measurements of the template, taken from the supplied
+   PDF: a Letter page is 612 by 792pt, each card is 251.97 by 158.70pt, the
+   columns start at 35.74pt and 319.43pt, and the rows repeat every 181.3pt.
+   There is no PDF library here -- the browser's own print dialog is what turns
+   this into a file, so the numbers have to be right rather than approximate. */
+
+.card-sheet { display: none; }
+.card-sheet.is-ready { display: block; }
+
+.card-page {
+  width: 612pt;
+  height: 792pt;
+  box-sizing: border-box;
+  padding: 42pt 0 0 35.74pt;
+  display: grid;
+  grid-template-columns: repeat(2, 251.97pt);
+  grid-auto-rows: 158.7pt;
+  column-gap: 31.72pt;
+  row-gap: 22.6pt;
+  align-content: start;
+  background: #ffffff;
+}
+
+.tcard {
+  position: relative;
+  width: 251.97pt;
+  height: 158.7pt;
+  overflow: hidden;
+  /* styles.css sits at the root, so this resolves the same from admin/ as from
+     a public page -- the same reason the badge backdrop is a background. */
+  background-image: url("images/trainer-card-front.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  /* Without this a browser drops background images when printing, and every
+     card comes out as three empty boxes. */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* The block above the boxes, anchored at its BOTTOM. A player with thirteen
+   badges wraps to a second row, and anchoring this way grows that row upward
+   into empty artwork rather than down through the name box. */
+.tcard-head {
+  position: absolute;
+  left: 5.8%;
+  bottom: 44.2%;
+  width: 40%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.5pt;
+}
+
+/* The gold and the shadow are sampled from the labels already drawn on the
+   template -- #b99d2c is the exact colour of "Name:" -- so the two lines read
+   as part of the card rather than as something typed over it. Slightly larger
+   than those labels, which measure about 9.2pt on this card. */
+.tcard-league,
+.tcard-rank {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 11.5pt;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  color: #b99d2c;
+  text-shadow: 0.6pt 0.6pt 0 rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+}
+
+.tcard-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4pt;
+  margin: 0.5pt 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The artwork is used as a mask and filled with the colour already stored on
+   the badge row, so this is a silhouette rather than a shrunken picture -- at
+   this size the character art would be mud, and the colour is what makes a
+   badge recognisable.
+
+   8pt, not the third-of-a-field-box 5.3pt this was first built at. The badge
+   art is mostly sprawling limbs, and a third of a box turned every one of them
+   into four stray pixels -- not a small silhouette, an invisible one. 8pt is
+   about half a field box and is the smallest that still reads as a shape. */
+.tcard-badge {
+  width: 8pt;
+  height: 8pt;
+  background-color: var(--fill, #b99d2c);
+  -webkit-mask-image: var(--art);
+  mask-image: var(--art);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+/* The three boxes are drawn on the artwork, so these are placed against it.
+   Percentages measured off the 1013 by 638 template: every box is 10.03% tall
+   and starts 27.54% across. */
+.tcard-field {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 2.2%;
+  height: 10.03%;
+  font-family: var(--font-body);
+  font-size: 9pt;
+  font-weight: 600;
+  line-height: 1;
+  color: #1b1b1b;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.tcard-name  { left: 27.54%; top: 58.78%; width: 55.38%; }
+.tcard-pid   { left: 27.54%; top: 70.69%; width: 27.74%; }
+.tcard-birth { left: 27.54%; top: 82.60%; width: 15.60%; }
+
+/* A long name shrinks rather than being cut off: a card with half a surname on
+   it is worse than one with small type. */
+.tcard-name.is-long { font-size: 7.4pt; }
+.tcard-name.is-very-long { font-size: 6.2pt; }
+
+/* On screen the sheet is a preview, so it gets an edge to show where the paper
+   is. None of this survives into print. */
+@media screen {
+  .card-sheet.is-ready {
+    margin-top: 1.5rem;
+    overflow-x: auto;
+  }
+  .card-page {
+    border: 1px solid var(--line);
+    margin: 0 auto 1rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  }
+}
+
+@media print {
+  .card-sheet { display: block; }
+  .card-page {
+    border: none;
+    box-shadow: none;
+    margin: 0;
+    break-after: page;
+  }
+  .card-page:last-child { break-after: auto; }
+}

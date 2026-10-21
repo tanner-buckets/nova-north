@@ -1260,6 +1260,51 @@ page notes that official documents get moved, pointing at the rules hub as the
 way to find where one went rather than leaving a dead link looking like a fault
 in this site.
 
+### Trainer Card Creator
+
+`admin/trainer-cards.html` prints membership cards, eight to a Letter page.
+Build a list, check the ranks, print. A print stylesheet, not a generated file —
+the browser's own Save as PDF makes the PDF, and Margins must be set to None or
+the cards shift off the template.
+
+Three ways to build the list: **everyone active**, meaning attendance in the
+last three months — the same window consent uses everywhere else; **everyone
+without a card yet**; or search somebody up by Player ID or name. Each row
+carries a rank dropdown prefilled with what the season says, because a professor
+sometimes knows something the record does not.
+
+**The two seasons are deliberately different.** The rank and badges come from
+the season that has been played, while the print record is filed under the
+season the card is issued for — a card handed out at the start of 2027 shows
+what was earned in 2026. Both are constants at the top of `trainer-cards.js`,
+and `trainer_card_roster()`, `trainer_card_batch()` and
+`record_trainer_card_prints()` all take the season as a parameter so the pairing
+is visible in one place rather than baked into SQL.
+
+**A card is the only place a full name and a birth year appear together.** It is
+the player's own card, handed to the player. The roster that chooses who gets
+one carries no birth years at all; only the batch call does, and only for the
+players already chosen. That split is the point, not an accident of design.
+
+Measurements come from the supplied template PDF rather than from taste: a card
+is 251.97 by 158.70pt, columns start at 35.74pt and 319.43pt, rows repeat every
+181.3pt, and the three field boxes were measured off the artwork — each 10.03%
+tall, starting 27.54% across.
+
+Badges print as silhouettes: the artwork used as a CSS mask, filled with the
+`tile_color` already stored on the badge row. Two things were learned the hard
+way. A third of a field box, the size first asked for, made every badge
+disappear — the art is mostly thin limbs and 5.3pt leaves four stray pixels, so
+8pt is the floor. And a `url()` inside a CSS custom property resolves against
+the **stylesheet**, not the page, so a path written `../images/` for an admin
+page resolved above the site and 404ed in silence; the path is made absolute in
+page code first.
+
+**A card counts as printed the moment the dialog opens.** Nothing tells a page
+whether the print went ahead, so a cancelled print still counts and those
+players drop off the "without a card" button. They can be searched up and
+printed again, and the screen says so.
+
 ### Printable lists
 
 `admin/print.html`. Loyalty tiers to hand to the store, and pre-registration to
