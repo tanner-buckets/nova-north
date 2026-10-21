@@ -44,6 +44,7 @@ function fullName(row) {
 let professor = null;
 let roster = [];               // every player, no birth years
 let ranks = [];                // trainer_card_ranks, for the override dropdown
+let championRanks = new Set(); // the names that earn a star
 const chosen = new Map();      // player_id -> { ...roster row, rank_name }
 
 // --- The sheet ---------------------------------------------------------------
@@ -125,6 +126,22 @@ function badgeDot(badge, index, place) {
   });
 }
 
+// A Champion's star, on the white directly below the gold band and in from the
+// right edge. Drawn rather than typed: a star glyph is whatever shape the
+// reading font happens to have, and there are no web fonts here. The gold is
+// #b99d2c, sampled from the band itself, so it is the card's own gold and not
+// an approximation of it.
+const STAR_POINTS = '50.00,0.00 61.23,34.55 97.55,34.55 68.17,55.90 79.39,90.45 '
+  + '50.00,69.10 20.61,90.45 31.83,55.90 2.45,34.55 38.77,34.55';
+
+function championStar() {
+  return el('div', {
+    className: 'tcard-star',
+    html: '<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">'
+        + `<polygon points="${STAR_POINTS}" fill="#b99d2c"/></svg>`
+  });
+}
+
 function badgeRing(badges) {
   if (!badges.length) return null;
   const place = arcPlacement(badges.length);
@@ -151,6 +168,7 @@ function card(row) {
       el('p', { className: 'tcard-rank', text: shortRank(row.rank_name) })
     ]),
     badgeRing(badges),
+    championRanks.has(row.rank_name) ? championStar() : null,
     // The three values sit in the boxes already drawn on the artwork, so these
     // are placed against the template rather than laid out in a flow.
     el('span', { className: nameClass(name), text: name }),
@@ -414,9 +432,15 @@ async function start() {
 
   try {
     const rankResult = await supabase
-      .from('trainer_card_ranks').select('name, sort_order').order('sort_order');
+      .from('trainer_card_ranks')
+      .select('name, sort_order, requires_elite_four').order('sort_order');
     if (rankResult.error) throw rankResult.error;
     ranks = rankResult.data || [];
+    // Champion is the rank that needs the Elite 4 beaten, which is a column
+    // rather than a word. Matching on the name would break the star the day
+    // somebody rewords the ladder.
+    championRanks = new Set(
+      ranks.filter((r) => r.requires_elite_four).map((r) => r.name));
 
     await refreshRoster();
     draw();

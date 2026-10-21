@@ -3049,6 +3049,25 @@ h1.event-name + .event-when {
   mask-position: center;
 }
 
+/* A Champion's star: on the white, directly below the gold band, in from the
+   right edge. Measured off the artwork like everything else here -- the band's
+   lower edge sits at 30.6% of the card height at the sides, and the square
+   below it is clean white all the way across. Sized to match a field box,
+   which is 10.03% of the card height. */
+.tcard-star {
+  position: absolute;
+  right: 3.85%;
+  top: 32.92%;
+  height: 10.03%;
+  aspect-ratio: 1;
+}
+
+.tcard-star svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 /* The three boxes are drawn on the artwork, so these are placed against it.
    Percentages measured off the 1013 by 638 template: every box is 10.03% tall
    and starts 27.54% across. */
