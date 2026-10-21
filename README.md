@@ -1291,14 +1291,30 @@ is 251.97 by 158.70pt, columns start at 35.74pt and 319.43pt, rows repeat every
 181.3pt, and the three field boxes were measured off the artwork — each 10.03%
 tall, starting 27.54% across.
 
-Badges print as silhouettes: the artwork used as a CSS mask, filled with the
-`tile_color` already stored on the badge row. Two things were learned the hard
-way. A third of a field box, the size first asked for, made every badge
-disappear — the art is mostly thin limbs and 5.3pt leaves four stray pixels, so
-8pt is the floor. And a `url()` inside a CSS custom property resolves against
-the **stylesheet**, not the page, so a path written `../images/` for an admin
-page resolved above the site and 404ed in silence; the path is made absolute in
-page code first.
+Badges print as silhouettes riding the inside edge of the white circle, top to
+bottom: the artwork used as a CSS mask, filled with the `tile_color` already
+stored on the badge row. The circle is measured off the template rather than
+eyeballed — fitting its left edge gives centre (815.8, 225.6) and radius 350.5,
+to within half a pixel. `arcPlacement()` spreads them at a comfortable pitch
+until they would reach the name box, then compresses and shrinks just enough
+that all thirteen fit without touching.
+
+Several of the stored colours are nearly white — Friendship is `#fefec5`,
+Community `#ffcbde` — and they sit on a white circle, so each silhouette carries
+a hairline halo. It goes on the list rather than the item, or it outlines the
+square the mask was cut from instead of the shape.
+
+Three things were learned the hard way here. A third of a field box, the size
+first asked for, made every badge disappear — the art is mostly thin limbs and
+5.3pt leaves four stray pixels, so 8pt is the floor. A `url()` inside a CSS
+custom property resolves against the **stylesheet**, not the page, so a path
+written `../images/` for an admin page resolved above the site and 404ed in
+silence; the path is made absolute in page code first. And the sheet has to
+escape `main`, which is capped at 46rem — 552pt, narrower than the 612pt page it
+contains — or the browser shrinks every card to about 94% to make it fit, which
+still looks plausible on screen. `.card-print main` drops the cap in print, and
+the page box is a **named** `@page trainer-cards` so the other printable pages
+keep their margins.
 
 **A card counts as printed the moment the dialog opens.** Nothing tells a page
 whether the print went ahead, so a cancelled print still counts and those

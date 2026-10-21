@@ -61,13 +61,75 @@ function badgeArtHref(badge) {
   return new URL(badgeArtUrl(badge, '../'), document.baseURI).href;
 }
 
-function badgeDot(badge) {
+// --- Where a badge sits ------------------------------------------------------
+//
+// The silhouettes ride the inside edge of the white circle, from the top of the
+// card downward. The circle is measured off the artwork rather than guessed:
+// fitting its left edge gives centre (815.8, 225.6) and radius 350.5 on the
+// 1013 by 638 template, to within half a pixel. Converted to the printed card
+// at 251.97 by 158.70pt, that is:
+const CARD_W = 251.97;
+const CARD_H = 158.7;
+const RING = { cx: 202.92, cy: 56.12, r: 87.19 };   // points
+
+const BADGE_MAX = 8;        // the size they were approved at
+const PITCH_MAX = 10;       // the gap between two when there is room to spare
+
+// The run is bounded at both ends by something a badge must not touch: the top
+// edge of the card, and the top of the name box at 58.78%. Everything inside
+// the circle below that line is also inside the name box, so the arc stops
+// there rather than carrying on round.
+const NAME_TOP = CARD_H * 0.5878;
+
+function arcPlacement(count) {
+  const inset = BADGE_MAX / 2 + 2;         // keep the shape off the outline
+  const radius = RING.r - inset;
+
+  const topY = BADGE_MAX / 2 + 2;
+  const bottomY = NAME_TOP - BADGE_MAX / 2 - 2;
+
+  // Angles on the left half of the circle. 180 degrees is level with the
+  // centre, and the angle falls as y grows, so stepping down the card is
+  // stepping the angle down too.
+  const at = (y) => Math.PI - Math.asin(
+    Math.max(-1, Math.min(1, (y - RING.cy) / radius)));
+
+  const start = at(topY);
+  const span = start - at(bottomY);
+
+  if (count <= 1) return { radius, start, step: 0, size: BADGE_MAX };
+
+  // Spread at the comfortable pitch until they would run past the name box,
+  // then compress to fit and shrink just enough that they still do not touch.
+  // Thirteen is the case that forces this: the usable arc is about 86pt long
+  // and thirteen at full size want 104.
+  const step = Math.min(PITCH_MAX / radius, span / (count - 1));
+  const size = Math.min(BADGE_MAX, step * radius * 0.85);
+
+  return { radius, start, step, size };
+}
+
+function badgeDot(badge, index, place) {
+  const angle = place.start - place.step * index;
+  const x = RING.cx + place.radius * Math.cos(angle);
+  const y = RING.cy + place.radius * Math.sin(angle);
+
   return el('li', {
     className: 'tcard-badge',
     title: badge.name || '',
     style: `--art: url("${badgeArtHref(badge)}"); `
-         + `--fill: ${badge.tile_color || '#c9a227'}`
+         + `--fill: ${badge.tile_color || '#c9a227'}; `
+         + `--x: ${(x / CARD_W * 100).toFixed(3)}%; `
+         + `--y: ${(y / CARD_H * 100).toFixed(3)}%; `
+         + `--size: ${place.size.toFixed(2)}pt`
   });
+}
+
+function badgeRing(badges) {
+  if (!badges.length) return null;
+  const place = arcPlacement(badges.length);
+  return el('ul', { className: 'tcard-badges' },
+    badges.map((b, i) => badgeDot(b, i, place)));
 }
 
 // The name box holds about 24 characters at the ordinary size. Rather than
@@ -86,11 +148,9 @@ function card(row) {
   return el('div', { className: 'tcard' }, [
     el('div', { className: 'tcard-head' }, [
       el('p', { className: 'tcard-league', text: 'LoCo League' }),
-      el('p', { className: 'tcard-rank', text: shortRank(row.rank_name) }),
-      badges.length
-        ? el('ul', { className: 'tcard-badges' }, badges.map(badgeDot))
-        : null
+      el('p', { className: 'tcard-rank', text: shortRank(row.rank_name) })
     ]),
+    badgeRing(badges),
     // The three values sit in the boxes already drawn on the artwork, so these
     // are placed against the template rather than laid out in a flow.
     el('span', { className: nameClass(name), text: name }),
