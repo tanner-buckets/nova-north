@@ -1322,8 +1322,10 @@ still looks plausible on screen. `.card-print main` drops the cap in print, and
 the page box is a **named** `@page trainer-cards` so the other printable pages
 keep their margins.
 
-**A Champion carries a gold star**, on the white directly below the gold band
-and in from the right edge, sized to match a field box. It is an SVG polygon
+**A Champion carries a gold star**, on the white below the gold band and in from
+the right edge, a tenth taller than a field box and dropped by its own height so
+it clears the band. It carries the same shadow the artwork's own labels do, as a
+`drop-shadow` so it follows the polygon rather than the square. It is an SVG polygon
 rather than a star glyph, because there are no web fonts here and a glyph is
 whatever shape the reading font happens to carry; the gold is `#b99d2c`, sampled
 off the band. Which rank earns it comes from `requires_elite_four` on

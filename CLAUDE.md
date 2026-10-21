@@ -527,11 +527,14 @@ makes the file.
   loyalty and registration sheets keep theirs.
 - **The page box is a NAMED page**, `@page trainer-cards`. A bare `@page` with
   no margin would strip the margins off every other printable page too.
-- **A Champion gets a gold star**, on the white directly below the gold band and
-  in from the right edge, the same height as a field box. It is drawn as an SVG
-  polygon rather than typed as a star glyph: there are no web fonts here, so a
-  glyph would be whatever shape the reading font happens to carry. The gold is
-  `#b99d2c`, sampled from the band itself.
+- **A Champion gets a gold star**, on the white below the gold band and in from
+  the right edge, a tenth taller than a field box and dropped by its own height
+  so it sits clear of the band. It is drawn as an SVG polygon rather than typed
+  as a star glyph: there are no web fonts here, so a glyph would be whatever
+  shape the reading font happens to carry. The gold is `#b99d2c`, sampled from
+  the band itself, and it carries the same shadow the labels on the artwork do —
+  as a `drop-shadow`, which follows the polygon, rather than a `box-shadow`,
+  which would outline the square the star is drawn in.
 - **Champion is found from `requires_elite_four`, not from the word.** The flag
   is a column on `trainer_card_ranks`; matching the name would break the star
   the day somebody rewords the ladder.
