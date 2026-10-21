@@ -528,13 +528,17 @@ makes the file.
 - **The page box is a NAMED page**, `@page trainer-cards`. A bare `@page` with
   no margin would strip the margins off every other printable page too.
 - **A Champion gets a gold star**, on the white below the gold band and in from
-  the right edge, a tenth taller than a field box and dropped by its own height
-  so it sits clear of the band. It is drawn as an SVG polygon rather than typed
+  the right edge, about a fifth taller than a field box and dropped by its own
+  height so it sits clear of the band. It is drawn as an SVG polygon rather than typed
   as a star glyph: there are no web fonts here, so a glyph would be whatever
   shape the reading font happens to carry. The gold is `#b99d2c`, sampled from
-  the band itself, and it carries the same shadow the labels on the artwork do —
-  as a `drop-shadow`, which follows the polygon, rather than a `box-shadow`,
-  which would outline the square the star is drawn in.
+  the band itself. Its shadow is a `drop-shadow`, which follows the polygon,
+  rather than a `box-shadow`, which would outline the square the star is drawn
+  in — and it is **darker than the two text lines use**, because those sit on
+  the grey building while the star sits on white, where the same alpha washes
+  out. Sampling the artwork's own label shadow gives an average of (86, 83, 72);
+  0.65 black over white renders (89, 89, 89), which is that, measured rather
+  than guessed.
 - **Champion is found from `requires_elite_four`, not from the word.** The flag
   is a column on `trainer_card_ranks`; matching the name would break the star
   the day somebody rewords the ladder.
