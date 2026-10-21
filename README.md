@@ -1322,6 +1322,18 @@ still looks plausible on screen. `.card-print main` drops the cap in print, and
 the page box is a **named** `@page trainer-cards` so the other printable pages
 keep their margins.
 
+**A Champion carries a gold star**, on the white below the gold band and in from
+the right edge, about a fifth taller than a field box and dropped by its own
+height so it clears the band. Its shadow is a `drop-shadow`, so it follows the
+polygon rather than the square, and it is darker than the two text lines use —
+those sit on the grey building, the star sits on white, and the same alpha washes
+out there. The artwork's own label shadow averages (86, 83, 72); 0.65 black over
+white renders (89, 89, 89). It is an SVG polygon
+rather than a star glyph, because there are no web fonts here and a glyph is
+whatever shape the reading font happens to carry; the gold is `#b99d2c`, sampled
+off the band. Which rank earns it comes from `requires_elite_four` on
+`trainer_card_ranks` rather than from matching the word "Champion".
+
 **A card counts as printed the moment the dialog opens.** Nothing tells a page
 whether the print went ahead, so a cancelled print still counts and those
 players drop off the "without a card" button. They can be searched up and
