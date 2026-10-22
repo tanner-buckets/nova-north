@@ -432,6 +432,26 @@ is applied to the production database.** There is no confirmation step.
 
 ---
 
+## Chaos Cup
+
+`chaos-cup.html` explains what a Chaos Cup is and shows six example rules.
+Static HTML with no module and no database call, like the Resources page.
+
+- **The caveat is the loudest thing on the page**, directly under the lede and
+  before anything else. Somebody reading it is deciding what to bring, and the
+  honest answer to "what are the rules" is "not these ones" — every Chaos Cup
+  has its own set written for that day. A footnote at the bottom would be read
+  by nobody who needed it.
+- **Six examples, not the rulebook.** There are dozens, they change every event,
+  and a page that tried to list them all would be a page that goes out of date
+  and gets believed anyway.
+- **The rule text is the organiser's own**, from their Chaos Cup documents. It
+  is not lifted from anywhere else: the rule against copying from official
+  sources applies here as everywhere.
+- It is reached from League programs rather than the top nav. A Chaos Cup is an
+  event format rather than an ongoing programme, and the nav order was settled
+  separately.
+
 ## The league charter
 
 `charter.html` carries the mission and the values, taken from the charter draft.
@@ -706,6 +726,7 @@ prizes.html         prize wall catalog
 players.html        player lookup by Player ID
 gallery.html        approved photographs, and the form that sends one in
 charter.html        the mission and values, professor-only until the draft lands
+chaos-cup.html      what a Chaos Cup is, and example rules
 home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
 data/source/*.csv   spreadsheet exports used to seed reference tables
