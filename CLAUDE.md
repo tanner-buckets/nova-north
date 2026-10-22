@@ -445,6 +445,15 @@ Static HTML with no module and no database call, like the Resources page.
 - **Six examples, not the rulebook.** There are dozens, they change every event,
   and a page that tried to list them all would be a page that goes out of date
   and gets believed anyway.
+- **A Standard legal deck is the whole requirement**, and the page says so
+  twice: in the lede and in the first point of how a day runs. It is the one
+  question somebody has before coming.
+- **No two Chaos Cups work the same way**, and the page says that rather than
+  describing one of them as though it were the format. Rules may be swapped out
+  between rounds or built up across them; they may be drawn at random, put to a
+  vote, or chosen by the professors; a set may be themed to a holiday. The page
+  used to assert that rules never carry over, which was true of the one document
+  it was written from and not of the format.
 - **The rule text is the organiser's own**, from their Chaos Cup documents. It
   is not lifted from anywhere else: the rule against copying from official
   sources applies here as everywhere.
