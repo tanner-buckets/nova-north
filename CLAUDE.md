@@ -509,6 +509,14 @@ makes the file.
   upload. A third of a field box was the first size tried and it made every
   badge vanish — the art is mostly thin limbs, and at 5.3pt a silhouette is four
   stray pixels. 8pt is the floor at which one still reads as a shape.
+- **Nothing is printed inside a 9.52pt edge**, which is 6% of the card height
+  and the same inset the heading block uses, so the badge run starts level with
+  the two text lines. Cards are cut by hand from a sheet of eight, so the last
+  millimetre of any one of them is the least reliable part of it — the first
+  badge used to sit 6pt down, inside a guillotine's margin of error.
+- **The two lines read "League" and then the rank**, which is the stored name
+  split across them: ranks are stored as "League Ace Trainer". The card used to
+  say "LoCo League" above the stripped rank, which repeated the word.
 - **They ride the inside edge of the white circle, top to bottom.** The circle
   is measured off the artwork rather than eyeballed: fitting its left edge gives
   centre (815.8, 225.6) and radius 350.5 on the template, to within half a

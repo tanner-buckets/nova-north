@@ -30,9 +30,9 @@ const sheet = document.querySelector('#sheet');
 const BADGE_SEASON = 2026;
 const CARD_SEASON = 2027;
 
-// Ranks are stored as "League Ace Trainer". The card already says LoCo League
-// on the line above, so printing the stored name would read "LoCo League /
-// League Ace Trainer".
+// Ranks are stored as "League Ace Trainer", and the line above the rank says
+// "League", so the two read down the card as the stored name split across two
+// lines. Printing the stored name whole would repeat the word.
 function shortRank(name) {
   return (name || '').replace(/^League\s+/, '');
 }
@@ -76,6 +76,16 @@ const RING = { cx: 202.92, cy: 56.12, r: 87.19 };   // points
 const BADGE_MAX = 8;        // the size they were approved at
 const PITCH_MAX = 10;       // the gap between two when there is room to spare
 
+// A quiet edge all the way round. Nothing is printed inside it. Cards are cut
+// by hand from a sheet of eight, so the last millimetre of any one of them is
+// the least reliable part of the card -- the first badge used to sit 6pt from
+// the top, inside the margin of error of a guillotine.
+//
+// 6% of the card height, which is the same inset the heading block already uses
+// at the top left. Matching it rather than picking a second number means the
+// badge run and the two text lines start level with each other.
+const EDGE = CARD_H * 0.06;        // 9.52pt
+
 // The run is bounded at both ends by something a badge must not touch: the top
 // edge of the card, and the top of the name box at 58.78%. Everything inside
 // the circle below that line is also inside the name box, so the arc stops
@@ -86,7 +96,7 @@ function arcPlacement(count) {
   const inset = BADGE_MAX / 2 + 2;         // keep the shape off the outline
   const radius = RING.r - inset;
 
-  const topY = BADGE_MAX / 2 + 2;
+  const topY = EDGE + BADGE_MAX / 2;
   const bottomY = NAME_TOP - BADGE_MAX / 2 - 2;
 
   // Angles on the left half of the circle. 180 degrees is level with the
@@ -164,7 +174,7 @@ function card(row) {
 
   return el('div', { className: 'tcard' }, [
     el('div', { className: 'tcard-head' }, [
-      el('p', { className: 'tcard-league', text: 'LoCo League' }),
+      el('p', { className: 'tcard-league', text: 'League' }),
       el('p', { className: 'tcard-rank', text: shortRank(row.rank_name) })
     ]),
     badgeRing(badges),
