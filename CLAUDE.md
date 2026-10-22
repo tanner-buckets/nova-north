@@ -814,6 +814,22 @@ than skipping ahead.
 7. **Printable lists.** Loyalty tiers for the store, pre-registration for the
    desk. Print stylesheets, professor-only.
 
+The tools menu is **four collapsed sections**, not a list. Sixteen tools in one
+column had stopped being a menu and become something to read; grouped by what a
+professor came here to do, the page is four choices and everything else is one
+click away.
+
+**A queue that is waiting for a person carries a count**, on the tool card and
+on the section holding it. The second one is the point: collapsing a section
+hides what is inside it, and something waiting for attention has to survive
+that. The counts are head requests rather than rows — the number is the whole
+of what the page wants and the rows can be hundreds. A queue that fails to load
+gets **no badge rather than a zero**, because "nothing waiting" and "could not
+tell" are different and the second must not look like the first.
+
+The menu draws twice: once immediately with no badges, once when the counts
+land. The menu is the point and the badges are a bonus on top of it.
+
 `admin/attendance-history.html` reads all of it back: how many came each week,
 split by played, attended and age division, and who was there on any given day.
 **Total** — players plus everybody without a Player ID — leads the table, because

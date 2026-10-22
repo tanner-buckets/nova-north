@@ -3574,3 +3574,95 @@ h1.event-name + .event-when {
   margin: 0.5rem 0 0;
   font-size: 0.9rem;
 }
+
+/* --- The professor tools menu, in sections ------------------------------------- */
+/* Sixteen tools in one list had stopped being a menu. Four collapsed groups is
+   four choices; everything else is one click away. */
+.tool-section {
+  margin-bottom: 0.6rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tool-section > summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.2rem 0.6rem;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+.tool-section > summary::-webkit-details-marker { display: none; }
+
+.tool-section-name {
+  font-family: var(--font-head);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Full width on the second row, under both the name and the badge. */
+.tool-section-note {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.tool-section > summary:hover .tool-section-name,
+.tool-section > summary:focus-visible .tool-section-name { color: var(--gold); }
+
+.tool-section[open] > summary {
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
+/* A triangle that turns, drawn rather than a glyph so it is the same shape in
+   every font. */
+.tool-section > summary .tool-section-name::before {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-right: 0.5rem;
+  border-left: 6px solid var(--gold);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  transition: transform 0.15s ease;
+  vertical-align: 0.05em;
+}
+.tool-section[open] > summary .tool-section-name::before { transform: rotate(90deg); }
+
+.tool-section .tool-list { margin: 0; padding: 0.7rem; }
+
+.tool-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* The count of things waiting. A circle because it has to read as a number
+   needing attention at a glance, from a collapsed row, on a phone. */
+.queue-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.45rem;
+  height: 1.45rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.tool-waiting {
+  margin: 0 0 0.8rem;
+  font-weight: 600;
+  color: var(--danger);
+}
