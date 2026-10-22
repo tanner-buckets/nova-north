@@ -166,6 +166,16 @@ way to tell from the file who is in it. A person decides, every time.
   `attendance`, `loyalty_results`, or `consent_log`.
 - Every public-facing surface gets its display string from `display_label()`.
   Never assemble a name from columns in page code.
+- **Never decide whether somebody is public by reading `show_player_id`.** The
+  flag is three-valued and it is only half the rule: null means "use the
+  age-based default", which for an adult is **yes**, and visibility also lapses
+  without attendance in the last three months. `id_visible()` is the only thing
+  that knows, and `public_players` is that function applied to everybody — a
+  professor screen asking "is this player listed" should test membership of that
+  view. The players page read the flag directly and got it wrong both ways: every
+  consenting adult who had never been toggled by hand showed as "not public"
+  while appearing correctly on the public list, and a recorded consent whose
+  attendance had gone stale showed as public when it was no longer in force.
 
 When in doubt about whether something can be shown publicly: it cannot.
 

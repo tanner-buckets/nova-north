@@ -244,19 +244,36 @@ function playerButton(id, label, extra) {
 }
 
 async function professorList() {
-  const { data, error } = await supabase
-    .from('players')
-    .select('player_id, first_name, last_name, show_player_id, show_name')
-    .order('first_name');
-  if (error) throw error;
+  // Two reads, because neither answers on its own. players has everybody;
+  // public_players is who is actually listed.
+  //
+  // This used to mark the tag from `show_player_id === true` alone, and that
+  // flag is three-valued. Null means "use the age-based default", which for an
+  // adult is YES -- so every consenting adult who had never been toggled by
+  // hand read as "not public" here while appearing correctly on the public
+  // list. It was wrong in the other direction too, and more quietly: an
+  // explicit true whose attendance has gone stale is no longer in force, and
+  // this called that one public.
+  //
+  // id_visible() is the only thing that knows the answer, and public_players
+  // is that function applied to everybody. The view is security_invoker =
+  // false, so it returns the same rows for a professor as for anybody else --
+  // which is exactly the property needed here: the tag should say what a
+  // player would see, not what this session can see.
+  const [all, listed] = await Promise.all([
+    supabase.from('players')
+      .select('player_id, first_name, last_name')
+      .order('first_name'),
+    supabase.from('public_players').select('player_id')
+  ]);
+  if (all.error || listed.error) throw all.error || listed.error;
 
-  const rows = (data || []).map((p) => ({
+  const publicIds = new Set((listed.data || []).map((p) => p.player_id));
+
+  const rows = (all.data || []).map((p) => ({
     player_id: p.player_id,
     name: `${p.first_name} ${p.last_name}`.trim(),
-    // Whether they are actually public also depends on recent attendance, which
-    // this list does not ask about per player. The flag alone is enough to mark
-    // the ones nobody has been asked about; the card says what is truly in force.
-    recorded: p.show_player_id === true
+    listed: publicIds.has(p.player_id)
   }));
 
   const listEl = el('ul', { className: 'player-list' });
@@ -279,7 +296,7 @@ async function professorList() {
     listEl.replaceChildren(...shown.map((r) => playerButton(
       r.player_id,
       r.name,
-      r.recorded ? null : el('span', { className: 'tag tag-hidden', text: 'not public' })
+      r.listed ? null : el('span', { className: 'tag tag-hidden', text: 'not public' })
     )));
 
     return shown;
