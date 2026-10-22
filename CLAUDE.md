@@ -556,8 +556,26 @@ makes the file.
   silhouette blank with nothing in the console. The path is made absolute in
   page code before it is handed to CSS.
 - **A card counts as printed when the dialog opens**, because nothing tells a
-  page whether the print went ahead. A cancelled print still counts. The screen
-  says so, and anybody can be searched for and printed again.
+  page whether the print went ahead. Assuming the opposite is worse: it hands
+  out duplicates. The screen says so plainly.
+- **The undo is the other half of that bargain.** "The cards did not print"
+  voids the run that was just made, and everybody on it goes back on the list.
+  It appears only once cards exist and withdraws the moment the list changes —
+  an undo offer that outlives the run it belongs to is a trap.
+- **A print run has an id.** `trainer_card_prints.batch_id` is one uuid per
+  press of Create the cards, and the undo names it. Voiding by player and season
+  instead would catch whatever is newest for those players, which is usually the
+  right row and occasionally is not: two professors on one league day, or a
+  reprint for somebody who was missed.
+- **Voiding is a function, not a grant.** `void_trainer_card_batch()` is
+  `SECURITY DEFINER` and touches three columns of one run. An `UPDATE` grant on
+  the table would let any signed-in professor write any column of any row from a
+  browser.
+- **Rows are voided, never removed**, here as everywhere else. The press of the
+  button did happen; it just did not produce a card.
+- **The counts on the two source buttons are live.** They were drawn once at
+  startup, which left them stale from the first print onward — the figure on
+  "no card yet" is the whole reason that button exists.
 
 ---
 

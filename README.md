@@ -1342,9 +1342,19 @@ off the band. Which rank earns it comes from `requires_elite_four` on
 `trainer_card_ranks` rather than from matching the word "Champion".
 
 **A card counts as printed the moment the dialog opens.** Nothing tells a page
-whether the print went ahead, so a cancelled print still counts and those
-players drop off the "without a card" button. They can be searched up and
-printed again, and the screen says so.
+whether the print went ahead, and assuming it did not is worse — that hands out
+duplicates. The screen says so plainly, and **"The cards did not print"** is the
+way back: it voids the run just made and puts everyone on it back on the list.
+The button appears only once cards exist and withdraws as soon as the list
+changes, so it never refers to a run the professor has moved on from.
+
+A run has an id — `trainer_card_prints.batch_id`, one uuid per press of Create
+the cards — and the undo names it. Voiding by player and season instead would
+catch whatever is newest for those players, which is usually right and
+occasionally not: two professors on one league day, or a reprint for somebody
+who was missed. The rows are voided rather than removed, and voiding is a
+`SECURITY DEFINER` function rather than an `UPDATE` grant, which would let any
+signed-in professor write any column of any row from a browser.
 
 ### Printable lists
 

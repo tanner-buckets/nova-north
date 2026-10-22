@@ -254,6 +254,16 @@ function chosenRow(row) {
 let chosenHost = null;
 let goButton = null;
 let goNote = null;
+let undoWrap = null;
+let undoButton = null;
+let activeButton = null;
+let freshButton = null;
+
+// The print run from the last press of Create the cards, so it can be undone
+// without guessing which rows it was. Cleared once it has been undone, and
+// whenever the list changes -- an undo button still sitting there after the
+// list has moved on would undo something the professor is no longer looking at.
+let lastBatch = null;
 
 function drawChosen() {
   const rows = [...chosen.values()];
@@ -283,6 +293,15 @@ function drawChosen() {
 
   goButton.disabled = rows.length === 0;
   if (!rows.length) status(goNote, '');
+  forgetBatch();
+}
+
+// The undo offer belongs to one print run and one list. Change either and it
+// stops being an undo and starts being a trap.
+function forgetBatch() {
+  lastBatch = null;
+  if (undoWrap) undoWrap.hidden = true;
+  if (undoButton) undoButton.disabled = false;
 }
 
 // --- Printing ----------------------------------------------------------------
@@ -318,12 +337,22 @@ async function createCards() {
     await artReady(art);
 
     // Logged here rather than after the dialog, because nothing tells this page
-    // whether the print went ahead. Said out loud below.
-    const { error: logError } = await supabase.rpc('record_trainer_card_prints', {
-      p_card_season: CARD_SEASON,
-      p_player_ids: ids
-    });
-    if (logError) console.warn('The print was not recorded:', logError.message);
+    // whether the print went ahead. The undo below is the other half of that
+    // bargain: assume printed, and offer a way back when it was not.
+    const { data: batch, error: logError } = await supabase
+      .rpc('record_trainer_card_prints', {
+        p_card_season: CARD_SEASON,
+        p_player_ids: ids
+      });
+    if (logError) {
+      console.warn('The print was not recorded:', logError.message);
+    } else {
+      lastBatch = batch;
+      // Re-enabled as well as shown: it was disabled by the last undo, and a
+      // new run deserves its own.
+      undoButton.disabled = false;
+      undoWrap.hidden = false;
+    }
 
     goButton.disabled = false;
     status(goNote, `${rows.length} card${rows.length === 1 ? '' : 's'} ready, `
@@ -336,6 +365,40 @@ async function createCards() {
     console.error(err);
     goButton.disabled = false;
     status(goNote, `The cards could not be built: ${err.message || 'unknown error'}.`,
+      'error');
+  }
+}
+
+// Everyone on the run goes back on the list. The rows are voided rather than
+// removed -- the press of the button did happen, it just did not produce a
+// card -- so what this undoes is the claim that somebody is holding one.
+async function undoPrint() {
+  if (!lastBatch) return;
+
+  undoButton.disabled = true;
+  status(goNote, 'Putting them back on the list.');
+
+  try {
+    const { data, error } = await supabase.rpc('void_trainer_card_batch', {
+      p_batch_id: lastBatch,
+      p_reason: 'The cards were not printed.'
+    });
+    if (error) throw error;
+
+    const n = Number(data) || 0;
+    forgetBatch();
+    await refreshRoster();
+    drawChosen();
+
+    status(goNote, n
+      ? `${n} card${n === 1 ? '' : 's'} put back. Nobody on that run counts as `
+        + 'holding one, so they are on the button above again.'
+      : 'That run had already been put back. Nothing changed.', 'good');
+  } catch (err) {
+    console.error(err);
+    undoButton.disabled = false;
+    status(goNote, 'They could not be put back: '
+      + `${err.message || 'unknown error'}. The cards still count as printed.`,
       'error');
   }
 }
@@ -356,6 +419,7 @@ async function refreshRoster() {
     const picked = chosen.get(row.player_id);
     if (picked) Object.assign(picked, row, { rank_name: picked.rank_name });
   }
+  refreshCounts();
   return roster;
 }
 
@@ -365,16 +429,28 @@ function countsNote() {
   return { active, fresh };
 }
 
+// The two numbers on those buttons are the whole point of them, and printing
+// moves both. They were drawn once at startup, so they went stale the moment
+// anybody pressed Create the cards and stayed stale through an undo.
+function refreshCounts() {
+  if (!activeButton) return;
+  const { active, fresh } = countsNote();
+  activeButton.textContent = `Everyone active (${active.length})`;
+  freshButton.textContent = `No ${CARD_SEASON} card yet (${fresh.length})`;
+}
+
 function draw() {
   const { active, fresh } = countsNote();
 
-  const activeButton = el('button', { type: 'button', className: 'button button-quiet',
+  activeButton = el('button', { type: 'button', className: 'button button-quiet',
     text: `Everyone active (${active.length})` });
-  activeButton.addEventListener('click', () => addMany(active));
+  // The roster is re-read on every click rather than closed over, or the
+  // button would keep handing out the list as it was when the page loaded.
+  activeButton.addEventListener('click', () => addMany(countsNote().active));
 
-  const freshButton = el('button', { type: 'button', className: 'button button-quiet',
+  freshButton = el('button', { type: 'button', className: 'button button-quiet',
     text: `No ${CARD_SEASON} card yet (${fresh.length})` });
-  freshButton.addEventListener('click', () => addMany(fresh));
+  freshButton.addEventListener('click', () => addMany(countsNote().fresh));
 
   const clear = el('button', { type: 'button', className: 'link-button',
     text: 'Start the list again' });
@@ -400,6 +476,22 @@ function draw() {
     text: 'Create the cards' });
   goButton.addEventListener('click', createCards);
 
+  // Hidden until there is a run to undo. It appears under the status line the
+  // moment cards are made and goes again as soon as the list changes, so it
+  // only ever refers to the run the professor is looking at.
+  undoButton = el('button', { type: 'button', className: 'button button-quiet',
+    text: 'The cards did not print' });
+  undoButton.addEventListener('click', undoPrint);
+
+  undoWrap = el('div', { className: 'undo-print' }, [
+    el('p', {}, [undoButton]),
+    el('p', { className: 'field-help',
+      text: 'Press this if the print was cancelled, the printer jammed, or the '
+          + 'cards came out wrong. Everyone on that run goes back onto the '
+          + 'button above. The record that a print was attempted is kept.' })
+  ]);
+  undoWrap.hidden = true;
+
   app.replaceChildren(
     el('section', { className: 'panel' }, [
       el('h2', { text: 'Who gets a card' }),
@@ -420,10 +512,10 @@ function draw() {
       el('p', { className: 'button-row' }, [goButton, clear]),
       el('p', { className: 'field-help',
         text: 'A card is counted as printed the moment the dialog opens, because '
-            + 'nothing tells this page whether you went through with it. Cancel '
-            + 'the dialog and those players still drop off the button above — '
-            + 'search for them and print again.' }),
-      goNote
+            + 'nothing tells this page whether you went through with it. If it '
+            + 'did not print, say so below and everyone goes back on the list.' }),
+      goNote,
+      undoWrap
     ])
   );
 

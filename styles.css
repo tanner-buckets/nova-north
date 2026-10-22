@@ -2918,6 +2918,17 @@ h1.event-name + .event-when {
   font-variant-numeric: tabular-nums;
 }
 
+/* The undo offer, set apart from the create button so the two do not read as a
+   pair of equal choices. It is hidden until there is a run to undo. */
+.undo-print {
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+}
+
+.undo-print p { margin: 0 0 0.4rem; }
+.undo-print p:last-child { margin-bottom: 0; }
+
 /* --- Trainer Cards ------------------------------------------------------------ */
 /* Laid out at the real measurements of the template, taken from the supplied
    PDF: a Letter page is 612 by 792pt, each card is 251.97 by 158.70pt, the
