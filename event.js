@@ -96,6 +96,13 @@ function detail(event, counts, { onChange, heading, tag = 'div' }) {
         ])
       : null,
     el('ul', { className: 'badges' }, badges),
+    // Same link the schedule carries. This is the page a posted link lands on,
+    // so it is the one card somebody deciding whether to come will see.
+    /chaos\s*cup/i.test(event.name || '')
+      ? el('p', { className: 'event-explainer' }, [
+          el('a', { href: 'chaos-cup.html', text: 'What is a Chaos Cup?' })
+        ])
+      : null,
     event.description ? el('p', { text: event.description }) : null,
     el('p', { className: 'event-fee' }, [
       el('span', { text: 'Entry: ' }),

@@ -469,6 +469,16 @@ Static HTML with no module and no database call, like the Resources page.
   honest answer to "what are the rules" is "not these ones" — every Chaos Cup
   has its own set written for that day. A footnote at the bottom would be read
   by nobody who needed it.
+- **The tone is part of the format.** The page says a Chaos Cup is meant to be
+  silly, and that the answer to a confusing rule is to work it out with your
+  opponent and play it the way both of you find most fun. It deliberately does
+  not say "ask a judge if you are confused" — that is the right instruction for
+  a League Cup and the wrong one here.
+- **An event named Chaos Cup links to this page**, from the schedule and from
+  its own event page. Matched on the name rather than a column: there is no
+  event type for it, the events are already named that, and a new type would
+  only light up on events typed again from scratch. A Chaos Cup called something
+  else entirely wants a real flag on the event, not a cleverer match.
 - **Six examples, not the rulebook.** There are dozens, they change every event,
   and a page that tried to list them all would be a page that goes out of date
   and gets believed anyway.

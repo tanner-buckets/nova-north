@@ -80,6 +80,18 @@ function eventCard(event, counts) {
 
   body.push(...registrationBlock(event, counts, { onChange: refreshCounts }));
 
+  // A Chaos Cup needs explaining before somebody decides whether to come, and
+  // the explanation is a whole page. Matched on the name rather than a column:
+  // there is no event type for it, these events are already named "Chaos Cup",
+  // and a new type would only light up on events typed again from scratch. If
+  // that ever becomes awkward -- a Chaos Cup called something else entirely --
+  // it wants a real flag on the event rather than a cleverer match here.
+  if (/chaos\s*cup/i.test(event.name || '')) {
+    body.push(el('p', { className: 'event-explainer' }, [
+      el('a', { href: 'chaos-cup.html', text: 'What is a Chaos Cup?' })
+    ]));
+  }
+
   // An event that takes registration gets a page of its own, so a professor has
   // something to post that is this event and not the whole schedule. Only where
   // registration is open: a link to a page saying "just turn up" is a link

@@ -3567,3 +3567,10 @@ h1.event-name + .event-when {
   align-items: center;
   gap: 0.6rem;
 }
+
+/* A link out of an event card to the page that explains it. Quieter than the
+   permalink below it: that one is an action, this one is background. */
+.event-explainer {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
