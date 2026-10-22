@@ -1297,6 +1297,13 @@ is 251.97 by 158.70pt, columns start at 35.74pt and 319.43pt, rows repeat every
 181.3pt, and the three field boxes were measured off the artwork — each 10.03%
 tall, starting 27.54% across.
 
+Nothing is printed inside a **9.52pt edge** — 6% of the card height, the same
+inset the heading block uses, so the badge run starts level with the two text
+lines. Cards are cut by hand from a sheet of eight, so the last millimetre of
+any one of them is the least reliable part of it. The two lines themselves read
+"League" and then the rank, which is the stored name ("League Ace Trainer")
+split across them.
+
 Badges print as silhouettes riding the inside edge of the white circle, top to
 bottom: the artwork used as a CSS mask, filled with the `tile_color` already
 stored on the badge row. The circle is measured off the template rather than
