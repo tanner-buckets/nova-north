@@ -432,6 +432,33 @@ is applied to the production database.** There is no confirmation step.
 
 ---
 
+## Rentable resources
+
+The section at the foot of `league_programs.html`, filled by `rentals.js`, and
+`admin/rentals.html` behind it. Four tables, all of them public: there is no
+personal data in a catalogue of what is on a shelf.
+
+- **Status is not a tag.** `rental_decks.status` is a column with a check,
+  because exactly one of *current* and *needs updating* is true at a time and a
+  deck wearing both would tell a player two different things. Everything else is
+  a tag, because a deck can be several of those at once.
+- **The tag vocabulary is a table, not an enum.** The point is that a professor
+  adds one without a migration. Tags retire rather than delete, so a deck that
+  wore one keeps its history.
+- **Both formats always render**, even empty. A missing Standard list and an
+  empty one look identical on a page and mean different things.
+- **`claimed_note` is the duplicate guard**, and it is public for that reason:
+  somebody about to spend money on cards needs to see that a bounty is spoken
+  for *before* they do, not in a professor's notes.
+- **Decks and bounties retire, never delete**, like every other reference row
+  here.
+- **Donating a deck has earning actions** — 10 points, or 20 from the bounty
+  list. They are rows in `earning_actions` rather than a number written into
+  copy, so the points screen can actually award what the page promises and a
+  professor can override the amount like any other.
+- The shelf comes from `rental_deck_shelf()` so tags arrive on the deck rather
+  than as rows to regroup; a list of decks should not cost one request per deck.
+
 ## Chaos Cup
 
 `chaos-cup.html` explains what a Chaos Cup is and shows six example rules.
@@ -736,6 +763,7 @@ players.html        player lookup by Player ID
 gallery.html        approved photographs, and the form that sends one in
 charter.html        the mission and values, professor-only until the draft lands
 chaos-cup.html      what a Chaos Cup is, and example rules
+rentals.js          the rental shelf and bounty list on the programs page
 home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
 data/source/*.csv   spreadsheet exports used to seed reference tables

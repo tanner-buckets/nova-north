@@ -77,6 +77,8 @@ const TOOLS = [
     note: 'Add a player, or correct a name or Player ID.' },
   { href: 'events.html', name: 'Events',
     note: 'Create and edit events, set what they cost, and decide which take pre-registration.' },
+  { href: 'rentals.html', name: 'Rental decks',
+    note: 'Decks players can borrow, the bounty list of ones we want built, and the tags a deck can wear. All public.' },
   { href: 'prizes.html', name: 'Prize wall and earning',
     note: 'What points buy and what earns them. Rows are retired, never deleted.' },
   { href: 'reference.html', name: 'Reference data',

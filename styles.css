@@ -3463,3 +3463,107 @@ h1.event-name + .event-when {
   font-size: 0.92rem;
   line-height: 1.5;
 }
+
+/* --- Rental decks -------------------------------------------------------------- */
+/* Two tag variants the shelf needs. tag-good is the one a player scans for --
+   "is this deck current" is the question they have before any other -- so it
+   wears the action colour, while an ordinary descriptive tag stays quiet. */
+.tag-good {
+  background: var(--gold);
+  color: var(--card);
+}
+
+.tag-soft {
+  background: var(--paper);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.bounty-reward {
+  margin: 0 0 1rem;
+  padding-left: 1.1rem;
+}
+.bounty-reward li { margin-bottom: 0.25rem; }
+
+.rental-format { margin: 0 0 1.2rem; }
+.rental-format h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.rental-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rental-deck {
+  padding: 0.6rem 0.8rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold-line);
+  border-radius: 0 8px 8px 0;
+}
+
+/* Name and chips on one line, wrapping together rather than the chips sliding
+   under the name one at a time. */
+.rental-deck-head {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+
+.rental-deck-name { font-weight: 700; }
+
+.rental-deck-note {
+  margin: 0.3rem 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.rental-deck p + p { margin-top: 0.3rem; }
+
+/* --- The professor's rental screen --------------------------------------------- */
+.rental-edit .field { margin-bottom: 0.4rem; }
+.rental-edit .field-help { margin: 0 0 0.7rem; }
+
+.field-label-ish {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.tag-choices {
+  margin: 0 0 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+}
+.tag-choices .field-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tag-admin-list {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.tag-admin-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
