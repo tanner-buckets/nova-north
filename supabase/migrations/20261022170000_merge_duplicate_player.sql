@@ -1,23 +1,27 @@
--- Zane D exists twice. 6325247 is the right one.
+-- Zane D exists twice. 6325247 is the right one; 63252467 is the duplicate.
+--
+-- An extra digit on the end, which is how it happened and why the two ids look
+-- so alike. Both are named here rather than searched for: an id is exact, and
+-- a migration that went looking for "the other Zane D" would be guessing at a
+-- real person's records.
 --
 -- A duplicate row is the same human entered twice, so this MERGES rather than
--- deletes: a Sunday's attendance or a prize point filed under the wrong id
+-- deletes. A Sunday's attendance or a prize point filed under the wrong id
 -- belongs to that person and should move, not vanish. A plain delete would
--- either fail on a foreign key or quietly take history with it.
+-- either fail on a foreign key or quietly take the history with it.
 --
--- IT FINDS THE DUPLICATE ITSELF, by name, because the id was never written
--- down anywhere this file could read. That makes the matching the risky part,
--- so it is deliberately timid:
+-- Guarded three ways, all of which no-op rather than raise. Six other
+-- migrations ride in on the same push and a failed deploy is a worse outcome
+-- than a duplicate surviving a day longer:
 --
---   * exactly one other Zane D   -> merge it
---   * none                       -> do nothing, say so
---   * more than one              -> do NOTHING and say so loudly
+--   * the keeper has to exist
+--   * the duplicate has to exist -- if it is already gone this has already run
+--   * the duplicate has to still look like Zane D, so a mistyped id in this
+--     file cannot merge away somebody else's records
 --
--- The last case does not raise. Five other migrations ride in on the same push
--- and a failed deploy would be a worse outcome than a duplicate surviving one
--- more day. That is a trade: if the notices are not read, a no-op looks exactly
--- like a success. VERIFY AFTER MERGING -- look up Zane D on the players screen
--- and confirm there is one of him.
+-- The cost of not raising is that an unread notice makes a no-op look like a
+-- success. VERIFY AFTER MERGING: look up Zane D on the players screen and
+-- confirm there is one of him, with his attendance and points intact.
 --
 -- Where a move would collide -- the same badge twice, two attendance rows for
 -- one day -- the duplicate's copy is dropped, because the keeper already has
@@ -26,8 +30,8 @@
 do $merge$
 declare
   v_keep text := '6325247';
-  v_dupe text;
-  v_count integer;
+  v_dupe text := '63252467';
+  v_name text;
   v_moved integer;
 begin
   if not exists (select 1 from public.players where player_id = v_keep) then
@@ -35,25 +39,25 @@ begin
     return;
   end if;
 
-  select count(*), min(player_id) into v_count, v_dupe
+  select btrim(coalesce(first_name, '') || ' ' || coalesce(last_name, ''))
+    into v_name
   from public.players
-  where player_id <> v_keep
-    and first_name ilike 'zane'
-    and last_name ilike 'd%';
+  where player_id = v_dupe;
 
-  if v_count = 0 then
-    raise notice 'MERGE SKIPPED: no second Zane D found. Nothing to do.';
+  if v_name is null then
+    raise notice 'MERGE SKIPPED: % is not in this database. Already merged?', v_dupe;
     return;
   end if;
 
-  if v_count > 1 then
-    raise notice 'MERGE SKIPPED: % players match Zane D besides %. '
-      'Refusing to guess which one is the duplicate -- do it by hand.',
-      v_count, v_keep;
+  -- The id is exact, so this is a seatbelt rather than a search: if 63252467
+  -- turns out to be somebody else entirely, stop before touching their records.
+  if v_name not ilike 'zane%' then
+    raise notice 'MERGE SKIPPED: % is "%", which is not Zane D. '
+      'Refusing to merge somebody else.', v_dupe, v_name;
     return;
   end if;
 
-  raise notice 'Merging % into %.', v_dupe, v_keep;
+  raise notice 'Merging % ("%") into %.', v_dupe, v_name, v_keep;
 
   -- One attendance row per player per day is a unique constraint, so a day the
   -- keeper is already recorded for cannot take a second.
@@ -74,8 +78,9 @@ begin
   get diagnostics v_moved = row_count;
   raise notice '  badges moved: %', v_moved;
 
-  -- The ledger is append only and every row is its own transaction, so these
-  -- all move: nothing here can collide and nothing is recalculated.
+  -- The ledger is append only and every row stands alone, so these all move:
+  -- nothing here can collide and no total is recalculated, because there is no
+  -- stored total to recalculate.
   update public.point_ledger set player_id = v_keep where player_id = v_dupe;
   get diagnostics v_moved = row_count;
   raise notice '  ledger rows moved: %', v_moved;
@@ -103,7 +108,7 @@ begin
   raise notice '  trainer card prints moved: %', v_moved;
 
   -- One pending request per player is a partial unique index, so the keeper's
-  -- own pending request wins if both have one.
+  -- own pending request wins if both happen to have one.
   delete from public.visibility_requests r
    where r.player_id = v_dupe
      and r.status = 'pending'
