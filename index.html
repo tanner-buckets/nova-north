@@ -24,17 +24,17 @@
         </div>
       </div>
       <p class="masthead-meta">
-        <span>Sundays, 2:30 PM</span>
-        <span>Sign-in opens 2:00 PM</span>
+        <span>Sundays, 2:00 PM</span>
         <span>21140 Ashburn Crossing Dr #110, Ashburn</span>
       </p>
       <nav class="masthead-nav" aria-label="Main">
         <ul>
             <li><a href="index.html" aria-current="page">Home</a></li>
             <li><a href="schedule.html">Schedule</a></li>
+            <li class="nav-prof"><a href="charter.html">League charter</a></li>
             <li><a href="league_programs.html">League programs</a></li>
-            <li><a href="players.html">Players</a></li>
             <li><a href="gallery.html">Gallery</a></li>
+            <li><a href="players.html">Players</a></li>
         </ul>
       </nav>
     </header>
@@ -47,6 +47,15 @@
         Come to play, come to learn, come to trade.
       </p>
 
+      <!-- After the welcome line and before the detail: a first-time visitor
+           gets told what this is, then what is on. A heading rather than a
+           bare box so it is reachable by heading navigation. -->
+      <section class="upnext" id="up-next" aria-labelledby="up-next-heading"
+               aria-busy="true">
+        <h2 id="up-next-heading" class="upnext-title">What is on next</h2>
+        <p class="upnext-note">Checking the calendar.</p>
+      </section>
+
       <p>
         Most weeks that means the Pokémon Trading Card Game. We also host other
         Play! Pokémon competitive events, including Pokémon Champions VGC and
@@ -58,8 +67,8 @@
 
         <div class="meets-split">
           <div class="meets-details">
-            <p class="meets-when">Sundays at 2:30 PM</p>
-            <p class="meets-deadline">Sign-in opens at 2:00 PM. Arrive before 2:30 to play.</p>
+            <p class="meets-when">Sundays at 2:00 PM</p>
+            <p class="meets-deadline">Registration opens at 2:00 PM and the event begins at 2:30 PM.</p>
             <address class="meets-where">
               <strong>Continental Cards Tournament Location</strong><br>
               21140 Ashburn Crossing Dr #110<br>
@@ -178,6 +187,7 @@
              alt="Play! Pokémon" loading="lazy" decoding="async">
       </p>
     </footer>
+    <script type="module" src="home-events.js"></script>
     <script type="module">
       import { mountProfessorBar } from './auth.js';
       mountProfessorBar({ tdf: true });

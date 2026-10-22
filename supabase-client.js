@@ -40,6 +40,20 @@ export function formatEventTime(startsAt) {
   return TIME_FORMAT.format(new Date(startsAt));
 }
 
+// When to turn up. The large figure on every public card shows this rather than
+// starts_at: the start time was accurate and still read as "be there at half
+// past", because the big number is the one a reader takes away, and half past
+// is after registration has closed.
+//
+// starts_at is the fallback and not a second meaning -- an event with no desk
+// time recorded has only the one time to show.
+//
+// Display only. starts_at remains what the registration cutoff, the division
+// calculation and the drop screen key on.
+export function arriveAt(event) {
+  return event.registration_opens_at || event.starts_at;
+}
+
 // A YYYY-MM-DD key in league time, for grouping. Using the visitor's day would
 // slide an 11:00 AM event onto a different date for someone reading abroad.
 const DAY_KEY_FORMAT = new Intl.DateTimeFormat('en-CA', {

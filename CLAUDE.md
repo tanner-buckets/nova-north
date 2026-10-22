@@ -18,9 +18,10 @@ Every page carries the strapline "A Play! Pokémon league at Continental Cards,
 Ashburn" under the name, so a visitor landing on any page knows what and where
 this is.
 
-League plays Sundays at 2:30 PM and sign-in opens at 2:00 PM, at
+Registration opens Sundays at 2:00 PM and play begins at 2:30 PM, at
 Continental Cards Tournament Location, 21140 Ashburn Crossing Dr #110, Ashburn,
-VA 20147.
+VA 20147. **2:00 is the time the site leads with**, everywhere a single time is
+shown: it is the one a player needs to act on.
 
 Many players are children. Privacy rules in this file are not negotiable.
 
@@ -85,9 +86,25 @@ If a task seems to need a framework or a build step, stop and ask. Do not add on
 - Full last name
 - Birth year, or any date of birth
 - Age division (Junior / Senior / Master)
-- Contact fields (Discord handle, email)
 - Professor notes
 - Pre-registration lists — who registered for an event is never public
+
+**Contact used to be on that list and no longer is.** A player may now ask for
+their Discord handle to be published, and a professor may grant it. This was a
+deliberate change, made knowingly. What keeps it safe is the shape of it, so do
+not loosen any of these:
+
+- `show_contact` defaults **false** for everybody and never defaults true. The
+  age-based default that `show_player_id` has does not exist here.
+- It is set only through `set_player_visibility()`, so every change writes a
+  `consent_log` row naming who recorded it and on whose say-so. A minor needs
+  guardian consent, as for any other flag.
+- Public means `show_contact` **and** `id_visible()`. A contact detail cannot
+  outlive the consent that published it, and it lapses with the three-month
+  attendance rule like everything else. `expire_stale_consent()` clears it —
+  that is the part worth checking if either is ever rewritten.
+- `get_player_summary()` is what decides. It returns `contact` as null to
+  anybody who may not see it, so no page ever reasons about this itself.
 
 These are visible only to a signed-in professor. Division and birth year are
 stored and used for logic (registration caps, minor status) but never rendered.
@@ -101,6 +118,7 @@ Two independent switches, both professor-controlled:
 |---|---|---|
 | Player ID visible | Yes | **No** |
 | Name visible (first name + last initial) | **No** | **No** |
+| Contact visible (Discord handle) | **No** | **No** |
 
 Rules:
 
@@ -165,6 +183,45 @@ way to tell from the file who is in it. A person decides, every time.
   `attendance`, `loyalty_results`, or `consent_log`.
 - Every public-facing surface gets its display string from `display_label()`.
   Never assemble a name from columns in page code.
+- **Never decide whether somebody is public by reading `show_player_id`.** The
+  flag is three-valued and it is only half the rule: null means "use the
+  age-based default", which for an adult is **yes**, and visibility also lapses
+  without attendance in the last three months. `id_visible()` is the only thing
+  that knows, and `public_players` is that function applied to everybody — a
+  professor screen asking "is this player listed" should test membership of that
+  view. The players page read the flag directly and got it wrong both ways: every
+  consenting adult who had never been toggled by hand showed as "not public"
+  while appearing correctly on the public list, and a recorded consent whose
+  attendance had gone stale showed as public when it was no longer in force.
+
+### Players can ask
+
+`players.html` carries a form under a looked-up card: ask to be listed, ask to
+be taken off again, or record a Pokémon TCG Live name. It writes a
+`visibility_requests` row and **changes nothing**. A professor reads it at the
+top of `admin/consent.html` and decides, and the decision goes through
+`set_player_visibility()` like every other flag change.
+
+- **Both directions, one place.** A form that only ever added visibility would
+  put the easy half on the website and leave the half somebody might feel
+  awkward about to a conversation at a desk.
+- **Untouched means "leave it alone".** Each switch is three-state. A form that
+  sent false for everything nobody ticked would read as a request to be hidden
+  from somebody who only wanted to add a TCG Live name.
+- **Player ID and first name together**, the same proof a drop request and a
+  gallery submission ask for, with **one refusal covering both** — telling a
+  wrong ID from a wrong name apart would make this a way to test which Player
+  IDs exist.
+- **One pending request per player.** A second submission updates the first, so
+  correcting a typo does not leave a professor two rows to reconcile.
+- **The review row says whether the player is under 18**, because guardian
+  consent is the rule for a child and the screen should not make a professor go
+  and look it up before deciding. The "who agreed" field starts on *guardian*
+  for a minor.
+
+**A TCG Live name is not a contact.** `ptcg_live` is a game handle and is public
+wherever the player is already public — no flag of its own. It is not a way to
+message somebody, which is the whole reason contact needs one and this does not.
 
 When in doubt about whether something can be shown publicly: it cannot.
 
@@ -279,13 +336,21 @@ is applied to the production database.** There is no confirmation step.
   event, so the two cannot end up on different days, and the default start is
   2:30 rather than 2:00 — prefilling the desk time is how this happened in the
   first place.
-- **Every screen calls it sign-in, and only the column says registration.** The
-  line sits directly above a register form that works right now, and
-  "registration opens at 2:00 PM" over a working form reads as a refusal. The
-  column kept its name because that is what it is in the domain and renaming it
-  after the migration shipped would cost a second one; the mismatch is the
-  wording doing its job, not an oversight. Do not "fix" one to match the other
-  without changing both.
+- **The large figure on a card is when to arrive, not when play starts.** It
+  shows `registration_opens_at`, falling back to `starts_at` for an event with
+  no desk time. The card used to lead with the start time and put the desk time
+  in small print underneath: accurate, and still read as "turn up at half past",
+  because the big number is the one people take away. That is the failure this
+  is built around — a player arriving at 2:30 has missed registration.
+- **The line underneath carries both times in one sentence**, "Registration
+  opens at 2:00 PM and the event begins at 2:30 PM." Neither time appears
+  without the other, so neither can be read alone and acted on wrongly. It was
+  briefly worded as "sign-in" to avoid colliding with the register form on the
+  same card; naming both times is what actually resolves that, and the sentence
+  is now the same on the schedule, the event page and the home page.
+- **This is display only.** `starts_at` is still when play starts and still what
+  every rule keys on, and the admin form still asks for the two times exactly as
+  it did. Nothing about the data changed when the wording did.
 - **An event that takes registration has a page of its own**, `event.html?e=<id>`,
   so a professor has a link to post that is one event rather than the whole
   schedule. It reads what the schedule reads and nothing more: places left and
@@ -366,6 +431,124 @@ is applied to the production database.** There is no confirmation step.
   again and everybody earned a point less, with nothing on screen saying so.
 
 ---
+
+## Rentable resources
+
+The section at the foot of `league_programs.html`, filled by `rentals.js`, and
+`admin/rentals.html` behind it. Four tables, all of them public: there is no
+personal data in a catalogue of what is on a shelf.
+
+- **Status is not a tag.** `rental_decks.status` is a column with a check,
+  because exactly one of *current* and *needs updating* is true at a time and a
+  deck wearing both would tell a player two different things. Everything else is
+  a tag, because a deck can be several of those at once.
+- **The tag vocabulary is a table, not an enum.** The point is that a professor
+  adds one without a migration. Tags retire rather than delete, so a deck that
+  wore one keeps its history.
+- **Both formats always render**, even empty. A missing Standard list and an
+  empty one look identical on a page and mean different things.
+- **`claimed_note` is the duplicate guard**, and it is public for that reason:
+  somebody about to spend money on cards needs to see that a bounty is spoken
+  for *before* they do, not in a professor's notes.
+- **Decks and bounties retire, never delete**, like every other reference row
+  here.
+- **Donating a deck has earning actions** — 10 points, or 20 from the bounty
+  list. They are rows in `earning_actions` rather than a number written into
+  copy, so the points screen can actually award what the page promises and a
+  professor can override the amount like any other.
+- The shelf comes from `rental_deck_shelf()` so tags arrive on the deck rather
+  than as rows to regroup; a list of decks should not cost one request per deck.
+
+## Chaos Cup
+
+`chaos-cup.html` explains what a Chaos Cup is and shows six example rules.
+Static HTML with no module and no database call, like the Resources page.
+
+- **The caveat is the loudest thing on the page**, directly under the lede and
+  before anything else. Somebody reading it is deciding what to bring, and the
+  honest answer to "what are the rules" is "not these ones" — every Chaos Cup
+  has its own set written for that day. A footnote at the bottom would be read
+  by nobody who needed it.
+- **The tone is part of the format.** The page says a Chaos Cup is meant to be
+  silly, and that the answer to a confusing rule is to work it out with your
+  opponent and play it the way both of you find most fun. It deliberately does
+  not say "ask a judge if you are confused" — that is the right instruction for
+  a League Cup and the wrong one here.
+- **An event named Chaos Cup links to this page**, from the schedule and from
+  its own event page. Matched on the name rather than a column: there is no
+  event type for it, the events are already named that, and a new type would
+  only light up on events typed again from scratch. A Chaos Cup called something
+  else entirely wants a real flag on the event, not a cleverer match.
+- **Six examples, not the rulebook.** There are dozens, they change every event,
+  and a page that tried to list them all would be a page that goes out of date
+  and gets believed anyway.
+- **A Standard legal deck is the whole requirement**, and the page says so
+  twice: in the lede and in the first point of how a day runs. It is the one
+  question somebody has before coming.
+- **No two Chaos Cups work the same way**, and the page says that rather than
+  describing one of them as though it were the format. Rules may be swapped out
+  between rounds or built up across them; they may be drawn at random, put to a
+  vote, or chosen by the professors; a set may be themed to a holiday. The page
+  used to assert that rules never carry over, which was true of the one document
+  it was written from and not of the format.
+- **The rule text is the organiser's own**, from their Chaos Cup documents. It
+  is not lifted from anywhere else: the rule against copying from official
+  sources applies here as everywhere.
+- It is reached from League programs rather than the top nav. A Chaos Cup is an
+  event format rather than an ongoing programme, and the nav order was settled
+  separately.
+
+## The league charter
+
+`charter.html` carries the mission and the values, taken from the charter draft.
+
+- **It is not published yet.** The draft is unfinished, so the page renders for
+  a signed-in professor and everybody else gets a short note. The nav item wears
+  `nav-prof`, hidden until `mountProfessorBar()` puts `has-prof-bar` on the body
+  — the one signal every public page already shares. Like everything `auth.js`
+  governs this decides what to **show**: the file is fetchable and the text is
+  in it, which is fine, because the charter is unfinished rather than secret.
+  Publishing it is deleting the gate in `charter.js` and the class on the nav
+  item.
+- **Values are the words alone.** The draft has a one-line definition beside
+  each, still being worded. Half-written definitions on a page about how to
+  treat each other would be worse than the words by themselves. The card is
+  already the right shape to hold one underneath.
+- **Responsibilities are not here.** That section of the draft says TODO.
+- **The league is LoCo League in the mission statement**, as everywhere else.
+  The draft calls it by the venue's name, which is the room rather than the
+  league.
+
+## What is on next
+
+The banner at the top of the home page, filled by `home-events.js`. Two
+questions a visitor lands with — is there league this Sunday, and is there
+anything to sign up for — and the schedule answers both at the cost of a tap
+that somebody checking on a Saturday night should not have to take.
+
+- **It shows strictly less than the schedule.** No description, no entry fee, no
+  places left. A banner that repeats the schedule is a second schedule to keep
+  in step with the first.
+- **The next day is the soonest day with anything on it**, not the next Sunday.
+  A Saturday prerelease is still the next thing happening, and a banner that
+  skipped it would be wrong on the weekend it mattered most. The heading prints
+  the date rather than saying "this Sunday", which is ambiguous in a way a date
+  is not.
+- **The second list is what can still be signed up for, further out.** Events on
+  the next day are left out of it because they are already above with their own
+  link.
+- **No type chip.** Every event this league runs is named for its type — "TCG
+  League Cup", "Delta Reign Prerelease" — so the chip repeated the name back and
+  pushed the sign-up link onto a second line on a phone.
+- **A link only where there is something to do.** An event that takes no
+  registration has a page, but sending somebody to it to read "just turn up" is
+  a tap that gives nothing back.
+- **It fails quietly.** A summary of a page that still works does not get a red
+  box across the top of the home page; it gets one line and a link to the
+  schedule. Every state keeps the heading, because the section is labelled by
+  its id and dropping it would leave `aria-labelledby` pointing at nothing.
+- **An event stays listed until play starts**, not until the desk opens, so
+  somebody reading at ten past can still see that they can walk in.
 
 ## The home page's outside links
 
@@ -556,8 +739,26 @@ makes the file.
   silhouette blank with nothing in the console. The path is made absolute in
   page code before it is handed to CSS.
 - **A card counts as printed when the dialog opens**, because nothing tells a
-  page whether the print went ahead. A cancelled print still counts. The screen
-  says so, and anybody can be searched for and printed again.
+  page whether the print went ahead. Assuming the opposite is worse: it hands
+  out duplicates. The screen says so plainly.
+- **The undo is the other half of that bargain.** "The cards did not print"
+  voids the run that was just made, and everybody on it goes back on the list.
+  It appears only once cards exist and withdraws the moment the list changes —
+  an undo offer that outlives the run it belongs to is a trap.
+- **A print run has an id.** `trainer_card_prints.batch_id` is one uuid per
+  press of Create the cards, and the undo names it. Voiding by player and season
+  instead would catch whatever is newest for those players, which is usually the
+  right row and occasionally is not: two professors on one league day, or a
+  reprint for somebody who was missed.
+- **Voiding is a function, not a grant.** `void_trainer_card_batch()` is
+  `SECURITY DEFINER` and touches three columns of one run. An `UPDATE` grant on
+  the table would let any signed-in professor write any column of any row from a
+  browser.
+- **Rows are voided, never removed**, here as everywhere else. The press of the
+  button did happen; it just did not produce a card.
+- **The counts on the two source buttons are live.** They were drawn once at
+  startup, which left them stale from the first print onward — the figure on
+  "no card yet" is the whole reason that button exists.
 
 ---
 
@@ -570,6 +771,10 @@ event.html          one event, by ?e=<id>, for a link that can be posted
 prizes.html         prize wall catalog
 players.html        player lookup by Player ID
 gallery.html        approved photographs, and the form that sends one in
+charter.html        the mission and values, professor-only until the draft lands
+chaos-cup.html      what a Chaos Cup is, and example rules
+rentals.js          the rental shelf and bounty list on the programs page
+home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
 data/source/*.csv   spreadsheet exports used to seed reference tables
 event-registration.js  the register and cancel forms, shared by both pages
@@ -608,6 +813,22 @@ than skipping ahead.
    Trainer Card, players, events and reference data.
 7. **Printable lists.** Loyalty tiers for the store, pre-registration for the
    desk. Print stylesheets, professor-only.
+
+The tools menu is **four collapsed sections**, not a list. Sixteen tools in one
+column had stopped being a menu and become something to read; grouped by what a
+professor came here to do, the page is four choices and everything else is one
+click away.
+
+**A queue that is waiting for a person carries a count**, on the tool card and
+on the section holding it. The second one is the point: collapsing a section
+hides what is inside it, and something waiting for attention has to survive
+that. The counts are head requests rather than rows — the number is the whole
+of what the page wants and the rows can be hundreds. A queue that fails to load
+gets **no badge rather than a zero**, because "nothing waiting" and "could not
+tell" are different and the second must not look like the first.
+
+The menu draws twice: once immediately with no badges, once when the counts
+land. The menu is the point and the badges are a bonus on top of it.
 
 `admin/attendance-history.html` reads all of it back: how many came each week,
 split by played, attended and age division, and who was there on any given day.

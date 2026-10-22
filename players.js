@@ -147,6 +147,8 @@ export function summaryCard(summary) {
 
     professor ? adminLinks(summary.player_id) : null,
 
+    handles(summary),
+
     championStars(champions),
 
     el('div', { className: 'stat-grid' }, [
@@ -160,6 +162,192 @@ export function summaryCard(summary) {
     el('h3', { text: 'Badges' }),
     badgeList(summary),
     pastSeasons(summary)
+  ]);
+}
+
+// A TCG Live name and, where there is one to show, a contact.
+//
+// get_player_summary() decides which of these this caller may see, so the page
+// prints what it was given and never reasons about consent itself. contact
+// arrives null for anybody who should not have it.
+function handles(summary) {
+  const rows = [];
+
+  if (summary.ptcg_live) {
+    rows.push(el('p', { className: 'handle' }, [
+      el('span', { className: 'handle-label', text: 'Pokémon TCG Live' }),
+      el('span', { className: 'handle-value', text: summary.ptcg_live })
+    ]));
+  }
+
+  if (summary.contact) {
+    rows.push(el('p', { className: 'handle' }, [
+      el('span', { className: 'handle-label', text: 'Discord' }),
+      el('span', { className: 'handle-value', text: summary.contact }),
+      // Contact was private without exception until this was built, so a
+      // professor reading one should be told which kind they are looking at
+      // rather than left to assume the old rule.
+      professor
+        ? el('span', {
+            className: summary.contact_public ? 'tag' : 'tag tag-hidden',
+            text: summary.contact_public ? 'public' : 'professors only'
+          })
+        : null
+    ]));
+  }
+
+  return rows.length ? el('div', { className: 'handle-set' }, rows) : null;
+}
+
+// --- Asking to be listed ------------------------------------------------------
+//
+// Everything about how a player appears is decided here, in one place, in both
+// directions: a player can ask to be listed, ask to be taken off again, or just
+// record a TCG Live name. The alternative was a form that only ever added
+// visibility and a quiet word with a professor for the other direction, which
+// puts the easy half on the website and the half somebody might feel awkward
+// about in a conversation.
+//
+// NOTHING HERE CHANGES ANYTHING. It writes a request. A professor reads it on
+// the consent screen and decides, which is the rule everywhere: a visibility
+// flag moves only through set_player_visibility(), only by a professor, and
+// only with consent recorded against it.
+
+const WANT = [
+  ['want_player_id', 'My Player ID',
+   'Shows you in the player list and lets people look you up.'],
+  ['want_name', 'My name',
+   'Shown as a first name and a last initial, never in full. Needs your Player ID shown too.'],
+  ['want_contact', 'My Discord',
+   'Anybody on the site could see it. Leave this off to give it to the professors only.']
+];
+
+const REFUSALS = {
+  not_matched: 'That Player ID and first name do not go together. Check both and '
+    + 'try again, or ask a professor at league.',
+  nothing_asked: 'Nothing was filled in, so there is nothing to send. Tick what '
+    + 'you would like changed, or add a TCG Live name.'
+};
+
+function requestPanel(summary) {
+  const uid = Math.random().toString(36).slice(2, 8);
+  const first = el('input', { id: `rq-first-${uid}`, autocomplete: 'given-name' });
+  const contact = el('input', { id: `rq-dis-${uid}`, autocomplete: 'off',
+    placeholder: 'your.name' });
+  const ptcg = el('input', { id: `rq-tcg-${uid}`, autocomplete: 'off',
+    placeholder: 'YourName1234' });
+  const note = el('input', { id: `rq-note-${uid}`, autocomplete: 'off' });
+
+  // Three-state on purpose: untouched means "leave this alone". A form that
+  // sent false for everything nobody ticked would read as a request to be
+  // hidden from somebody who only wanted to add a TCG Live name.
+  const wants = WANT.map(([key, label, help]) => {
+    const yes = el('input', { type: 'radio', name: `${key}-${uid}`,
+      id: `${key}-y-${uid}`, value: 'yes' });
+    const no = el('input', { type: 'radio', name: `${key}-${uid}`,
+      id: `${key}-n-${uid}`, value: 'no' });
+    const leave = el('input', { type: 'radio', name: `${key}-${uid}`,
+      id: `${key}-l-${uid}`, value: 'leave' });
+    leave.checked = true;
+
+    return {
+      key,
+      read: () => (yes.checked ? true : no.checked ? false : null),
+      node: el('fieldset', { className: 'want' }, [
+        el('legend', { text: label }),
+        el('p', { className: 'field-help', text: help }),
+        el('p', { className: 'want-choices' }, [
+          el('span', { className: 'field-inline' },
+            [yes, el('label', { for: yes.id, text: 'Show it' })]),
+          el('span', { className: 'field-inline' },
+            [no, el('label', { for: no.id, text: 'Hide it' })]),
+          el('span', { className: 'field-inline' },
+            [leave, el('label', { for: leave.id, text: 'Leave as it is' })])
+        ])
+      ])
+    };
+  });
+
+  const status = el('p', { className: 'form-status', role: 'status' });
+  const go = el('button', { type: 'submit', className: 'button', text: 'Send the request' });
+
+  const form = el('form', { className: 'request-form' }, [
+    el('p', { className: 'field' }, [
+      el('label', { for: first.id, text: 'Your first name' }), first
+    ]),
+    el('p', { className: 'field-help',
+      text: 'So we know this is you. It has to match what we have for '
+          + `${summary.player_id}.` }),
+
+    ...wants.map((w) => w.node),
+
+    el('p', { className: 'field' }, [
+      el('label', { for: contact.id, text: 'Discord username, optional' }), contact
+    ]),
+    el('p', { className: 'field' }, [
+      el('label', { for: ptcg.id, text: 'Pokémon TCG Live username, optional' }), ptcg
+    ]),
+    el('p', { className: 'field-help',
+      text: 'A TCG Live name is shown to anybody who can already see you. It is '
+          + 'a game handle, not a way to message you.' }),
+
+    el('p', { className: 'field' }, [
+      el('label', { for: note.id, text: 'Anything to add, optional' }), note
+    ]),
+    el('p', {}, [go]),
+    status
+  ]);
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    go.disabled = true;
+    status.className = 'form-status';
+    status.textContent = 'Sending.';
+
+    try {
+      const { data, error } = await supabase.rpc('request_visibility', {
+        p_player_id: summary.player_id,
+        p_first_name: first.value.trim(),
+        p_want_player_id: wants[0].read(),
+        p_want_name: wants[1].read(),
+        p_want_contact: wants[2].read(),
+        p_contact: contact.value.trim() || null,
+        p_ptcg_live: ptcg.value.trim() || null,
+        p_note: note.value.trim() || null
+      });
+      if (error) throw error;
+
+      go.disabled = false;
+
+      if (!data || !data.ok) {
+        status.className = 'form-status is-error';
+        status.textContent = REFUSALS[data && data.code]
+          || 'That could not be sent. Try again, or ask a professor at league.';
+        return;
+      }
+
+      form.reset();
+      status.className = 'form-status is-good';
+      status.textContent = 'Sent. A professor will look at it before anything '
+        + 'changes. Nothing on the site has changed yet.';
+    } catch (err) {
+      console.error(err);
+      go.disabled = false;
+      status.className = 'form-status is-error';
+      status.textContent = 'That could not be sent just now. Try again, or ask '
+        + 'a professor at league.';
+    }
+  });
+
+  return el('details', { className: 'disclosure request-panel' }, [
+    el('summary', { text: 'Change what people can see, or add a TCG Live name' }),
+    el('div', { className: 'disclosure-body' }, [
+      el('p', { className: 'field-help',
+        text: 'Ask us to list you, to take you off the site, or to record your '
+            + 'usernames. A professor checks every request, and for anyone '
+            + 'under 18 we ask a parent or guardian first.' }),
+      form
+    ])
   ]);
 }
 
@@ -181,7 +369,7 @@ async function lookUp(playerId) {
       result.replaceChildren(el('p', { className: 'notice notice-problem', text: NOT_FOUND }));
       return;
     }
-    result.replaceChildren(summaryCard(data));
+    result.replaceChildren(summaryCard(data), requestPanel(data));
     result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch (err) {
     console.error(err);
@@ -244,19 +432,36 @@ function playerButton(id, label, extra) {
 }
 
 async function professorList() {
-  const { data, error } = await supabase
-    .from('players')
-    .select('player_id, first_name, last_name, show_player_id, show_name')
-    .order('first_name');
-  if (error) throw error;
+  // Two reads, because neither answers on its own. players has everybody;
+  // public_players is who is actually listed.
+  //
+  // This used to mark the tag from `show_player_id === true` alone, and that
+  // flag is three-valued. Null means "use the age-based default", which for an
+  // adult is YES -- so every consenting adult who had never been toggled by
+  // hand read as "not public" here while appearing correctly on the public
+  // list. It was wrong in the other direction too, and more quietly: an
+  // explicit true whose attendance has gone stale is no longer in force, and
+  // this called that one public.
+  //
+  // id_visible() is the only thing that knows the answer, and public_players
+  // is that function applied to everybody. The view is security_invoker =
+  // false, so it returns the same rows for a professor as for anybody else --
+  // which is exactly the property needed here: the tag should say what a
+  // player would see, not what this session can see.
+  const [all, listed] = await Promise.all([
+    supabase.from('players')
+      .select('player_id, first_name, last_name')
+      .order('first_name'),
+    supabase.from('public_players').select('player_id')
+  ]);
+  if (all.error || listed.error) throw all.error || listed.error;
 
-  const rows = (data || []).map((p) => ({
+  const publicIds = new Set((listed.data || []).map((p) => p.player_id));
+
+  const rows = (all.data || []).map((p) => ({
     player_id: p.player_id,
     name: `${p.first_name} ${p.last_name}`.trim(),
-    // Whether they are actually public also depends on recent attendance, which
-    // this list does not ask about per player. The flag alone is enough to mark
-    // the ones nobody has been asked about; the card says what is truly in force.
-    recorded: p.show_player_id === true
+    listed: publicIds.has(p.player_id)
   }));
 
   const listEl = el('ul', { className: 'player-list' });
@@ -279,7 +484,7 @@ async function professorList() {
     listEl.replaceChildren(...shown.map((r) => playerButton(
       r.player_id,
       r.name,
-      r.recorded ? null : el('span', { className: 'tag tag-hidden', text: 'not public' })
+      r.listed ? null : el('span', { className: 'tag tag-hidden', text: 'not public' })
     )));
 
     return shown;

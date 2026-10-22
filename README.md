@@ -249,6 +249,28 @@ Built so far:
 
 All the public pages are built.
 
+### What is on next
+
+A banner at the top of the home page, filled by `home-events.js`: the events on
+the next day anything is happening, then anything further out that can still be
+signed up for, each linking to its own event page.
+
+It shows strictly less than the schedule — no description, no entry fee, no
+places left — because a banner that repeats the schedule is a second schedule to
+keep in step. The next day is the soonest day with events rather than the next
+Sunday: a Saturday prerelease is still the next thing happening. The heading
+prints the date instead of saying "this Sunday", which is ambiguous in a way a
+date is not.
+
+There is no type chip, although the schedule has one. Every event here is named
+for its type — "TCG League Cup", "Delta Reign Prerelease" — so the chip repeated
+the name and pushed the sign-up link to a second line on a phone. A link appears
+only where registration is open; sending somebody to a page to read "just turn
+up" is a tap that gives nothing back.
+
+It fails quietly. A summary of a page that still works gets one line and a link
+to the schedule, not a red box across the top of the home page.
+
 ### The home page's outside links
 
 Two things on the home page reach outside the site, and both were asked about
@@ -893,12 +915,21 @@ the event exists and closes when play starts, which is the rule below and is
 unchanged. A check constraint keeps it before `starts_at` — immutable, so it
 can be a check rather than a trigger, which `at time zone` would have forced.
 
-**Every screen calls it sign-in; only the column says registration.** The line
-can sit directly above a register form that works right now, and "registration
-opens at 2:00 PM" over a working form reads as a refusal. The column kept the
-domain word — it is when registration at the desk opens — and renaming it after
-the migration shipped would cost a second migration for a naming preference.
-The two words are deliberate, so changing one means changing the other.
+**The large figure is when to arrive, not when play starts.** A card shows
+`registration_opens_at`, falling back to `starts_at` where there is no desk
+time, and the line underneath reads "Registration opens at 2:00 PM and the event
+begins at 2:30 PM."
+
+Leading with the start time was accurate and still wrong in practice: the big
+number is the one people take away, so a card headed 2:30 sent players to a
+desk that had closed. Carrying both times in one sentence is what fixes it —
+neither time appears without the other, so neither can be read alone and acted
+on. The same sentence is on the schedule, the event page and the home page, and
+the home page leads with 2:00 for the same reason.
+
+None of this touched the data. `starts_at` is still when play starts and still
+what every rule keys on; the admin form still asks for both times exactly as
+before.
 
 The form asks for a **time and not a datetime**, and composes the date from the
 start time every time it saves, so the two can never end up on different days.
@@ -1093,6 +1124,35 @@ something SQL can reach. If the decision saves and the delete then fails, it
 says so plainly: the photograph is off the page either way -- the storage policy
 stops signing it the moment the status changes -- but a file nobody meant to
 keep is still sitting there and somebody should know.
+
+### Players can ask to be listed
+
+Under a looked-up card on `players.html` there is a form: ask to be listed, ask
+to be taken off the site again, or record a Pokémon TCG Live name and a Discord
+handle. It writes a `visibility_requests` row and **changes nothing by itself**.
+A professor reads it at the top of the consent screen and decides, and every
+flag still moves through `set_player_visibility()` with consent logged.
+
+Both directions live in the same form. One that only ever added visibility would
+put the easy half on the website and leave the half somebody might feel awkward
+about to a conversation at a desk.
+
+Each switch is three-state, and untouched means leave it alone. A form sending
+false for everything nobody ticked would read as a request to be hidden from
+somebody who only wanted to add a TCG Live name.
+
+Player ID and first name together are the proof, with **one refusal covering
+both** — telling a wrong ID from a wrong name apart would make the form a way to
+test which Player IDs exist. There is one pending request per player: a second
+submission updates the first rather than queueing behind it.
+
+**Contact can now be public, by request.** That reverses a rule, and the shape
+is what keeps it safe: `show_contact` defaults false for everybody and never
+defaults true, it is set only through `set_player_visibility()` so every change
+is logged, public means the flag **and** `id_visible()`, and
+`expire_stale_consent()` clears it with the rest — a handle cannot outlive the
+consent that published it. A **TCG Live name is not a contact**: it is a game
+handle, public wherever the player already is, with no flag of its own.
 
 ### Visibility consent
 
@@ -1342,9 +1402,19 @@ off the band. Which rank earns it comes from `requires_elite_four` on
 `trainer_card_ranks` rather than from matching the word "Champion".
 
 **A card counts as printed the moment the dialog opens.** Nothing tells a page
-whether the print went ahead, so a cancelled print still counts and those
-players drop off the "without a card" button. They can be searched up and
-printed again, and the screen says so.
+whether the print went ahead, and assuming it did not is worse — that hands out
+duplicates. The screen says so plainly, and **"The cards did not print"** is the
+way back: it voids the run just made and puts everyone on it back on the list.
+The button appears only once cards exist and withdraws as soon as the list
+changes, so it never refers to a run the professor has moved on from.
+
+A run has an id — `trainer_card_prints.batch_id`, one uuid per press of Create
+the cards — and the undo names it. Voiding by player and season instead would
+catch whatever is newest for those players, which is usually right and
+occasionally not: two professors on one league day, or a reprint for somebody
+who was missed. The rows are voided rather than removed, and voiding is a
+`SECURITY DEFINER` function rather than an `UPDATE` grant, which would let any
+signed-in professor write any column of any row from a browser.
 
 ### Printable lists
 

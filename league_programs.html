@@ -9,6 +9,7 @@
     <link rel="apple-touch-icon" href="images/icon-180.png">
     <link rel="stylesheet" href="styles.css">
     <script type="module" src="league_programs.js"></script>
+    <script type="module" src="rentals.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -28,9 +29,10 @@
         <ul>
             <li><a href="index.html">Home</a></li>
             <li><a href="schedule.html">Schedule</a></li>
+            <li class="nav-prof"><a href="charter.html">League charter</a></li>
             <li><a href="league_programs.html" aria-current="page">League programs</a></li>
-            <li><a href="players.html">Players</a></li>
             <li><a href="gallery.html">Gallery</a></li>
+            <li><a href="players.html">Players</a></li>
         </ul>
       </nav>
     </header>
@@ -39,14 +41,16 @@
       <h1>League programs</h1>
 
       <p class="lede">
-        Three things run alongside ordinary league play, and you can take part in
-        all of them at once. Turning up is what starts every one.
+        What runs alongside ordinary league play. You can take part in all of it
+        at once, and turning up is what starts every one.
       </p>
 
       <nav class="jump-nav" aria-label="On this page">
         <ul>
           <li><a href="#trainer-card">Trainer Card Program</a></li>
+          <li><a href="#chaos-cup">Chaos Cup</a></li>
           <li><a href="#prize-wall">Prize wall</a></li>
+          <li><a href="#rentals">Rentable resources</a></li>
           <li><a href="#loyalty">Loyalty program</a></li>
         </ul>
       </nav>
@@ -74,6 +78,24 @@
         <p class="section-note">
           Ask a professor to record a badge once you have earned it. They keep the
           record, so nothing is lost if you forget.
+        </p>
+      </section>
+
+      <!-- Chaos Cup. An event format rather than an ongoing programme, but
+           this is the page somebody looks at to find out what we run, and a
+           page nobody can reach is a page nobody reads. -->
+      <section class="panel" id="chaos-cup" aria-labelledby="chaos-cup-heading">
+        <h2 id="chaos-cup-heading">Chaos Cup</h2>
+
+        <p>
+          A Pokémon TCG tournament with the rules bent. Same deck, same Swiss
+          rounds — but each round has extra rules in play, and they change from
+          round to round and from event to event.
+        </p>
+
+        <p>
+          <a href="chaos-cup.html">What a Chaos Cup is, and some of the rules
+          we have played with</a>
         </p>
       </section>
 
@@ -114,6 +136,53 @@
           professor decides the amount. Prize points never reset, so it is fine to
           save up for something larger.
         </p>
+      </section>
+
+      <!-- Rentable resources. The deck lists are filled by rentals.js; the
+           copy around them is static because it does not change. -->
+      <section class="panel" id="rentals" aria-labelledby="rentals-heading">
+        <h2 id="rentals-heading">Rentable resources</h2>
+
+        <p>
+          Short of damage counters, dice, a playmat, or anything else you need to
+          play? Tell a professor and we will find you something to use. There is
+          no charge and no deposit — just hand it back at the end of the day.
+        </p>
+
+        <h3>Rental decks</h3>
+
+        <p>
+          We keep decks you can borrow for the afternoon. Ask a professor and
+          they will set you up. Each one is marked <strong>Current</strong> if it
+          is up to date with the format, or <strong>Needs updating</strong> if it
+          is still playable but behind.
+        </p>
+
+        <div id="rental-shelf" aria-busy="true">
+          <p class="notice">Loading the rental decks.</p>
+        </div>
+
+        <h3>Rental Deck Bounties</h3>
+
+        <p>
+          Decks we would like to add to the shelf. Build one and donate it, and
+          it goes out to players who have not got one of their own.
+        </p>
+
+        <ul class="bounty-reward">
+          <li><strong>10 prize points</strong> for building and donating a rental deck.</li>
+          <li><strong>20 prize points</strong> if it is on the bounty list below.</li>
+        </ul>
+
+        <p class="section-note">
+          <strong>Tell a professor before you start building.</strong> Two people
+          turning up with the same deck helps nobody, and we would rather point
+          you at something we are still missing than see you spend money twice.
+        </p>
+
+        <div id="rental-bounties" aria-busy="true">
+          <p class="notice">Loading the bounty list.</p>
+        </div>
       </section>
 
       <!-- Loyalty -->
