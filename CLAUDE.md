@@ -376,6 +376,27 @@ is applied to the production database.** There is no confirmation step.
 
 ---
 
+## The league charter
+
+`charter.html` carries the mission and the values, taken from the charter draft.
+
+- **It is not published yet.** The draft is unfinished, so the page renders for
+  a signed-in professor and everybody else gets a short note. The nav item wears
+  `nav-prof`, hidden until `mountProfessorBar()` puts `has-prof-bar` on the body
+  — the one signal every public page already shares. Like everything `auth.js`
+  governs this decides what to **show**: the file is fetchable and the text is
+  in it, which is fine, because the charter is unfinished rather than secret.
+  Publishing it is deleting the gate in `charter.js` and the class on the nav
+  item.
+- **Values are the words alone.** The draft has a one-line definition beside
+  each, still being worded. Half-written definitions on a page about how to
+  treat each other would be worse than the words by themselves. The card is
+  already the right shape to hold one underneath.
+- **Responsibilities are not here.** That section of the draft says TODO.
+- **The league is LoCo League in the mission statement**, as everywhere else.
+  The draft calls it by the venue's name, which is the room rather than the
+  league.
+
 ## What is on next
 
 The banner at the top of the home page, filled by `home-events.js`. Two
@@ -628,6 +649,7 @@ event.html          one event, by ?e=<id>, for a link that can be posted
 prizes.html         prize wall catalog
 players.html        player lookup by Player ID
 gallery.html        approved photographs, and the form that sends one in
+charter.html        the mission and values, professor-only until the draft lands
 home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
 data/source/*.csv   spreadsheet exports used to seed reference tables
