@@ -376,6 +376,37 @@ is applied to the production database.** There is no confirmation step.
 
 ---
 
+## What is on next
+
+The banner at the top of the home page, filled by `home-events.js`. Two
+questions a visitor lands with — is there league this Sunday, and is there
+anything to sign up for — and the schedule answers both at the cost of a tap
+that somebody checking on a Saturday night should not have to take.
+
+- **It shows strictly less than the schedule.** No description, no entry fee, no
+  places left. A banner that repeats the schedule is a second schedule to keep
+  in step with the first.
+- **The next day is the soonest day with anything on it**, not the next Sunday.
+  A Saturday prerelease is still the next thing happening, and a banner that
+  skipped it would be wrong on the weekend it mattered most. The heading prints
+  the date rather than saying "this Sunday", which is ambiguous in a way a date
+  is not.
+- **The second list is what can still be signed up for, further out.** Events on
+  the next day are left out of it because they are already above with their own
+  link.
+- **No type chip.** Every event this league runs is named for its type — "TCG
+  League Cup", "Delta Reign Prerelease" — so the chip repeated the name back and
+  pushed the sign-up link onto a second line on a phone.
+- **A link only where there is something to do.** An event that takes no
+  registration has a page, but sending somebody to it to read "just turn up" is
+  a tap that gives nothing back.
+- **It fails quietly.** A summary of a page that still works does not get a red
+  box across the top of the home page; it gets one line and a link to the
+  schedule. Every state keeps the heading, because the section is labelled by
+  its id and dropping it would leave `aria-labelledby` pointing at nothing.
+- **An event stays listed until play starts**, not until the desk opens, so
+  somebody reading at ten past can still see that they can walk in.
+
 ## The home page's outside links
 
 - **The map is the keyless embed**, `maps.google.com/maps?q=...&output=embed`.
@@ -597,6 +628,7 @@ event.html          one event, by ?e=<id>, for a link that can be posted
 prizes.html         prize wall catalog
 players.html        player lookup by Player ID
 gallery.html        approved photographs, and the form that sends one in
+home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
 data/source/*.csv   spreadsheet exports used to seed reference tables
 event-registration.js  the register and cancel forms, shared by both pages

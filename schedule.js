@@ -1,6 +1,6 @@
 import {
   supabase, el, problem, formatEventDay, formatEventTime, leagueDayKey,
-  eventShortcuts
+  eventShortcuts, arriveAt
 } from './supabase-client.js';
 import {
   TYPE_LABELS, spotsHost, fillSpots, registrationBlock, eventPath
@@ -48,14 +48,6 @@ function opensLine(event) {
                  text: formatEventTime(event.starts_at) }),
     el('span', { text: '.' })
   ]);
-}
-
-// What the large figure shows: when to turn up. starts_at is still when play
-// starts and still what every rule keys on -- the registration cutoff, the
-// division calculation, the drop screen -- this is display only. An event with
-// no desk time falls back to the start, which is all there is to show.
-function arriveAt(event) {
-  return event.registration_opens_at || event.starts_at;
 }
 
 function eventCard(event, counts) {

@@ -41,6 +41,15 @@
     <main id="main">
       <h1>LoCo League</h1>
 
+      <!-- Directly under the title, above the welcome: somebody checking on a
+           Saturday night wants the date before the introduction. A heading
+           rather than a bare box so it is reachable by heading navigation. -->
+      <section class="upnext" id="up-next" aria-labelledby="up-next-heading"
+               aria-busy="true">
+        <h2 id="up-next-heading" class="upnext-title">What is on next</h2>
+        <p class="upnext-note">Checking the calendar.</p>
+      </section>
+
       <p class="lede">
         A Play! Pokémon League for players of every age and every skill level.
         Come to play, come to learn, come to trade.
@@ -177,6 +186,7 @@
              alt="Play! Pokémon" loading="lazy" decoding="async">
       </p>
     </footer>
+    <script type="module" src="home-events.js"></script>
     <script type="module">
       import { mountProfessorBar } from './auth.js';
       mountProfessorBar({ tdf: true });

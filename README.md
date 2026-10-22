@@ -249,6 +249,28 @@ Built so far:
 
 All the public pages are built.
 
+### What is on next
+
+A banner at the top of the home page, filled by `home-events.js`: the events on
+the next day anything is happening, then anything further out that can still be
+signed up for, each linking to its own event page.
+
+It shows strictly less than the schedule — no description, no entry fee, no
+places left — because a banner that repeats the schedule is a second schedule to
+keep in step. The next day is the soonest day with events rather than the next
+Sunday: a Saturday prerelease is still the next thing happening. The heading
+prints the date instead of saying "this Sunday", which is ambiguous in a way a
+date is not.
+
+There is no type chip, although the schedule has one. Every event here is named
+for its type — "TCG League Cup", "Delta Reign Prerelease" — so the chip repeated
+the name and pushed the sign-up link to a second line on a phone. A link appears
+only where registration is open; sending somebody to a page to read "just turn
+up" is a tap that gives nothing back.
+
+It fails quietly. A summary of a page that still works gets one line and a link
+to the schedule, not a red box across the top of the home page.
+
 ### The home page's outside links
 
 Two things on the home page reach outside the site, and both were asked about

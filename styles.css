@@ -3156,3 +3156,78 @@ h1.event-name + .event-when {
   }
   .card-page:last-child { break-after: auto; }
 }
+
+/* --- What is on next, on the home page ---------------------------------------- */
+/* A gold edge rather than a filled panel. The home page already has three
+   panels; a fourth would read as more of the same, and this one is the thing a
+   returning visitor came for. */
+.upnext {
+  margin: 0 0 1.5rem;
+  /* The gold edge is a background layer, not a border-image. border-image with
+     a slice of 1 replaces ALL four borders, so the hairline would have gone
+     gold on every side instead of just the left. */
+  background:
+    var(--gold-metal) left top / 4px 100% no-repeat,
+    var(--card);
+  border: 1px solid var(--line);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  padding: 0.9rem 1rem 0.9rem calc(1rem + 4px);
+}
+
+.upnext-title {
+  margin: 0 0 0.6rem;
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.upnext-subtitle {
+  margin: 0.9rem 0 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.upnext-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Each line wraps rather than scrolls: on a narrow screen the name is what
+   matters and the time can fall to its own row. */
+.upnext-event {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.55rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--line);
+}
+.upnext-event:first-child { border-top: none; }
+
+.upnext-when {
+  font-weight: 700;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.upnext-name { font-weight: 600; }
+
+/* Pushed to the end of the row so every sign-up link lines up down the right,
+   wherever the name happens to end. */
+.upnext-link {
+  margin-left: auto;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.upnext-note {
+  margin: 0.7rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.upnext-list + .upnext-note { margin-top: 0.8rem; }

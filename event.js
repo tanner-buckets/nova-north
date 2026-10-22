@@ -10,7 +10,7 @@
 // code, and ?g=<code> opens the whole group, because a player looking at a
 // prerelease has to be able to pick a flight.
 import {
-  supabase, el, problem, formatEventDay, formatEventTime, leagueDayKey
+  supabase, el, problem, formatEventDay, formatEventTime, leagueDayKey, arriveAt
 } from './supabase-client.js';
 import {
   TYPE_LABELS, spotsHost, fillSpots, registrationBlock, registrationState
@@ -43,11 +43,6 @@ function notice(heading, body) {
 
 // Past events are still reachable, because a link outlives the afternoon it was
 // posted for and a dead link is worse than a page saying what happened.
-// When to turn up, which is what the page leads with. See schedule.js.
-function arriveAt(event) {
-  return event.registration_opens_at || event.starts_at;
-}
-
 function isPast(event) {
   return new Date(event.starts_at).getTime() < Date.now();
 }
