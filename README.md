@@ -1125,6 +1125,35 @@ says so plainly: the photograph is off the page either way -- the storage policy
 stops signing it the moment the status changes -- but a file nobody meant to
 keep is still sitting there and somebody should know.
 
+### Players can ask to be listed
+
+Under a looked-up card on `players.html` there is a form: ask to be listed, ask
+to be taken off the site again, or record a Pokémon TCG Live name and a Discord
+handle. It writes a `visibility_requests` row and **changes nothing by itself**.
+A professor reads it at the top of the consent screen and decides, and every
+flag still moves through `set_player_visibility()` with consent logged.
+
+Both directions live in the same form. One that only ever added visibility would
+put the easy half on the website and leave the half somebody might feel awkward
+about to a conversation at a desk.
+
+Each switch is three-state, and untouched means leave it alone. A form sending
+false for everything nobody ticked would read as a request to be hidden from
+somebody who only wanted to add a TCG Live name.
+
+Player ID and first name together are the proof, with **one refusal covering
+both** — telling a wrong ID from a wrong name apart would make the form a way to
+test which Player IDs exist. There is one pending request per player: a second
+submission updates the first rather than queueing behind it.
+
+**Contact can now be public, by request.** That reverses a rule, and the shape
+is what keeps it safe: `show_contact` defaults false for everybody and never
+defaults true, it is set only through `set_player_visibility()` so every change
+is logged, public means the flag **and** `id_visible()`, and
+`expire_stale_consent()` clears it with the rest — a handle cannot outlive the
+consent that published it. A **TCG Live name is not a contact**: it is a game
+handle, public wherever the player already is, with no flag of its own.
+
 ### Visibility consent
 
 `admin/consent.html` is the only screen that can make a player public, and it

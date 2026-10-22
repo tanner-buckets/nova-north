@@ -339,6 +339,183 @@ export function history(state) {
   ]);
 }
 
+// --- What players have asked for ----------------------------------------------
+//
+// At the top, above the search, because it is the only part of this screen
+// somebody else started. A professor opening this page has either come to look
+// a player up -- which is what the search is for -- or come because a request
+// is waiting, and the second one should not need finding.
+//
+// Nothing here applies itself. The professor reads what was asked, decides each
+// flag, and the decision goes through set_player_visibility() exactly as it
+// does lower down the page.
+
+const queue = el('div', { id: 'requests' });
+
+function wantWord(value) {
+  if (value === true) return 'show';
+  if (value === false) return 'hide';
+  return null;
+}
+
+// What they asked for, in words, so a professor reads a sentence rather than
+// decoding three booleans.
+function asked(row) {
+  const parts = [];
+  for (const [key, label] of [['want_player_id', 'Player ID'],
+                              ['want_name', 'name'],
+                              ['want_contact', 'Discord']]) {
+    const word = wantWord(row[key]);
+    if (word) parts.push(word + ' ' + label);
+  }
+  if (row.ptcg_live) parts.push('record a TCG Live name');
+  if (!parts.length && row.contact) parts.push('record a Discord handle');
+  return parts.length ? parts.join(', ') : 'nothing specific';
+}
+
+// Pre-set to what was asked for, so the ordinary case is read it and press the
+// button. Each one can still be overridden: a professor who has spoken to a
+// parent may be approving less than was asked for.
+function decisionPick(label, initial, help) {
+  const sel = el('select', { 'aria-label': label }, [
+    el('option', { value: 'leave', text: 'Leave as it is' }),
+    el('option', { value: 'yes', text: 'Show' }),
+    el('option', { value: 'no', text: 'Hide' })
+  ]);
+  sel.value = initial === true ? 'yes' : initial === false ? 'no' : 'leave';
+
+  return {
+    read: () => (sel.value === 'yes' ? true : sel.value === 'no' ? false : null),
+    nodes: [
+      el('p', { className: 'field' }, [el('label', { text: label }, [sel])]),
+      help ? el('p', { className: 'field-help', text: help }) : null
+    ]
+  };
+}
+
+function requestCard(row, onDone) {
+  const note = el('p', { className: 'form-status', role: 'status' });
+
+  const idPick = decisionPick('Player ID', row.want_player_id);
+  const namePick = decisionPick('Name', row.want_name);
+  const contactPick = decisionPick('Discord, publicly', row.want_contact,
+    'Off means professors only, which is where it stays unless this says Show.');
+
+  const contact = el('input', { value: row.contact || '', autocomplete: 'off' });
+  const ptcg = el('input', { value: row.ptcg_live || '', autocomplete: 'off' });
+
+  const source = el('select', {}, [
+    el('option', { value: 'player', text: 'The player' }),
+    el('option', { value: 'guardian', text: 'A parent or guardian' })
+  ]);
+  // A child cannot consent for themselves, so the screen does not open by
+  // suggesting they did.
+  source.value = row.is_minor ? 'guardian' : 'player';
+
+  const decisionNote = el('input', { autocomplete: 'off' });
+
+  const apply = el('button', { type: 'button', className: 'button', text: 'Apply' });
+  const decline = el('button', { type: 'button', className: 'button button-quiet',
+    text: 'Turn it down' });
+
+  async function decide(doApply) {
+    apply.disabled = true;
+    decline.disabled = true;
+    note.className = 'form-status';
+    note.textContent = doApply ? 'Applying.' : 'Closing it.';
+
+    const { data, error } = await supabase.rpc('decide_visibility_request', {
+      p_id: row.id,
+      p_apply: doApply,
+      p_source: source.value,
+      p_player_id_visible: doApply ? idPick.read() : null,
+      p_name_visible: doApply ? namePick.read() : null,
+      p_contact_visible: doApply ? contactPick.read() : null,
+      p_contact: doApply ? (contact.value.trim() || null) : null,
+      p_ptcg_live: doApply ? (ptcg.value.trim() || null) : null,
+      p_note: decisionNote.value.trim() || null
+    });
+
+    if (error || !data || !data.ok) {
+      apply.disabled = false;
+      decline.disabled = false;
+      note.className = 'form-status is-error';
+      note.textContent = 'That did not go through: '
+        + ((error && error.message) || (data && data.code) || 'unknown error') + '.';
+      return;
+    }
+    await onDone();
+  }
+
+  apply.addEventListener('click', () => decide(true));
+  decline.addEventListener('click', () => decide(false));
+
+  return el('li', {}, [
+    el('article', { className: 'card request-review' }, [
+      el('h3', {}, [
+        el('span', { text: row.full_name }),
+        el('span', { className: 'count', text: ' ' + row.player_id }),
+        row.is_minor
+          ? el('span', { className: 'tag tag-hidden', text: 'under 18' })
+          : null
+      ]),
+      el('p', { className: 'muted-note',
+        text: 'Asked for: ' + asked(row) + '. Sent ' + day(row.submitted_at) + '.' }),
+      el('p', { className: 'muted-note',
+        text: 'Right now: ' + (row.now_listed ? 'listed publicly' : 'not listed')
+            + ', name ' + nameFlagWord(row.now_name) + '.' }),
+      row.note ? el('p', { className: 'request-said', text: row.note }) : null,
+
+      ...idPick.nodes,
+      ...namePick.nodes,
+      ...contactPick.nodes,
+
+      el('p', { className: 'field' }, [el('label', { text: 'Discord' }, [contact])]),
+      el('p', { className: 'field' }, [
+        el('label', { text: 'Pokemon TCG Live' }, [ptcg])
+      ]),
+      el('p', { className: 'field' }, [el('label', { text: 'Who agreed' }, [source])]),
+      el('p', { className: 'field' }, [
+        el('label', { text: 'Note, optional' }, [decisionNote])
+      ]),
+      el('p', { className: 'button-row' }, [apply, decline]),
+      note
+    ])
+  ]);
+}
+
+async function loadQueue() {
+  try {
+    const { data, error } = await supabase.rpc('pending_visibility_requests');
+    if (error) throw error;
+
+    const rows = data || [];
+    if (!rows.length) {
+      queue.replaceChildren(el('p', { className: 'muted-note',
+        text: 'No visibility requests are waiting.' }));
+      return;
+    }
+
+    queue.replaceChildren(
+      el('h2', { text: rows.length + ' request'
+        + (rows.length === 1 ? '' : 's') + ' waiting' }),
+      el('p', { className: 'field-help',
+        text: 'Sent by players from the players page. Nothing has changed yet: '
+            + 'applying one is what sets the flags, and each change is logged '
+            + 'the same as any other.' }),
+      el('ul', { className: 'card-list' }, rows.map((r) => requestCard(r, async () => {
+        await loadQueue();
+        // The detail below may be showing the same player, whose flags have
+        // just moved.
+        if (openPlayerId === r.player_id) show(r.player_id);
+      })))
+    );
+  } catch (err) {
+    console.error(err);
+    queue.replaceChildren(problem('The waiting requests'));
+  }
+}
+
 // --- Search ------------------------------------------------------------------
 
 // The same one-box picker every other professor screen uses. This page used to
@@ -355,7 +532,10 @@ function searchPanel() {
 
 const detail = el('div', { id: 'detail' });
 
+let openPlayerId = null;
+
 async function show(playerId) {
+  openPlayerId = playerId;
   detail.replaceChildren(el('p', { className: 'notice', text: 'Loading that player.' }));
   try {
     const state = await loadState(playerId);
@@ -382,7 +562,8 @@ async function show(playerId) {
     return;
   }
 
-  app.replaceChildren(searchPanel(), detail);
+  app.replaceChildren(queue, searchPanel(), detail);
+  await loadQueue();
 
   // A link can carry an ID, so the upload screen or a printed list can point
   // straight at the player being asked.

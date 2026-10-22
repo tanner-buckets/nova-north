@@ -3306,3 +3306,89 @@ h1.event-name + .event-when {
   line-height: 1.2;
   color: var(--text);
 }
+
+/* --- Handles on a player card -------------------------------------------------- */
+.handle-set {
+  margin: 0.6rem 0 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.handle {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.handle-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.handle-value {
+  font-weight: 600;
+  word-break: break-word;
+}
+
+/* --- Asking to be listed ------------------------------------------------------- */
+.request-panel { margin-top: 1rem; }
+
+/* Each switch is its own fieldset so the three radios read as one question to a
+   screen reader rather than as three loose controls. */
+.want {
+  margin: 0 0 0.9rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.want legend {
+  padding: 0 0.3rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.want .field-help { margin: 0 0 0.5rem; }
+
+.want-choices {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.1rem;
+}
+
+.want-choices .field-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* --- The professor's review queue ---------------------------------------------- */
+.request-review h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin-top: 0;
+}
+
+/* What the player typed, set apart from the page's own words so a professor can
+   tell which is which. */
+.request-said {
+  margin: 0.6rem 0;
+  padding: 0.5rem 0.8rem;
+  border-left: 3px solid var(--gold-line);
+  background: var(--paper);
+  font-style: italic;
+}
+
+.request-review .field { margin-bottom: 0.35rem; }
+.request-review .field-help { margin: 0 0 0.7rem; }

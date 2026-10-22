@@ -86,9 +86,25 @@ If a task seems to need a framework or a build step, stop and ask. Do not add on
 - Full last name
 - Birth year, or any date of birth
 - Age division (Junior / Senior / Master)
-- Contact fields (Discord handle, email)
 - Professor notes
 - Pre-registration lists — who registered for an event is never public
+
+**Contact used to be on that list and no longer is.** A player may now ask for
+their Discord handle to be published, and a professor may grant it. This was a
+deliberate change, made knowingly. What keeps it safe is the shape of it, so do
+not loosen any of these:
+
+- `show_contact` defaults **false** for everybody and never defaults true. The
+  age-based default that `show_player_id` has does not exist here.
+- It is set only through `set_player_visibility()`, so every change writes a
+  `consent_log` row naming who recorded it and on whose say-so. A minor needs
+  guardian consent, as for any other flag.
+- Public means `show_contact` **and** `id_visible()`. A contact detail cannot
+  outlive the consent that published it, and it lapses with the three-month
+  attendance rule like everything else. `expire_stale_consent()` clears it —
+  that is the part worth checking if either is ever rewritten.
+- `get_player_summary()` is what decides. It returns `contact` as null to
+  anybody who may not see it, so no page ever reasons about this itself.
 
 These are visible only to a signed-in professor. Division and birth year are
 stored and used for logic (registration caps, minor status) but never rendered.
@@ -102,6 +118,7 @@ Two independent switches, both professor-controlled:
 |---|---|---|
 | Player ID visible | Yes | **No** |
 | Name visible (first name + last initial) | **No** | **No** |
+| Contact visible (Discord handle) | **No** | **No** |
 
 Rules:
 
@@ -176,6 +193,35 @@ way to tell from the file who is in it. A person decides, every time.
   consenting adult who had never been toggled by hand showed as "not public"
   while appearing correctly on the public list, and a recorded consent whose
   attendance had gone stale showed as public when it was no longer in force.
+
+### Players can ask
+
+`players.html` carries a form under a looked-up card: ask to be listed, ask to
+be taken off again, or record a Pokémon TCG Live name. It writes a
+`visibility_requests` row and **changes nothing**. A professor reads it at the
+top of `admin/consent.html` and decides, and the decision goes through
+`set_player_visibility()` like every other flag change.
+
+- **Both directions, one place.** A form that only ever added visibility would
+  put the easy half on the website and leave the half somebody might feel
+  awkward about to a conversation at a desk.
+- **Untouched means "leave it alone".** Each switch is three-state. A form that
+  sent false for everything nobody ticked would read as a request to be hidden
+  from somebody who only wanted to add a TCG Live name.
+- **Player ID and first name together**, the same proof a drop request and a
+  gallery submission ask for, with **one refusal covering both** — telling a
+  wrong ID from a wrong name apart would make this a way to test which Player
+  IDs exist.
+- **One pending request per player.** A second submission updates the first, so
+  correcting a typo does not leave a professor two rows to reconcile.
+- **The review row says whether the player is under 18**, because guardian
+  consent is the rule for a child and the screen should not make a professor go
+  and look it up before deciding. The "who agreed" field starts on *guardian*
+  for a minor.
+
+**A TCG Live name is not a contact.** `ptcg_live` is a game handle and is public
+wherever the player is already public — no flag of its own. It is not a way to
+message somebody, which is the whole reason contact needs one and this does not.
 
 When in doubt about whether something can be shown publicly: it cannot.
 
