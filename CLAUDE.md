@@ -18,9 +18,10 @@ Every page carries the strapline "A Play! Pokémon league at Continental Cards,
 Ashburn" under the name, so a visitor landing on any page knows what and where
 this is.
 
-League plays Sundays at 2:30 PM and sign-in opens at 2:00 PM, at
+Registration opens Sundays at 2:00 PM and play begins at 2:30 PM, at
 Continental Cards Tournament Location, 21140 Ashburn Crossing Dr #110, Ashburn,
-VA 20147.
+VA 20147. **2:00 is the time the site leads with**, everywhere a single time is
+shown: it is the one a player needs to act on.
 
 Many players are children. Privacy rules in this file are not negotiable.
 
@@ -279,13 +280,21 @@ is applied to the production database.** There is no confirmation step.
   event, so the two cannot end up on different days, and the default start is
   2:30 rather than 2:00 — prefilling the desk time is how this happened in the
   first place.
-- **Every screen calls it sign-in, and only the column says registration.** The
-  line sits directly above a register form that works right now, and
-  "registration opens at 2:00 PM" over a working form reads as a refusal. The
-  column kept its name because that is what it is in the domain and renaming it
-  after the migration shipped would cost a second one; the mismatch is the
-  wording doing its job, not an oversight. Do not "fix" one to match the other
-  without changing both.
+- **The large figure on a card is when to arrive, not when play starts.** It
+  shows `registration_opens_at`, falling back to `starts_at` for an event with
+  no desk time. The card used to lead with the start time and put the desk time
+  in small print underneath: accurate, and still read as "turn up at half past",
+  because the big number is the one people take away. That is the failure this
+  is built around — a player arriving at 2:30 has missed registration.
+- **The line underneath carries both times in one sentence**, "Registration
+  opens at 2:00 PM and the event begins at 2:30 PM." Neither time appears
+  without the other, so neither can be read alone and acted on wrongly. It was
+  briefly worded as "sign-in" to avoid colliding with the register form on the
+  same card; naming both times is what actually resolves that, and the sentence
+  is now the same on the schedule, the event page and the home page.
+- **This is display only.** `starts_at` is still when play starts and still what
+  every rule keys on, and the admin form still asks for the two times exactly as
+  it did. Nothing about the data changed when the wording did.
 - **An event that takes registration has a page of its own**, `event.html?e=<id>`,
   so a professor has a link to post that is one event rather than the whole
   schedule. It reads what the schedule reads and nothing more: places left and

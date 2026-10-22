@@ -32,18 +32,30 @@ const spots = new Map();
 // Null on an event nobody has set it for, and then the card says nothing rather
 // than guessing at half an hour.
 //
-// "Sign-in" and not "registration", although the column is named for the latter.
-// This line can sit directly above a register form that works right now, and
-// "registration opens at 2:00 PM" over a working form reads as a refusal. The
-// two really are different things -- pre-registration on this site opens when
-// the event is created -- and the card is where that is most easily confused.
+// Both times, in one sentence. The card used to carry the start time in the
+// large figure and the desk time in small print underneath, which was accurate
+// and still read as "turn up at half past" -- the big number is the one people
+// take away. The large figure is now when to arrive and this line is what each
+// time actually is, so neither can be read on its own and get it wrong.
 function opensLine(event) {
   if (!event.registration_opens_at) return null;
   return el('p', { className: 'event-opens' }, [
-    el('span', { text: 'Sign-in opens at ' }),
+    el('span', { text: 'Registration opens at ' }),
     el('time', { datetime: event.registration_opens_at,
-                 text: formatEventTime(event.registration_opens_at) })
+                 text: formatEventTime(event.registration_opens_at) }),
+    el('span', { text: ' and the event begins at ' }),
+    el('time', { datetime: event.starts_at,
+                 text: formatEventTime(event.starts_at) }),
+    el('span', { text: '.' })
   ]);
+}
+
+// What the large figure shows: when to turn up. starts_at is still when play
+// starts and still what every rule keys on -- the registration cutoff, the
+// division calculation, the drop screen -- this is display only. An event with
+// no desk time falls back to the start, which is all there is to show.
+function arriveAt(event) {
+  return event.registration_opens_at || event.starts_at;
 }
 
 function eventCard(event, counts) {
@@ -60,8 +72,8 @@ function eventCard(event, counts) {
 
   const body = [
     el('p', { className: 'event-when' }, [
-      el('time', { datetime: event.starts_at, className: 'event-time',
-                   text: formatEventTime(event.starts_at) })
+      el('time', { datetime: arriveAt(event), className: 'event-time',
+                   text: formatEventTime(arriveAt(event)) })
     ]),
     opensLine(event),
     el('h3', { className: 'event-name', text: event.name }),

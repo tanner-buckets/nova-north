@@ -43,6 +43,11 @@ function notice(heading, body) {
 
 // Past events are still reachable, because a link outlives the afternoon it was
 // posted for and a dead link is worse than a page saying what happened.
+// When to turn up, which is what the page leads with. See schedule.js.
+function arriveAt(event) {
+  return event.registration_opens_at || event.starts_at;
+}
+
 function isPast(event) {
   return new Date(event.starts_at).getTime() < Date.now();
 }
@@ -73,20 +78,26 @@ function detail(event, counts, { onChange, heading, tag = 'div' }) {
         })
       : null,
     el(heading, { className: 'event-name', text: event.name }),
+    // The large figure is when to turn up, not when play starts. The day comes
+    // from starts_at because the two are the same afternoon by construction --
+    // the admin form composes the desk time from the event's own date.
     el('p', { className: 'event-when' }, [
-      el('time', { datetime: event.starts_at, className: 'event-time',
-                   text: `${formatEventDay(event.starts_at)}, ${formatEventTime(event.starts_at)}` })
+      el('time', { datetime: arriveAt(event), className: 'event-time',
+                   text: `${formatEventDay(event.starts_at)}, `
+                       + `${formatEventTime(arriveAt(event))}` })
     ]),
-    // The same line the schedule carries, wording included -- "sign-in" rather
-    // than "registration", because it can sit above a register form that works
-    // right now. This is a page somebody is sent straight to, so it is the one
-    // card they will see all day; leaving the desk time off it would send them
-    // half an hour early in exactly the way the schedule used to.
+    // The same sentence the schedule carries. This is a page somebody is sent
+    // straight to, so it is the one card they will see all day; carrying only
+    // one of the two times would send them at the wrong one.
     event.registration_opens_at
       ? el('p', { className: 'event-opens' }, [
-          el('span', { text: 'Sign-in opens at ' }),
+          el('span', { text: 'Registration opens at ' }),
           el('time', { datetime: event.registration_opens_at,
-                       text: formatEventTime(event.registration_opens_at) })
+                       text: formatEventTime(event.registration_opens_at) }),
+          el('span', { text: ' and the event begins at ' }),
+          el('time', { datetime: event.starts_at,
+                       text: formatEventTime(event.starts_at) }),
+          el('span', { text: '.' })
         ])
       : null,
     el('ul', { className: 'badges' }, badges),

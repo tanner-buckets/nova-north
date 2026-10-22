@@ -893,12 +893,21 @@ the event exists and closes when play starts, which is the rule below and is
 unchanged. A check constraint keeps it before `starts_at` — immutable, so it
 can be a check rather than a trigger, which `at time zone` would have forced.
 
-**Every screen calls it sign-in; only the column says registration.** The line
-can sit directly above a register form that works right now, and "registration
-opens at 2:00 PM" over a working form reads as a refusal. The column kept the
-domain word — it is when registration at the desk opens — and renaming it after
-the migration shipped would cost a second migration for a naming preference.
-The two words are deliberate, so changing one means changing the other.
+**The large figure is when to arrive, not when play starts.** A card shows
+`registration_opens_at`, falling back to `starts_at` where there is no desk
+time, and the line underneath reads "Registration opens at 2:00 PM and the event
+begins at 2:30 PM."
+
+Leading with the start time was accurate and still wrong in practice: the big
+number is the one people take away, so a card headed 2:30 sent players to a
+desk that had closed. Carrying both times in one sentence is what fixes it —
+neither time appears without the other, so neither can be read alone and acted
+on. The same sentence is on the schedule, the event page and the home page, and
+the home page leads with 2:00 for the same reason.
+
+None of this touched the data. `starts_at` is still when play starts and still
+what every rule keys on; the admin form still asks for both times exactly as
+before.
 
 The form asks for a **time and not a datetime**, and composes the date from the
 start time every time it saves, so the two can never end up on different days.
