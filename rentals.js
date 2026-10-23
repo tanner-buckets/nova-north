@@ -7,7 +7,7 @@
 // Standard list look identical on a page and mean different things: one says we
 // have no Standard decks yet, the other leaves a reader wondering whether they
 // scrolled past it.
-import { supabase, el, problem } from './supabase-client.js';
+import { supabase, el, problem, readableOn } from './supabase-client.js';
 
 const shelf = document.querySelector('#rental-shelf');
 const bounties = document.querySelector('#rental-bounties');
@@ -25,6 +25,22 @@ const STATUS = {
   needs_updating: { word: 'Needs updating', className: 'tag tag-hidden' }
 };
 
+// A tag's colour comes from its row, so a professor can set one on a tag they
+// invented. Null is the quiet grey pill, which is what most tags should be: a
+// shelf where everything is coloured is a shelf where no colour means anything.
+//
+// The text colour is worked out rather than stored. See readableOn().
+function tagPill(tag) {
+  const label = typeof tag === 'string' ? tag : tag.label;
+  const colour = typeof tag === 'string' ? null : tag.color;
+  const ink = readableOn(colour);
+
+  return ink
+    ? el('span', { className: 'tag tag-colour', text: label,
+                   style: `background:${colour};color:${ink}` })
+    : el('span', { className: 'tag tag-soft', text: label });
+}
+
 function deckRow(deck) {
   const status = STATUS[deck.status] || STATUS.current;
   const tags = Array.isArray(deck.tags) ? deck.tags : [];
@@ -33,7 +49,7 @@ function deckRow(deck) {
     el('p', { className: 'rental-deck-head' }, [
       el('span', { className: 'rental-deck-name', text: deck.name }),
       el('span', { className: status.className, text: status.word }),
-      ...tags.map((t) => el('span', { className: 'tag tag-soft', text: t }))
+      ...tags.map(tagPill)
     ]),
     deck.notes ? el('p', { className: 'rental-deck-note', text: deck.notes }) : null,
     // A deck with no list recorded simply has no link. Printing a dead one

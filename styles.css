@@ -10,6 +10,9 @@
   --gold-lift: #b08420;
   --amber: #d9a32c;         /* a background only. White on it fails at 2.28 */
   --danger: #9e2f28;
+  /* White on it is 5.37:1, the same as --gold, so a green pill and a gold one
+     carry identical weight and neither shouts louder than the other. */
+  --green: #1b7a43;
   --paper: #f5f4f1;
   --card: #ffffff;
   --text: #23252a;
@@ -3493,6 +3496,15 @@ h1.event-name + .event-when {
   border: 1px solid var(--line);
 }
 
+/* Two tags earn a colour because they answer the two questions somebody
+   browsing the shelf actually has: can I pick this up cold, and is it any
+   good. Everything else stays quiet -- if every tag were coloured, none of
+   them would mean anything. */
+.tag-green {
+  background: var(--green);
+  color: var(--card);
+}
+
 .bounty-reward {
   margin: 0 0 1rem;
   padding-left: 1.1rem;
@@ -3680,3 +3692,47 @@ h1.event-name + .event-when {
   font-weight: 600;
   color: var(--danger);
 }
+
+/* --- Tag colours ---------------------------------------------------------------- */
+/* The background and text come from the row, because a professor chooses them.
+   The class only carries the things every coloured pill shares. */
+.tag-colour {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* Swatches that look like the pill they will become, so the choice is made by
+   looking rather than by reading a colour name. */
+.swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.6rem;
+  margin: 0 0 0.8rem;
+}
+
+.swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+}
+
+.swatch input { margin: 0; }
+
+.swatch input:focus-visible + .tag {
+  outline: 3px solid var(--gold-line);
+  outline-offset: 2px;
+}
+
+.tag-admin-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.recolour {
+  margin: 0.5rem 0 0.8rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--paper);
+  border-radius: 8px;
+}
+.recolour p:last-child { margin-bottom: 0; }

@@ -464,6 +464,19 @@ personal data in a catalogue of what is on a shelf.
 - **The tag vocabulary is a table, not an enum.** The point is that a professor
   adds one without a migration. Tags retire rather than delete, so a deck that
   wore one keeps its history.
+- **A tag carries its own colour**, and null is the quiet grey most tags should
+  stay. The colours were first a map in page code keyed on the label, which only
+  works for tags somebody already thought of: rename one and it went grey,
+  invent one and it could not have a colour at all.
+- **The text colour is computed, never stored.** `readableOn()` picks white or
+  ink by WCAG contrast against the chosen background, so any valid hex renders
+  readably — including one set straight through the API, past the swatches. The
+  database checks the shape of the value and nothing else, because a database
+  cannot judge contrast.
+- **The screen offers swatches, not a colour wheel.** Each was checked against
+  both white and ink and clears 4.5:1 with whichever the page picks. A wheel
+  would let somebody land on a washed-out pill, and a short list is faster to
+  choose from anyway.
 - **Both formats always render**, even empty. A missing Standard list and an
   empty one look identical on a page and mean different things.
 - **`claimed_note` is the duplicate guard**, and it is public for that reason:
