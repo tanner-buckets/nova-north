@@ -329,6 +329,19 @@ is applied to the production database.** There is no confirmation step.
   the schedule the links are simply absent for an event that takes no
   registration; the explainer that says to turn registration on belongs on the
   screen where that is one checkbox away.
+- **Picking a kind of event fills in what that kind always needs.** A League
+  Cup or Challenge ticks premier and registration and fills the division caps
+  with 56 / 16 / 16 / 32; a Prerelease ticks registration and **clears**
+  capacity, because its limit is however many kits the store has and no default
+  can guess it. Clearing rather than leaving it matters: a Prerelease quietly
+  keeping a Cup's 56 would publish a limit nobody chose. League, casual and
+  special have no preset and nothing is touched.
+- **Only on the create form.** On an existing event this would silently turn
+  registration on for something that already has places and a waiting list, and
+  changing a kind is not the same as deciding to take registration. `TYPE_PRESETS`
+  in `admin/events.js`, applied on the type dropdown's change event when `isNew`.
+  Like the point values on the upload screen, they are defaults a professor
+  edits, not rules.
 - **An event carries two times, and they mean different things.** `starts_at` is
   when play starts and is what every rule keys on: the registration cutoff, the
   division calculation, the drop screen, the printable list.
