@@ -350,6 +350,29 @@ is applied to the production database.** There is no confirmation step.
   in `admin/events.js`, applied on the type dropdown's change event when `isNew`.
   Like the point values on the upload screen, they are defaults a professor
   edits, not rules.
+- **An event can be copied from one that already exists.** Most weeks are last
+  week again, and everything that makes an event -- the name, the kind, the fee,
+  the capacity, whether it is premier -- is the same. The picker sits above the
+  create form and reseeds it; `eventForm()` already keys on `!event.id`, so a
+  prefilled object with no id is a create form and needed no second form.
+- **The flight PIN is never copied.** This is the trap the rest of the feature
+  is built around. A PIN is what puts events in one group, and a copy carrying
+  it would quietly join the group it came from -- where a player already holding
+  a confirmed place would then be refused a place on the new event, for a reason
+  nothing on screen explains. A second flight is made by typing the PIN in,
+  which is a decision rather than a leftover.
+- **The date moves, the time of day does not.** A copy is dated to the next
+  Sunday at the hour the original ran, so a 5pm prerelease stays at 5pm. The
+  date is the first thing a professor will change and the field is right there,
+  so a sensible guess beats an empty box.
+- **A copied desk time counts as chosen only when it was not the default.** If
+  `registration_opens_at` was half an hour before the start, it stays following
+  the start time; if it was deliberately set to something else, it sticks when
+  the date is moved. Carrying the value without this distinction would freeze
+  every copied event's desk time, including the ones that never wanted one.
+- **Capacity comes across**, because it is the tedious half of a Cup and the
+  half most likely to be forgotten. Only where the source took registration: a
+  cap on an event that refuses registration caps nothing.
 - **An event carries two times, and they mean different things.** `starts_at` is
   when play starts and is what every rule keys on: the registration cutoff, the
   division calculation, the drop screen, the printable list.

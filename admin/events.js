@@ -257,7 +257,7 @@ export function capacityPanel(eventId, rows) {
 
 // --- One event ---------------------------------------------------------------
 
-export function eventForm(event, { onSaved }) {
+export function eventForm(event, { onSaved, caps: seedCaps = [] } = {}) {
   const isNew = !event.id;
 
   // This form renders twice on the page, once to add and once per event being
@@ -270,9 +270,12 @@ export function eventForm(event, { onSaved }) {
     el('option', { value: v, text: t })));
   type.value = event.event_type || 'casual';
 
+  // A copy arrives with starts_local already worked out -- the next Sunday at
+  // the time of day the event it came from used, so a 5pm prerelease stays at
+  // 5pm. Without one, the ordinary default.
   const starts = el('input', {
     type: 'datetime-local',
-    value: isNew ? nextLeagueSunday() : toLocalInput(event.starts_at)
+    value: isNew ? (event.starts_local || nextLeagueSunday()) : toLocalInput(event.starts_at)
   });
 
   // A time and not a datetime: the desk opens on the day of the event, so
@@ -280,15 +283,21 @@ export function eventForm(event, { onSaved }) {
   // The date is taken from the start time when this is saved, which is also
   // what keeps the two from drifting apart if the event is moved.
   const opens = el('input', { type: 'time' });
-  opens.value = event.registration_opens_at
-    ? timePart(toLocalInput(event.registration_opens_at))
-    : halfHourBefore(starts.value);
+  opens.value = event.opens_local
+    || (event.registration_opens_at
+      ? timePart(toLocalInput(event.registration_opens_at))
+      : halfHourBefore(starts.value));
 
   // Half an hour is right nearly every time, so it follows the start time --
   // but only until a professor says otherwise. An event moved from 2:30 to
   // 11:00 should bring its desk time along; one deliberately set to open an
   // hour early should not have that quietly undone by a later edit.
-  let opensChosen = !!event.registration_opens_at;
+  // A copied desk time only counts as chosen when it was not simply half an
+  // hour before. The copy keeps the source's time of day, so a default one
+  // still matches here and goes on following the start time; a deliberate one
+  // does not, and sticks.
+  let opensChosen = !!event.registration_opens_at
+    || (!!event.opens_local && event.opens_local !== halfHourBefore(starts.value));
   opens.addEventListener('input', () => { opensChosen = true; });
   starts.addEventListener('input', () => {
     if (!opensChosen) opens.value = halfHourBefore(starts.value);
@@ -315,7 +324,7 @@ export function eventForm(event, { onSaved }) {
   // Only on the create form. An event that already exists has its own capacity
   // panel below, which can read what is stored; repeating the fields here would
   // give two places to set one number.
-  const caps = isNew ? capacityFields([]) : null;
+  const caps = isNew ? capacityFields(seedCaps) : null;
 
   // A cap on an event that refuses registration outright caps nothing, so the
   // fields are not offered. Hidden rather than disabled: an input nobody can use
@@ -348,19 +357,26 @@ export function eventForm(event, { onSaved }) {
     el('p', { className: 'field' }, [el('label', { text: 'Kind' }, [type])]),
     isNew
       ? el('p', { className: 'field-help',
-          text: 'A League Cup or Challenge fills in the usual capacity and ticks '
+          text: event.starts_local
+            ? 'Copied from an event that already ran. Changing the kind fills in '
+              + 'that kind’s usual capacity and replaces what came across.'
+            : 'A League Cup or Challenge fills in the usual capacity and ticks '
               + 'premier and registration. A Prerelease ticks registration and '
               + 'leaves capacity to you, because that is however many kits there '
               + 'are. Change any of it afterwards.' })
       : null,
     el('p', { className: 'field' }, [el('label', { text: 'Starts' }, [starts])]),
     el('p', { className: 'field-help',
-      text: isNew
-        ? 'When play starts, not when the desk opens. League time, shown on the '
-          + 'public schedule. Prefilled with the next Sunday at 2:30, which is '
-          + 'when league plays; change it for anything else.'
-        : 'When play starts, not when the desk opens. League time. Shown on the '
-          + 'public schedule.' }),
+      text: !isNew
+        ? 'When play starts, not when the desk opens. League time. Shown on the '
+          + 'public schedule.'
+        : event.starts_local
+          ? 'When play starts, not when the desk opens. League time, shown on the '
+            + 'public schedule. Set to the next Sunday at the time the event this '
+            + 'was copied from ran; change it for anything else.'
+          : 'When play starts, not when the desk opens. League time, shown on the '
+            + 'public schedule. Prefilled with the next Sunday at 2:30, which is '
+            + 'when league plays; change it for anything else.' }),
 
     el('p', { className: 'field' }, [
       el('label', { text: 'Sign-in opens' }, [opens])
@@ -517,6 +533,129 @@ export function eventForm(event, { onSaved }) {
   });
 
   return form;
+}
+
+// --- Copying an earlier event -------------------------------------------------
+
+// Most events this league runs are last week's event again. Everything that
+// makes one -- the name, the kind, the fee, the caps, whether it is premier --
+// is the same, and the one thing that changes is the date.
+//
+// WHAT IS DELIBERATELY NOT COPIED:
+//
+//   id              it is a new event, not an edit of the old one
+//   the date        the whole reason for making another
+//   the flight PIN  this is the trap. A PIN is what puts events in one group,
+//                   and a copy that carried it would quietly join the group it
+//                   was copied from -- where a player holding a confirmed place
+//                   would then be refused a place on the new event, for a
+//                   reason nothing on screen explains. A second flight is made
+//                   by typing the PIN in, which is a decision rather than a
+//                   leftover.
+//
+// Registrations, drops and the early-closing record are not copied either, but
+// those live in other tables and were never going to be.
+function copyTemplate(source) {
+  const sourceLocal = toLocalInput(source.starts_at);
+  const sourceOpens = source.registration_opens_at
+    ? timePart(toLocalInput(source.registration_opens_at))
+    : null;
+
+  return {
+    name: source.name,
+    event_type: source.event_type,
+    entry_fee: source.entry_fee,
+    description: source.description,
+    is_premier: source.is_premier,
+    registration_open: source.registration_open,
+    // The next Sunday, at the time of day the original ran. The date is the
+    // first thing a professor will change and it is the field right there, so
+    // a sensible guess beats an empty box.
+    starts_local: `${dayPart(nextLeagueSunday())}T${timePart(sourceLocal)}`,
+    opens_local: sourceOpens
+  };
+}
+
+const COPY_WHEN = new Intl.DateTimeFormat('en-US', {
+  weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+  timeZone: 'America/New_York'
+});
+
+// The create card, with a picker above it that reseeds the form from an event
+// that already exists. Past events lead, because repeating one is the reason
+// this is here; the upcoming ones are offered too, since a second flight is the
+// same job done a week earlier.
+function addPanel() {
+  const holder = el('div', {});
+  const note = el('p', { className: 'form-status', role: 'status' });
+
+  function show(template, seedCaps) {
+    holder.replaceChildren(eventForm(template, { onSaved: refresh, caps: seedCaps }));
+  }
+
+  const now = Date.now();
+  const past = events.filter((e) => new Date(e.starts_at).getTime() < now);
+  const upcoming = events.filter((e) => new Date(e.starts_at).getTime() >= now)
+    .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+
+  const option = (e) => el('option', {
+    value: e.id, text: `${COPY_WHEN.format(new Date(e.starts_at))} — ${e.name}`
+  });
+
+  const picker = el('select', {}, [
+    el('option', { value: '', text: 'Start from nothing' }),
+    past.length
+      ? el('optgroup', { label: 'Already happened' }, past.slice(0, 30).map(option))
+      : null,
+    upcoming.length
+      ? el('optgroup', { label: 'Coming up' }, upcoming.map(option))
+      : null
+  ]);
+  picker.setAttribute('aria-label', 'Copy an event');
+
+  picker.addEventListener('change', async () => {
+    if (!picker.value) {
+      show({}, []);
+      status(note, '');
+      return;
+    }
+
+    const source = events.find((e) => e.id === picker.value);
+    if (!source) return;
+
+    picker.disabled = true;
+    status(note, 'Copying.');
+    try {
+      // The caps are the tedious half of a Cup and the half most likely to be
+      // forgotten, so they come across with everything else.
+      const seedCaps = source.registration_open ? await loadCapacities(source.id) : [];
+      show(copyTemplate(source), seedCaps);
+      status(note, `Copied from ${source.name}. Check the date, then create it. `
+        + 'The flight PIN is not copied.', 'good');
+    } catch (err) {
+      console.error(err);
+      status(note, `That could not be copied: ${err.message || 'unknown error'}.`, 'error');
+    }
+    picker.disabled = false;
+  });
+
+  show({}, []);
+
+  return el('section', { className: 'card' }, [
+    el('h2', { text: 'Add an event' }),
+    el('p', { className: 'field' }, [
+      el('label', { text: 'Copy an event' }, [picker])
+    ]),
+    el('p', { className: 'field-help',
+      text: 'Fills the form below from an event that already exists — name, kind, '
+          + 'fee, capacity and the rest — dated to the next Sunday at the same '
+          + 'time of day. Everything stays editable, and picking one replaces '
+          + 'whatever is in the form. The flight PIN is never copied: a copy '
+          + 'that joined the original\u2019s group would refuse a place to anybody '
+          + 'already holding one in it.' }),
+    note,
+    holder
+  ]);
 }
 
 const WHEN = new Intl.DateTimeFormat('en-US', {
@@ -722,10 +861,7 @@ async function render() {
   const pastRows = await Promise.all(past.slice(0, 30).map(eventRow));
 
   app.replaceChildren(
-    el('section', { className: 'card' }, [
-      el('h2', { text: 'Add an event' }),
-      eventForm({}, { onSaved: refresh })
-    ]),
+    addPanel(),
 
     el('section', { className: 'card' }, [
       el('h2', { text: `Coming up (${upcoming.length})` }),
