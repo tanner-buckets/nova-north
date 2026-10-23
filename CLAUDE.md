@@ -497,17 +497,42 @@ printable lists and the attendance history.
   to get their name onto a rota would hand out read access to every child's full
   name and birth year to solve a scheduling problem. **Adding somebody to the
   roster grants them nothing**, and the screen says so where the button is.
-- **`regular` or `volunteer`, and the difference is the upload screen.** A
-  regular is offered in the judges list when a TDF is uploaded; a volunteer is
-  not. `loadJudges()` reads `staff` rather than `professors` for exactly this
-  reason -- the two lists had always been assumed to be the same one and never
-  were.
+- **`regular` or `volunteer`, and the difference is twofold.** A regular is
+  asked for availability and is offered in the judges list when a TDF is
+  uploaded; a volunteer is neither, and is put on an event by hand. Eight weeks
+  of empty cells for somebody who helps when they happen to be free is eight
+  weeks of nobody waiting on an answer, and it drags the present figure down for
+  no reason. `loadJudges()` reads `staff` rather than `professors` for the same
+  reason the grid does -- the two lists had always been assumed to be the same
+  one and never were.
 - **A regular with no `player_id` cannot be ticked as a judge**, because the
   loyalty week and the attendance point would have nobody to land on. The
   roster says so on the row, where it can be fixed, rather than leaving somebody
   wondering why a name is missing from the upload screen. Adding somebody offers
   to find their player record or create one, the same picker the attendance
   screen uses.
+- **Availability is keyed on a DATE, not an event.** The question is "can you
+  make Sunday the 25th", and it is worth asking eight weeks out -- long before
+  anybody has created the events those Sundays will hold. Keyed on an event the
+  grid could only ever show the weeks somebody had already filled in, which is
+  backwards: knowing who is free is how you decide what to put on. The sheet had
+  this right, and its Event column was a description of the day rather than the
+  key to it. `event_staffing` still keys on an event, because you cannot staff a
+  day that has nothing on it.
+- **The Sundays are generated, not stored.** The grid draws the next eight
+  whether or not anything exists for them. Generating them means no list to keep
+  topped up and no week that silently stops appearing because a backfill ran
+  out. `availability_dates` holds only the exceptions -- a midweek prerelease, a
+  holiday Saturday -- and those rows are marked on the grid, because the eye
+  stops expecting anything but a Sunday in a column of them.
+- **A Sunday with nothing on it says so** rather than being left out. The day is
+  real; what is on it is not decided, and that is exactly the week somebody
+  needs to see.
+- **An added day can be removed only while removing it does something** --
+  nobody has answered for it, and no event has appeared on it. A day with
+  answers keeps its row because the answers are about that day; a day with an
+  event keeps its row whatever that table says, so offering to remove it is an
+  offer to do nothing.
 - **Four states, not two.** `available`, `out`, `playing`, `unsure`. `playing`
   is the one worth keeping: somebody entered in the side event is in the room
   and is not a judge, and folding that into `out` would have a professor ringing

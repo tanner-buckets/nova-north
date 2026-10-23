@@ -4027,3 +4027,11 @@ h1.event-name + .event-when {
   .role-label { flex-basis: 100%; }
   .roster-actions { margin-left: 0; }
 }
+
+/* A day that is not a Sunday. Marked, because the grid is a column of Sundays
+   and the eye stops expecting anything else -- a midweek prerelease sitting
+   silently among them is the one row most worth not missing. */
+.avail-table tr.is-extra th[scope="row"] {
+  border-left: 3px solid var(--gold-line);
+  padding-left: 0.5rem;
+}

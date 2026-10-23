@@ -16,7 +16,8 @@
 // an account is still a thing that happens in the Supabase dashboard, and the
 // screen says so rather than letting somebody believe they have just granted
 // access to every child's name in the league.
-import { supabase, el, problem, formatEventDay } from '../supabase-client.js';
+import { supabase, el, problem, formatEventDay, leagueDayKey }
+  from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status, playerPicker } from './attendance-core.js';
 
@@ -45,15 +46,98 @@ const ROLES = [
 
 const KINDS = [['regular', 'Regular'], ['volunteer', 'Volunteer']];
 
+// Eight weeks is two months of notice, which is as far ahead as anybody will
+// commit and far enough to spot the Sunday nobody can cover.
+const WEEKS_AHEAD = 8;
+
 let roster = [];
 let events = [];
-let availability = new Map();   // `${eventId}:${staffId}` -> row
+let extraDates = [];            // the non-Sunday days somebody added
+let availability = new Map();   // `${dateKey}:${staffId}` -> row
 let staffing = new Map();       // eventId -> [row]
 let notes = new Map();          // eventId -> other_events text
 let showPast = false;
 
-const availKey = (eventId, staffId) => `${eventId}:${staffId}`;
+const availKey = (dateKey, staffId) => `${dateKey}:${staffId}`;
 const active = () => roster.filter((p) => p.is_active);
+
+// Only regulars are asked. A volunteer helps when they happen to be free, and
+// putting them in the grid would mean eight weeks of empty cells that nobody
+// is waiting on and that drag the "present" figure down for no reason. They are
+// still assignable to an event by hand, which is the whole of what they do.
+const asked = () => active().filter((p) => p.kind === 'regular');
+
+// --- League days --------------------------------------------------------------
+
+// Everything here is a plain YYYY-MM-DD in league time. Dates are compared and
+// keyed as text, which works because the format sorts.
+const DATE_KEY = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'America/New_York'
+});
+
+const todayKey = () => DATE_KEY.format(new Date());
+
+const DATE_LONG = new Intl.DateTimeFormat('en-US', {
+  weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC'
+});
+
+// Formatted at midday UTC: midnight in New York is the previous day in UTC and
+// every row would slide back by one.
+function showDate(key) {
+  return key ? DATE_LONG.format(new Date(`${key}T12:00:00Z`)) : '';
+}
+
+const isSunday = (key) => new Date(`${key}T12:00:00Z`).getUTCDay() === 0;
+
+// The next N Sundays, today included when today is one. Generated rather than
+// stored: league is on Sunday and that needs no recording, and a generated list
+// has no backfill to run out.
+function leagueSundays(weeks) {
+  const [y, m, d] = todayKey().split('-').map(Number);
+  const base = new Date(Date.UTC(y, m - 1, d));
+  const ahead = (7 - base.getUTCDay()) % 7;
+  const out = [];
+  for (let i = 0; i < weeks; i += 1) {
+    const dt = new Date(base);
+    dt.setUTCDate(base.getUTCDate() + ahead + i * 7);
+    out.push(dt.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+// What the grid asks about: the Sundays, plus anything else with an event on
+// it, plus the days somebody added by hand, plus any day already answered for.
+// The last one is what stops a date disappearing out from under an answer.
+function datesInView() {
+  const today = todayKey();
+
+  if (showPast) {
+    const seen = new Set();
+    for (const k of availability.keys()) seen.add(k.split(':')[0]);
+    for (const e of events) seen.add(leagueDayKey(e.starts_at));
+    return [...seen].filter((k) => k < today).sort().reverse().slice(0, 26);
+  }
+
+  const sundays = leagueSundays(WEEKS_AHEAD);
+  const last = sundays[sundays.length - 1];
+  const set = new Set(sundays);
+
+  for (const e of events) {
+    const k = leagueDayKey(e.starts_at);
+    if (k >= today && k <= last) set.add(k);
+  }
+  for (const d of extraDates) {
+    if (d.on_date >= today && d.on_date <= last) set.add(d.on_date);
+  }
+  for (const k of availability.keys()) {
+    const day = k.split(':')[0];
+    if (day >= today && day <= last) set.add(day);
+  }
+  return [...set].sort();
+}
+
+const eventsOn = (key) => events.filter((e) => leagueDayKey(e.starts_at) === key);
+const labelFor = (key) => (extraDates.find((d) => d.on_date === key) || {}).label || '';
 
 // --- Loading ------------------------------------------------------------------
 
@@ -68,33 +152,47 @@ async function load() {
   // earlier today is still on the upcoming list while the day is being run.
   // A rota that drops the event you are standing in is a rota that is wrong
   // exactly when somebody reaches for it.
-  const midnight = new Date();
-  midnight.setHours(0, 0, 0, 0);
-  const cutoff = midnight.toISOString();
+  const today = todayKey();
+  const cutoff = `${today}T00:00:00`;
 
   const query = supabase.from('events').select('id, name, starts_at, event_type');
-  const { data: eventRows, error: eventError } = showPast
-    ? await query.lt('starts_at', cutoff).order('starts_at', { ascending: false }).limit(60)
-    : await query.gte('starts_at', cutoff).order('starts_at').limit(40);
-  if (eventError) throw eventError;
-  events = eventRows || [];
+  const [eventRes, availRes, dateRes] = await Promise.all([
+    showPast
+      ? query.lt('starts_at', cutoff).order('starts_at', { ascending: false }).limit(60)
+      : query.gte('starts_at', cutoff).order('starts_at').limit(40),
+    // By date range rather than by a list of ids, because the dates are not
+    // known until the events are: the grid asks about Sundays that may have
+    // nothing created for them at all.
+    showPast
+      ? supabase.from('staff_availability').select('*')
+          .lt('on_date', today).order('on_date', { ascending: false }).limit(400)
+      : supabase.from('staff_availability').select('*').gte('on_date', today),
+    supabase.from('availability_dates').select('*').order('on_date')
+  ]);
+  if (eventRes.error) throw eventRes.error;
+  if (availRes.error) throw availRes.error;
+  if (dateRes.error) throw dateRes.error;
+
+  events = eventRes.data || [];
+  extraDates = dateRes.data || [];
 
   availability = new Map();
   staffing = new Map();
   notes = new Map();
+  for (const r of availRes.data || []) {
+    availability.set(availKey(r.on_date, r.staff_id), r);
+  }
+
   if (!events.length) return;
 
   const ids = events.map((e) => e.id);
-  const [avail, staffed, noteRows] = await Promise.all([
-    supabase.from('staff_availability').select('*').in('event_id', ids),
+  const [staffed, noteRows] = await Promise.all([
     supabase.from('event_staffing').select('*').in('event_id', ids).order('sort_order'),
     supabase.from('event_staffing_notes').select('*').in('event_id', ids)
   ]);
-  if (avail.error) throw avail.error;
   if (staffed.error) throw staffed.error;
   if (noteRows.error) throw noteRows.error;
 
-  for (const r of avail.data || []) availability.set(availKey(r.event_id, r.staff_id), r);
   for (const r of staffed.data || []) {
     if (!staffing.has(r.event_id)) staffing.set(r.event_id, []);
     staffing.get(r.event_id).push(r);
@@ -119,17 +217,17 @@ function personName(staffId) {
 // How many people said yes. `playing` deliberately does not count: somebody
 // entered in the side event is in the room and is not a judge, and counting
 // them would have a professor think the day is covered when it is not.
-function presentCount(event) {
-  return active().filter((p) =>
-    availability.get(availKey(event.id, p.id))?.status === 'available').length;
+function presentCount(dateKey) {
+  return asked().filter((p) =>
+    availability.get(availKey(dateKey, p.id))?.status === 'available').length;
 }
 
 // --- Availability -------------------------------------------------------------
 
-function availabilityCell(event, person, note) {
-  const row = availability.get(availKey(event.id, person.id));
+function availabilityCell(dateKey, person, note) {
+  const row = availability.get(availKey(dateKey, person.id));
   const sel = pick(STATUSES, row?.status || '');
-  sel.setAttribute('aria-label', `${person.display_name}, ${event.name}`);
+  sel.setAttribute('aria-label', `${person.display_name}, ${showDate(dateKey)}`);
 
   // The reason only appears once there is something to explain. "Out" on its
   // own is the common case and an empty box beside every one of them is a
@@ -150,11 +248,11 @@ function availabilityCell(event, person, note) {
     // than leave an empty string behind pretending to be an answer.
     const result = next
       ? await supabase.from('staff_availability').upsert({
-          event_id: event.id, staff_id: person.id,
+          on_date: dateKey, staff_id: person.id,
           status: next, note: why.value.trim() || null
-        }, { onConflict: 'event_id,staff_id' })
+        }, { onConflict: 'on_date,staff_id' })
       : await supabase.from('staff_availability').delete()
-          .eq('event_id', event.id).eq('staff_id', person.id);
+          .eq('on_date', dateKey).eq('staff_id', person.id);
 
     if (result.error) {
       sel.setAttribute('aria-invalid', 'true');
@@ -163,15 +261,15 @@ function availabilityCell(event, person, note) {
     }
 
     if (next) {
-      availability.set(availKey(event.id, person.id),
-        { event_id: event.id, staff_id: person.id, status: next, note: why.value.trim() || null });
+      availability.set(availKey(dateKey, person.id),
+        { on_date: dateKey, staff_id: person.id, status: next, note: why.value.trim() || null });
     } else {
-      availability.delete(availKey(event.id, person.id));
+      availability.delete(availKey(dateKey, person.id));
     }
     status(note, 'Saved.');
     // The present count sits in the same row and is now wrong.
-    const cell = document.querySelector(`[data-present="${event.id}"]`);
-    if (cell) cell.textContent = String(presentCount(event));
+    const cell = document.querySelector(`[data-present="${dateKey}"]`);
+    if (cell) cell.textContent = String(presentCount(dateKey));
   }
 
   sel.addEventListener('change', () => { showWhy(); save(); });
@@ -181,21 +279,22 @@ function availabilityCell(event, person, note) {
 }
 
 function availabilityPanel(note) {
-  if (!active().length) {
+  const people = asked();
+  if (!people.length) {
     return el('p', { className: 'muted-note',
-      text: 'Nobody is on the roster yet. Add somebody below and they get a column here.' });
-  }
-  if (!events.length) {
-    return el('p', { className: 'muted-note',
-      text: showPast
-        ? 'No past events.'
-        : 'No events coming up. Create one on the events screen and it appears here.' });
+      text: 'Nobody on the roster is a regular, so there is nobody to ask. '
+          + 'Volunteers are assigned to an event by hand rather than asked in '
+          + 'advance.' });
   }
 
-  const people = active();
+  const dates = datesInView();
+  if (!dates.length) {
+    return el('p', { className: 'muted-note',
+      text: showPast ? 'Nothing recorded yet.' : 'No days to ask about.' });
+  }
 
   const head = el('tr', {}, [
-    el('th', { scope: 'col', text: 'Event' }),
+    el('th', { scope: 'col', text: 'Day' }),
     // Before the names, not after them. A table with a column per person is
     // wide by nature, and a summary at the far right is the first thing off
     // the side of a phone -- which is exactly how Players got read as the
@@ -205,17 +304,28 @@ function availabilityPanel(note) {
     ...people.map((p) => el('th', { scope: 'col', text: p.display_name }))
   ]);
 
-  const rows = events.map((event) => el('tr', {}, [
-    el('th', { scope: 'row' }, [
-      el('span', { className: 'avail-day', text: formatEventDay(event.starts_at) }),
-      el('span', { className: 'avail-name', text: event.name })
-    ]),
-    el('td', { className: 'count', 'data-present': event.id,
-      text: String(presentCount(event)) }),
-    ...people.map((p) => showPast
-      ? readOnlyCell(event, p)
-      : availabilityCell(event, p, note))
-  ]));
+  const rows = dates.map((key) => {
+    const on = eventsOn(key);
+    // The event names where there are any, the hand-written label where there
+    // is not, and nothing at all for an ordinary Sunday nobody has planned yet.
+    // An empty cell is the honest answer there: the day is real, what is on it
+    // is not decided.
+    const what = on.length ? on.map((e) => e.name).join(' + ') : labelFor(key);
+
+    return el('tr', { className: isSunday(key) ? '' : 'is-extra' }, [
+      el('th', { scope: 'row' }, [
+        el('span', { className: 'avail-day', text: showDate(key) }),
+        what
+          ? el('span', { className: 'avail-name', text: what })
+          : el('span', { className: 'avail-name muted-note', text: 'Nothing planned' })
+      ]),
+      el('td', { className: 'count', 'data-present': key,
+        text: String(presentCount(key)) }),
+      ...people.map((p) => showPast
+        ? readOnlyCell(key, p)
+        : availabilityCell(key, p, note))
+    ]);
+  });
 
   return el('div', { className: 'table-wrap' }, [
     el('table', { className: 'data-table avail-table' }, [
@@ -225,8 +335,89 @@ function availabilityPanel(note) {
   ]);
 }
 
-function readOnlyCell(event, person) {
-  const row = availability.get(availKey(event.id, person.id));
+// A day that is not a Sunday: a Wednesday prerelease, a holiday Saturday. The
+// Sundays need no adding, so this only ever holds the exceptions.
+function addDatePanel(reload, note) {
+  const input = el('input', { type: 'date', id: 'extra-date' });
+  const label = el('input', { id: 'extra-label', placeholder: 'Pitch Black prerelease (5pm)' });
+  const go = el('button', { type: 'button', className: 'button button-quiet', text: 'Ask about this day' });
+
+  go.addEventListener('click', async () => {
+    const day = input.value;
+    if (!day) { status(note, 'Pick a date first.', 'error'); return; }
+
+    go.disabled = true;
+    const { error } = await supabase.from('availability_dates')
+      .upsert({ on_date: day, label: label.value.trim() || null },
+              { onConflict: 'on_date' });
+    go.disabled = false;
+    if (error) { status(note, `That did not save: ${error.message}`, 'error'); return; }
+
+    input.value = '';
+    label.value = '';
+    await reload();
+  });
+
+  const today = todayKey();
+  const last = leagueSundays(WEEKS_AHEAD).slice(-1)[0];
+  // Only the ones where removing actually removes something. A day somebody
+  // has answered for keeps its row, because the answers are about that day. A
+  // day with an event on it keeps its row too -- the event puts it on the grid
+  // whatever this table says -- and offering to remove a row that would still
+  // be there is an offer to do nothing.
+  const removable = extraDates.filter((d) =>
+    d.on_date >= today && d.on_date <= last
+    && !eventsOn(d.on_date).length
+    && !asked().some((p) => availability.get(availKey(d.on_date, p.id))));
+
+  const chips = removable.map((d) => {
+    const x = el('button', {
+      type: 'button', className: 'chip-remove', text: '×',
+      'aria-label': `Stop asking about ${showDate(d.on_date)}`
+    });
+    x.addEventListener('click', async () => {
+      x.disabled = true;
+      const { error } = await supabase.from('availability_dates')
+        .delete().eq('on_date', d.on_date);
+      if (error) { x.disabled = false; status(note, `That did not save: ${error.message}`, 'error'); return; }
+      await reload();
+    });
+    return el('span', { className: 'staff-chip is-guest' }, [
+      el('span', { text: showDate(d.on_date) }), x
+    ]);
+  });
+
+  return el('details', { className: 'disclosure' }, [
+    el('summary', { text: 'Ask about another day' }),
+    el('div', { className: 'disclosure-body' }, [
+      el('p', { className: 'field-help',
+        text: `The next ${WEEKS_AHEAD} Sundays are on the grid already and need `
+            + 'no adding. This is for the days that are not a Sunday — a '
+            + 'midweek prerelease, a holiday Saturday.' }),
+      el('p', { className: 'field' }, [
+        el('label', { for: input.id, text: 'Date' }), input
+      ]),
+      el('p', { className: 'field' }, [
+        el('label', { for: label.id, text: 'What it is' }), label,
+        el('span', { className: 'field-help',
+          text: 'Optional, and only used until an event exists for that day — '
+              + 'after that the event\u2019s own name is shown instead.' })
+      ]),
+      el('p', {}, [go]),
+      chips.length
+        ? el('div', {}, [
+            el('p', { className: 'field-help',
+              text: 'Added days nobody has answered for yet. Remove one and it '
+                  + 'leaves the grid.' }),
+            el('div', { className: 'chip-row' }, chips)
+          ])
+        : null
+    ])
+  ]);
+}
+
+function readOnlyCell(dateKey, person) {
+  const row = availability.get(availKey(dateKey, person.id));
   if (!row) return el('td', { className: 'muted-note', text: '—' });
   return el('td', { className: `avail-static is-${row.status}` }, [
     el('span', { text: STATUS_LABEL[row.status] || row.status }),
@@ -240,11 +431,12 @@ function readOnlyCell(event, person) {
 // above rather than typed again: the sheet kept this as its own column and it
 // was the column most often out of date with the one beside it.
 function unavailableLine(event) {
-  const away = active()
-    .map((p) => ({ p, row: availability.get(availKey(event.id, p.id)) }))
+  const key = leagueDayKey(event.starts_at);
+  const away = asked()
+    .map((p) => ({ p, row: availability.get(availKey(key, p.id)) }))
     .filter(({ row }) => row && (row.status === 'out' || row.status === 'playing'));
 
-  const unanswered = active().filter((p) => !availability.get(availKey(event.id, p.id))).length;
+  const unanswered = asked().filter((p) => !availability.get(availKey(key, p.id))).length;
 
   if (!away.length && !unanswered) return null;
 
@@ -620,10 +812,14 @@ async function draw() {
     el('section', { className: 'card' }, [
       el('h2', { text: 'Staff availability' }),
       el('p', { className: 'field-help',
-        text: 'Who can make each event. Playing means they will be here but in '
-            + 'the tournament rather than staffing it, so they do not count '
-            + 'toward the number present.' }),
-      availabilityPanel(note)
+        text: `The next ${WEEKS_AHEAD} Sundays, whether or not anything has been `
+            + 'created for them yet, plus any other day worth asking about. '
+            + 'Regulars only: a volunteer is assigned to an event by hand '
+            + 'rather than asked eight weeks out. Playing means they will be '
+            + 'here but in the tournament rather than staffing it, so they do '
+            + 'not count toward the number present.' }),
+      availabilityPanel(note),
+      showPast ? null : addDatePanel(reload, note)
     ]),
     el('section', { className: 'staff-events' }, [
       el('h2', { text: 'Event staffing' }),
