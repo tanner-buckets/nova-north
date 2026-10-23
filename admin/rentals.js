@@ -8,7 +8,7 @@
 // button. No modal, no separate edit page. These are short records a professor
 // corrects between rounds, and a dialog for a four-field row is a dialog in the
 // way.
-import { supabase, el, problem } from '../supabase-client.js';
+import { supabase, el, problem, readableOn } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status } from './attendance-core.js';
 
@@ -218,8 +218,61 @@ function bountyRow(bounty, reload) {
 
 // --- Tags ---------------------------------------------------------------------
 
+// Swatches rather than a free colour wheel. Every one was checked against both
+// white and ink and clears 4.5:1 with whichever the page picks, so a professor
+// cannot land on a pill nobody can read. The page would cope with any hex --
+// readableOn() sees to that -- but a washed-out pill is still a bad pill, and a
+// short list is quicker to choose from than a wheel.
+const SWATCHES = [
+  ['', 'No colour'],
+  ['#1b7a43', 'Green'],
+  ['#8a6410', 'Gold'],
+  ['#1c5f8a', 'Blue'],
+  ['#6b3f9e', 'Purple'],
+  ['#17706b', 'Teal'],
+  ['#4a5568', 'Slate'],
+  ['#e8d9a8', 'Sand'],
+  ['#bfe3cd', 'Mint'],
+  ['#cfe3f2', 'Sky']
+];
+
+function pill(label, colour) {
+  const ink = readableOn(colour);
+  return el('span', {
+    className: ink ? 'tag tag-colour' : 'tag tag-soft',
+    text: label,
+    style: ink ? 'background:' + colour + ';color:' + ink : null
+  });
+}
+
+// Radios that look like the pills they will become, so the choice is made by
+// looking rather than by reading a colour name.
+function swatchPicker(initial) {
+  const uid = Math.random().toString(36).slice(2, 8);
+  let chosen = initial || '';
+
+  const nodes = SWATCHES.map(function (pair) {
+    const value = pair[0];
+    const name = pair[1];
+    const radio = el('input', {
+      type: 'radio', name: 'swatch-' + uid, value: value,
+      id: 'swatch-' + uid + '-' + (value.slice(1) || 'none')
+    });
+    radio.checked = value === chosen;
+    radio.addEventListener('change', function () {
+      if (radio.checked) { chosen = value; }
+    });
+    return el('label', { className: 'swatch', for: radio.id },
+      [radio, pill(name, value)]);
+  });
+
+  return { read: function () { return chosen || null; }, nodes: nodes };
+}
+
+
 function tagPanel(reload) {
   const label = el('input', { placeholder: 'e.g. Good for beginners' });
+  const picker = swatchPicker('');
   const msg = el('p', { className: 'form-status', role: 'status' });
   const add = el('button', { type: 'button', className: 'button', text: 'Add the tag' });
 
@@ -229,7 +282,8 @@ function tagPanel(reload) {
     add.disabled = true;
 
     const { error } = await supabase.from('rental_deck_tags')
-      .insert({ label: value, sort_order: (tags.length + 1) * 10 });
+      .insert({ label: value, color: picker.read(),
+                sort_order: (tags.length + 1) * 10 });
     add.disabled = false;
 
     if (error) {
@@ -241,6 +295,35 @@ function tagPanel(reload) {
     label.value = '';
     await reload();
   });
+
+  // A tag set up grey months ago should not need deleting and recreating to
+  // gain a colour, so the same picker is offered inline against each one.
+  function recolour(tag, host) {
+    const row = swatchPicker(tag.color || '');
+    const save = el('button', { type: 'button', className: 'button',
+      text: 'Save colour' });
+
+    const wrap = el('div', { className: 'recolour' }, [
+      el('p', { className: 'swatch-row' }, row.nodes),
+      el('p', {}, [save])
+    ]);
+
+    const existing = host.querySelector('.recolour');
+    if (existing) { existing.remove(); return; }
+    host.append(wrap);
+
+    save.addEventListener('click', async () => {
+      save.disabled = true;
+      const { error } = await supabase.from('rental_deck_tags')
+        .update({ color: row.read() }).eq('id', tag.id);
+      if (error) {
+        save.disabled = false;
+        status(msg, 'That did not save: ' + error.message + '.', 'error');
+        return;
+      }
+      await reload();
+    });
+  }
 
   async function retire(tag) {
     const { error } = await supabase.from('rental_deck_tags')
@@ -256,17 +339,26 @@ function tagPanel(reload) {
           + 'one is the status on the deck itself. Retiring a tag takes it off '
           + 'the list without disturbing the decks that wore it.' }),
     tags.length
-      ? el('ul', { className: 'tag-admin-list' }, tags.map((t) => el('li', {}, [
-          el('span', { className: 'tag tag-soft', text: t.label }),
-          (() => {
-            const b = el('button', { type: 'button', className: 'link-button',
-              text: 'Retire' });
-            b.addEventListener('click', () => retire(t));
-            return b;
-          })()
-        ])))
+      ? el('ul', { className: 'tag-admin-list' }, tags.map((t) => {
+          const row = el('li', {});
+          const colour = el('button', { type: 'button', className: 'link-button',
+            text: 'Recolour' });
+          colour.addEventListener('click', () => recolour(t, row));
+          const drop = el('button', { type: 'button', className: 'link-button',
+            text: 'Retire' });
+          drop.addEventListener('click', () => retire(t));
+          row.append(el('span', { className: 'tag-admin-row' }, [
+            pill(t.label, t.color), colour, drop
+          ]));
+          return row;
+        }))
       : el('p', { className: 'muted-note', text: 'No tags yet.' }),
+
     el('p', { className: 'field' }, [el('label', { text: 'New tag' }, [label])]),
+    el('p', { className: 'field-help',
+      text: 'Most tags are better left grey. A colour is worth spending on the '
+          + 'one or two somebody scans the shelf for.' }),
+    el('p', { className: 'swatch-row' }, picker.nodes),
     el('p', {}, [add]),
     msg
   ]);

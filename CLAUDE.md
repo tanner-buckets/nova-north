@@ -318,6 +318,14 @@ is applied to the production database.** There is no confirmation step.
   picked out of a list a second time. Only where the event takes registration:
   the drop screen and the printable list both load registration-taking events, so
   for anything else the links would land on a page the event is not on.
+- **The loyalty box on the programs page carries a print link, for a signed-in
+  professor.** It points at `admin/print.html?release=<id>` for the release the
+  page is already describing, so the sheet is not the printable lists screen
+  plus the same release picked out of a dropdown a second time. `print.js`
+  accepts that parameter the way it already accepted `?event=`, and ignores an
+  id that is not in its list. Same posture as every other professor-only thing
+  on a public page: it decides what to **show**, and row level security is what
+  refuses the data.
 - **The same two links are on the public schedule, for a signed-in professor.**
   A professor arriving at league opens the schedule like everybody else, and
   that is the page with the event they want on it. The pair lives in
@@ -457,6 +465,11 @@ The section at the foot of `league_programs.html`, filled by `rentals.js`, and
 `admin/rentals.html` behind it. Four tables, all of them public: there is no
 personal data in a catalogue of what is on a shelf.
 
+- **The Current chip is silver, not gold.** Once a professor could choose a
+  tag's colour, gold stopped being available to the status: a gold Current beside
+  a gold Regional winner is two pills that look the same and mean different
+  kinds of thing. Silver also stays clear of the warm pale grey Needs updating
+  wears, so the two statuses read apart at a glance.
 - **Status is not a tag.** `rental_decks.status` is a column with a check,
   because exactly one of *current* and *needs updating* is true at a time and a
   deck wearing both would tell a player two different things. Everything else is
@@ -464,6 +477,19 @@ personal data in a catalogue of what is on a shelf.
 - **The tag vocabulary is a table, not an enum.** The point is that a professor
   adds one without a migration. Tags retire rather than delete, so a deck that
   wore one keeps its history.
+- **A tag carries its own colour**, and null is the quiet grey most tags should
+  stay. The colours were first a map in page code keyed on the label, which only
+  works for tags somebody already thought of: rename one and it went grey,
+  invent one and it could not have a colour at all.
+- **The text colour is computed, never stored.** `readableOn()` picks white or
+  ink by WCAG contrast against the chosen background, so any valid hex renders
+  readably — including one set straight through the API, past the swatches. The
+  database checks the shape of the value and nothing else, because a database
+  cannot judge contrast.
+- **The screen offers swatches, not a colour wheel.** Each was checked against
+  both white and ink and clears 4.5:1 with whichever the page picks. A wheel
+  would let somebody land on a washed-out pill, and a short list is faster to
+  choose from anyway.
 - **Both formats always render**, even empty. A missing Standard list and an
   empty one look identical on a page and mean different things.
 - **`claimed_note` is the duplicate guard**, and it is public for that reason:

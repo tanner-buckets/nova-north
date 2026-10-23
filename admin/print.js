@@ -220,6 +220,14 @@ function show(node) {
 async function loyaltyPanel(releases) {
   const select = el('select', { id: 'release' },
     releases.map((r) => el('option', { value: r.id, text: r.name })));
+
+  // A link can name the release, the same way one can name an event. The
+  // loyalty button on the programs page uses this, so a professor who is
+  // already looking at the open release does not have to find it again in a
+  // list. An id that is not in the list is ignored and the newest stays
+  // selected, which is what the dropdown would have shown anyway.
+  const wanted = new URLSearchParams(location.search).get('release');
+  if (wanted && releases.some((r) => r.id === wanted)) select.value = wanted;
   const note = el('p', { className: 'form-status', role: 'status' });
   const go = el('button', { type: 'submit', className: 'button', text: 'Build the loyalty sheet' });
 

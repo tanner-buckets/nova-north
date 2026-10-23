@@ -187,6 +187,35 @@ export function eventShortcuts(event, { prefix = '', explain = false } = {}) {
 // uploaded file; the original thirteen carry none and fall back to the file
 // committed beside the page. One code path, two sources, and no re-upload of
 // artwork that already works.
+// Readable text on any background somebody picks.
+//
+// A professor choosing a pill colour cannot be asked to also work out whether
+// white or dark sits better on it, and a palette of swatches only helps until
+// somebody sets a colour another way. So the page decides: whichever of white
+// and ink has more contrast against the chosen background wins, by the same
+// WCAG relative-luminance maths the palette was validated with.
+const PILL_INK = '#23252a';
+
+function relativeLuminance(hex) {
+  const parts = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const [r, g, b] = parts.map((c) =>
+    c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrast(a, b) {
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+export function readableOn(background) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(String(background || ''))) return null;
+  return contrast(background, '#ffffff') >= contrast(background, PILL_INK)
+    ? '#ffffff'
+    : PILL_INK;
+}
+
 // The mark on a premier event card.
 //
 // A League Cup and a League Challenge are different sanctioned events and have
