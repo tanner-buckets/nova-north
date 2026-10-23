@@ -187,6 +187,29 @@ export function eventShortcuts(event, { prefix = '', explain = false } = {}) {
 // uploaded file; the original thirteen carry none and fall back to the file
 // committed beside the page. One code path, two sources, and no re-upload of
 // artwork that already works.
+// The mark on a premier event card.
+//
+// A League Cup and a League Challenge are different sanctioned events and have
+// their own official marks, so the card carries the right one rather than a
+// single stand-in for both. is_premier is still what decides whether a card is
+// marked at all; the type decides which mark.
+//
+// worlds.png remains the fallback. is_premier is set on exactly Cups and
+// Challenges today, but it is a column somebody can tick, and a premier event
+// that is neither should still read as one rather than silently losing its
+// mark.
+const PREMIER_MARKS = {
+  challenge: { file: 'league-challenge.png', alt: 'Pokémon League Challenge' },
+  cup: { file: 'league-cup.png', alt: 'Pokémon League Cup' }
+};
+
+export function premierMark(event, prefix = '') {
+  if (!event.is_premier) return null;
+  const mark = PREMIER_MARKS[event.event_type]
+    || { file: 'worlds.png', alt: 'Premier event' };
+  return { src: `${prefix}images/${mark.file}`, alt: mark.alt };
+}
+
 export function badgeArtUrl(badge, prefix = '') {
   if (badge.image_path) {
     return `${SUPABASE_URL}/storage/v1/object/public/badge-art/${badge.image_path}`;

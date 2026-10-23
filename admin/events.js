@@ -174,8 +174,36 @@ function capacityFields(rows) {
     return wanted;
   }
 
-  return { nodes: [help, ...nodes], collect };
+  // Used by the type presets below. Null clears a field rather than leaving a
+  // number that belonged to a different kind of event.
+  function set(values) {
+    for (const [key, input] of inputs) {
+      const v = values ? values[key] : null;
+      input.value = (v === null || v === undefined) ? '' : String(v);
+    }
+  }
+
+  return { nodes: [help, ...nodes], collect, set };
 }
+
+// What picking a kind of event sets up for you.
+//
+// A Cup and a Challenge are sanctioned, take registration, and have the same
+// division caps every time; a Prerelease takes registration but its capacity is
+// however many kits the store has, which no default can guess. Typing those
+// four numbers correctly every time is the kind of job a form should do.
+//
+// They are defaults, not rules: every field stays editable, exactly like the
+// point values on the upload screen.
+const TYPE_PRESETS = {
+  cup: { premier: true, registration: true,
+         caps: { all: 56, junior: 16, senior: 16, master: 32 } },
+  challenge: { premier: true, registration: true,
+               caps: { all: 56, junior: 16, senior: 16, master: 32 } },
+  // Capacity cleared rather than left alone: a Prerelease that quietly kept a
+  // Cup's 56 would publish a limit nobody chose.
+  prerelease: { premier: false, registration: true, caps: null }
+};
 
 // Writes exactly what is on screen: every division present is upserted, and
 // every division absent loses its row. A cleared field has to delete, or an old
@@ -301,9 +329,30 @@ export function eventForm(event, { onSaved }) {
   }
   open.addEventListener('change', syncCaps);
 
+  // Only while creating. On an existing event this would silently turn
+  // registration on for something that already has places and a waiting list,
+  // and changing a kind is not the same as deciding to take registration.
+  if (isNew) {
+    type.addEventListener('change', () => {
+      const preset = TYPE_PRESETS[type.value];
+      if (!preset) return;             // no opinion about league, casual, special
+      premier.checked = preset.premier;
+      open.checked = preset.registration;
+      if (caps) caps.set(preset.caps);
+      syncCaps();
+    });
+  }
+
   const form = el('form', {}, [
     el('p', { className: 'field' }, [el('label', { text: 'Name' }, [name])]),
     el('p', { className: 'field' }, [el('label', { text: 'Kind' }, [type])]),
+    isNew
+      ? el('p', { className: 'field-help',
+          text: 'A League Cup or Challenge fills in the usual capacity and ticks '
+              + 'premier and registration. A Prerelease ticks registration and '
+              + 'leaves capacity to you, because that is however many kits there '
+              + 'are. Change any of it afterwards.' })
+      : null,
     el('p', { className: 'field' }, [el('label', { text: 'Starts' }, [starts])]),
     el('p', { className: 'field-help',
       text: isNew
