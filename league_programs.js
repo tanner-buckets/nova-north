@@ -1,4 +1,5 @@
 import { supabase, el, problem, badgeTile } from './supabase-client.js';
+import { currentProfessor } from './auth.js';
 
 function fill(selector, build) {
   const host = document.querySelector(selector);
@@ -181,6 +182,28 @@ fill('#loyalty-tiers', async () => {
             ])
           ])))
       : el('p', { className: 'notice notice-quiet',
-                  text: 'Thresholds for this release have not been set yet.' })
+                  text: 'Thresholds for this release have not been set yet.' }),
+
+    // The sheet for the release a professor is already reading about, rather
+    // than the printable lists screen and the same release picked out of a
+    // dropdown a second time. The same arrangement the schedule uses for drops
+    // and the desk list, and the same caveat: this decides what to SHOW. The
+    // admin pages are static files anybody can fetch, and row level security is
+    // what refuses the data.
+    await loyaltySheetLink(release)
   ];
 });
+
+async function loyaltySheetLink(release) {
+  const professor = await currentProfessor();
+  if (!professor) return null;
+
+  return el('p', { className: 'prof-aside' }, [
+    el('span', { className: 'eyebrow', text: 'Professor' }),
+    el('a', {
+      className: 'button button-quiet',
+      href: `admin/print.html?release=${encodeURIComponent(release.id)}`,
+      text: `Print the ${release.name} loyalty sheet`
+    })
+  ]);
+}

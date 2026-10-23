@@ -21,7 +21,7 @@ const FORMATS = [
 // wording. A player deciding whether to borrow one needs this before anything
 // else on the row.
 const STATUS = {
-  current: { word: 'Current', className: 'tag tag-good' },
+  current: { word: 'Current', className: 'tag tag-silver' },
   needs_updating: { word: 'Needs updating', className: 'tag tag-hidden' }
 };
 

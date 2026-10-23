@@ -13,6 +13,10 @@
   /* White on it is 5.37:1, the same as --gold, so a green pill and a gold one
      carry identical weight and neither shouts louder than the other. */
   --green: #1b7a43;
+  /* The Current chip. Ink on it is 8.19:1, and it sits far enough from --card
+     to read as a chip rather than a gap. */
+  --silver: #b8bec5;
+  --silver-edge: #9aa2ab;
   --paper: #f5f4f1;
   --card: #ffffff;
   --text: #23252a;
@@ -3482,12 +3486,15 @@ h1.event-name + .event-when {
 }
 
 /* --- Rental decks -------------------------------------------------------------- */
-/* Two tag variants the shelf needs. tag-good is the one a player scans for --
-   "is this deck current" is the question they have before any other -- so it
-   wears the action colour, while an ordinary descriptive tag stays quiet. */
-.tag-good {
-  background: var(--gold);
-  color: var(--card);
+/* The status chip. Silver, so it does not collide with the gold a professor
+   may well have chosen for a tag -- two gold pills on one row meaning two
+   different kinds of thing is worse than one quiet one. Ink on it is 8.19:1,
+   and it is cooler and darker than the warm pale grey of Needs updating, so
+   the two statuses stay apart at a glance. */
+.tag-silver {
+  background: var(--silver);
+  color: var(--text);
+  border: 1px solid var(--silver-edge);
 }
 
 .tag-soft {
@@ -3721,6 +3728,19 @@ h1.event-name + .event-when {
 .swatch input:focus-visible + .tag {
   outline: 3px solid var(--gold-line);
   outline-offset: 2px;
+}
+
+/* The professor-only link in an otherwise public panel. Set apart by a rule
+   above it, the same as the drops and print pair on the schedule, so somebody
+   showing this page to a player can see at a glance which part is theirs. */
+.prof-aside {
+  margin: 1rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
 }
 
 .tag-admin-row {
