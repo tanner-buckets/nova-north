@@ -107,20 +107,20 @@ async function refreshKnown() {
   known = new Set(data.map((r) => r.player_id));
 }
 
-// The regulars who are also players. Read from the roster rather than written
-// into this file: who judges changes, and a list in page code would be wrong the
+// The staff who are also players. Read from the roster rather than written into
+// this file: who judges changes, and a list in page code would be wrong the
 // first time somebody joined or left.
 //
 // staff rather than professors, because the two are not the same list. A
 // volunteer who floor-judges twice a year has no login and so can never be in
 // professors, and a professor who has stopped coming should stop being offered.
-// Regulars only: a volunteer helps when they can and is not on this list every
+// Staff only: a volunteer helps when they can and is not on this list every
 // week. A row with no player_id is skipped because the loyalty week and the
 // attendance point would have nobody to land on.
 async function loadJudges() {
   const { data: profs, error } = await supabase
     .from('staff').select('display_name, player_id')
-    .eq('kind', 'regular').eq('is_active', true)
+    .eq('kind', 'staff').eq('is_active', true)
     .not('player_id', 'is', null);
   if (error) throw error;
 

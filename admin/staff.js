@@ -44,7 +44,7 @@ const ROLES = [
   ['other', 'Other staff']
 ];
 
-const KINDS = [['regular', 'Regular'], ['volunteer', 'Volunteer']];
+const KINDS = [['staff', 'Staff'], ['volunteer', 'Volunteer']];
 
 // Eight weeks is two months of notice, which is as far ahead as anybody will
 // commit and far enough to spot the Sunday nobody can cover.
@@ -61,11 +61,11 @@ let showPast = false;
 const availKey = (dateKey, staffId) => `${dateKey}:${staffId}`;
 const active = () => roster.filter((p) => p.is_active);
 
-// Only regulars are asked. A volunteer helps when they happen to be free, and
-// putting them in the grid would mean eight weeks of empty cells that nobody
-// is waiting on and that drag the "present" figure down for no reason. They are
+// Only staff are asked. A volunteer helps when they happen to be free, and
+// putting them in the grid would mean eight weeks of empty cells that nobody is
+// waiting on and that drag the "present" figure down for no reason. They are
 // still assignable to an event by hand, which is the whole of what they do.
-const asked = () => active().filter((p) => p.kind === 'regular');
+const asked = () => active().filter((p) => p.kind === 'staff');
 
 // --- League days --------------------------------------------------------------
 
@@ -282,7 +282,7 @@ function availabilityPanel(note) {
   const people = asked();
   if (!people.length) {
     return el('p', { className: 'muted-note',
-      text: 'Nobody on the roster is a regular, so there is nobody to ask. '
+      text: 'Nobody on the roster is staff, so there is nobody to ask. '
           + 'Volunteers are assigned to an event by hand rather than asked in '
           + 'advance.' });
   }
@@ -648,10 +648,11 @@ function rosterRow(person, reload, note) {
     await reload();
   });
 
-  // A regular with no player record cannot be ticked as a judge on the upload
+  // Staff with no player record cannot be ticked as a judge on the upload
   // screen, because the loyalty week and the attendance point would have
-  // nobody to land on. Said here, where it can be fixed.
-  const needsPlayer = person.kind === 'regular' && !person.player_id;
+  // nobody to land on. Only the seeded rows can be in that state; everybody
+  // added through this screen arrives with one. Said here, where it shows.
+  const needsPlayer = person.kind === 'staff' && !person.player_id;
 
   return el('li', { className: person.is_active ? 'roster-row' : 'roster-row is-retired' }, [
     el('span', { className: 'roster-fields' }, [name, kind]),
@@ -662,7 +663,7 @@ function rosterRow(person, reload, note) {
         : el('span', { className: 'muted-note', text: 'No player record' }),
       needsPlayer
         ? el('span', { className: 'tag tag-new',
-            title: 'A regular needs a Player ID before they can be ticked as a judge on the upload screen.',
+            title: 'Staff need a Player ID before they can be ticked as a judge on the upload screen.',
             text: 'not a judge yet' })
         : null,
       person.is_active ? null : el('span', { className: 'tag', text: 'retired' })
@@ -671,25 +672,39 @@ function rosterRow(person, reload, note) {
   ]);
 }
 
+// Two ways in, and both of them end with a player record.
+//
+// Everybody on this roster is also a player: a judge earns a loyalty week and
+// an attendance point like anybody else, and that award needs a Player ID to
+// land on. So there is no third door marked "no player record" -- the only rows
+// without one come from the seed, where a professor had none, and the roster
+// shows that as something to fix rather than as a shape to copy.
+//
+//   Promote -- they are already on the player list. The ordinary player lookup,
+//              the same one the attendance and points screens use.
+//   Add     -- they are not. Creates the player and the roster row together,
+//              because sending somebody to the players screen and back to do
+//              half of it each is two screens for one job.
 function addStaffPanel(reload, note) {
-  const kind = pick(KINDS, 'regular');
-  kind.setAttribute('aria-label', 'What kind of staff');
+  const kind = pick(KINDS, 'staff');
+  kind.setAttribute('aria-label', 'Staff or volunteer');
+
   const nameInput = el('input', { id: 'new-staff-name', placeholder: 'Alice',
     'aria-label': 'Name on the rota' });
 
   const pickerNote = el('p', { className: 'form-status', role: 'status' });
 
-  async function create({ player, displayName }) {
-    const name = (displayName || '').trim() || (player ? player.first_name : '');
+  // The player is created first where they are new, because the roster row
+  // points at it. The other way round leaves a roster row referring to a
+  // player that does not exist.
+  async function create(player) {
+    const name = nameInput.value.trim() || player.first_name;
     if (!name) {
       status(pickerNote, 'A name for the rota is needed.', 'error');
-      return;
+      return false;
     }
 
-    // The player is created first where they are new, because the staff row
-    // points at it. The other way round leaves a staff row referring to a
-    // player that does not exist.
-    if (player && player.isNew) {
+    if (player.isNew) {
       const { error } = await supabase.from('players').insert({
         player_id: player.player_id,
         first_name: player.first_name,
@@ -698,35 +713,94 @@ function addStaffPanel(reload, note) {
       });
       if (error) {
         status(pickerNote, `That player could not be created: ${error.message}`, 'error');
-        return;
+        return false;
       }
     }
 
     const { error } = await supabase.from('staff').insert({
       display_name: name,
-      player_id: player ? player.player_id : null,
+      player_id: player.player_id,
       kind: kind.value
     });
     if (error) {
-      status(pickerNote, `That did not save: ${error.message}`, 'error');
-      return;
+      // The one worth naming: player_id is unique on staff, so a second row for
+      // the same person is refused by the table rather than by a check here.
+      status(pickerNote, /duplicate|unique/i.test(error.message)
+        ? `${player.first_name} is already on the roster.`
+        : `That did not save: ${error.message}`, 'error');
+      return false;
     }
+
     nameInput.value = '';
     status(pickerNote, `${name} is on the roster.`, 'good');
     await reload();
+    return true;
   }
 
-  const picker = playerPicker({
-    allowCreate: true,
-    label: 'Their player record (Player ID or name)',
-    onPick: (player) => create({ player, displayName: nameInput.value || player.first_name })
+  // Mode one. allowCreate is off: adding a player who does not exist is the
+  // other mode, with its own fields and its own button, rather than a
+  // disclosure hidden inside this one.
+  const promote = playerPicker({
+    allowCreate: false,
+    label: 'Find them by Player ID or name',
+    onPick: (player) => create(player)
   });
 
-  const withoutPlayer = el('button', {
-    type: 'button', className: 'button button-quiet',
-    text: 'Add without a player record'
+  // Mode two. The same four fields the attendance screen asks for, because a
+  // player is a player wherever they are first written down.
+  const uid = Math.random().toString(36).slice(2, 8);
+  const newId = el('input', { id: `sid-${uid}`, inputmode: 'numeric', placeholder: '1234567' });
+  const newFirst = el('input', { id: `sfn-${uid}` });
+  const newLast = el('input', { id: `sln-${uid}` });
+  const newYear = el('input', {
+    id: `syr-${uid}`, type: 'number', min: '1900', max: '2100', placeholder: '2014'
   });
-  withoutPlayer.addEventListener('click', () => create({ player: null, displayName: nameInput.value }));
+  const addGo = el('button', { type: 'button', className: 'button',
+    text: 'Add the player and put them on the roster' });
+
+  addGo.addEventListener('click', async () => {
+    const playerId = newId.value.trim();
+    if (!playerId || !newFirst.value.trim() || !newLast.value.trim()) {
+      status(pickerNote, 'Player ID, first name and last name are all needed.', 'error');
+      return;
+    }
+
+    addGo.disabled = true;
+    // Checked against the table rather than against the screen: an ID that
+    // already belongs to somebody is a typo, not a new person, and creating it
+    // would attach a judging record to the wrong player.
+    const { data: existing, error } = await supabase.from('players')
+      .select('player_id, first_name, last_name').eq('player_id', playerId).maybeSingle();
+    if (error) {
+      addGo.disabled = false;
+      status(pickerNote, `That check failed: ${error.message}. Try again.`, 'error');
+      return;
+    }
+    if (existing) {
+      addGo.disabled = false;
+      status(pickerNote, `${playerId} already belongs to ${existing.first_name} `
+        + `${existing.last_name}. Use the lookup above to put them on the roster.`, 'error');
+      return;
+    }
+
+    const ok = await create({
+      player_id: playerId,
+      first_name: newFirst.value.trim(),
+      last_name: newLast.value.trim(),
+      birth_year: newYear.value ? Number(newYear.value) : null,
+      isNew: true
+    });
+    addGo.disabled = false;
+    if (ok) {
+      newId.value = '';
+      newFirst.value = '';
+      newLast.value = '';
+      newYear.value = '';
+    }
+  });
+
+  const field = (control, label) =>
+    el('p', { className: 'field' }, [el('label', { for: control.id, text: label }), control]);
 
   return el('details', { className: 'disclosure' }, [
     el('summary', { text: 'Add somebody to the roster' }),
@@ -735,22 +809,44 @@ function addStaffPanel(reload, note) {
         text: 'This adds a name to the rota. It does not create a login: an '
             + 'account to sign in with is still made in Supabase, and nothing '
             + 'on this page grants anybody access to player records.' }),
-      el('p', { className: 'field' }, [
-        el('label', { for: nameInput.id, text: 'Name on the rota' }), nameInput,
-        el('span', { className: 'field-help',
-          text: 'The short name the rota is read by. Left empty, their first name is used.' })
-      ]),
-      el('p', { className: 'field' }, [
-        el('label', { text: 'Regular or volunteer' }, [kind]),
-        el('span', { className: 'field-help',
-          text: 'A regular is offered as a judge on the TDF upload screen. A volunteer is not.' })
-      ]),
+
+      field(nameInput, 'Name on the rota'),
       el('p', { className: 'field-help',
-        text: 'Find their player record so a judging week can be awarded, or add '
-            + 'them without one — a volunteer who never plays does not need it.' }),
-      picker,
+        text: 'The short name the rota is read by. Left empty, their first name '
+            + 'is used.' }),
+
+      el('p', { className: 'field' }, [
+        el('label', { text: 'Staff or volunteer' }, [kind]),
+        el('span', { className: 'field-help',
+          text: 'Staff are asked for availability and offered as a judge on the '
+              + 'TDF upload screen. A volunteer is neither, and is put on an '
+              + 'event by hand.' })
+      ]),
+
       pickerNote,
-      el('p', {}, [withoutPlayer])
+
+      el('div', { className: 'staff-mode' }, [
+        el('h4', { text: 'They are already a player' }),
+        el('p', { className: 'field-help',
+          text: 'Find them and they go straight onto the roster.' }),
+        promote
+      ]),
+
+      el('div', { className: 'staff-mode' }, [
+        el('h4', { text: 'They are not a player yet' }),
+        el('p', { className: 'field-help',
+          text: 'Creates the player record and the roster entry together. The '
+              + 'Player ID is what a judging week is awarded against, so it is '
+              + 'needed either way.' }),
+        field(newId, 'Player ID'),
+        field(newFirst, 'First name'),
+        field(newLast, 'Last name'),
+        field(newYear, 'Birth year'),
+        el('p', { className: 'field-help',
+          text: 'The year only, and never shown publicly. It is what decides '
+              + 'their division.' }),
+        el('p', {}, [addGo])
+      ])
     ])
   ]);
 }
@@ -759,8 +855,9 @@ function rosterPanel(reload, note) {
   return el('section', { className: 'card' }, [
     el('h2', { text: 'The roster' }),
     el('p', { className: 'field-help',
-      text: 'Everybody who staffs a league day. Retired, never deleted, so a past '
-          + 'event keeps the names on it.' }),
+      text: 'Everybody who staffs a league day, and whether they are asked in '
+          + 'advance. Retired, never deleted, so a past event keeps the names '
+          + 'on it.' }),
     roster.length
       ? el('ul', { className: 'roster-list' }, roster.map((p) => rosterRow(p, reload, note)))
       : el('p', { className: 'muted-note', text: 'Nobody on the roster yet.' }),
@@ -814,7 +911,7 @@ async function draw() {
       el('p', { className: 'field-help',
         text: `The next ${WEEKS_AHEAD} Sundays, whether or not anything has been `
             + 'created for them yet, plus any other day worth asking about. '
-            + 'Regulars only: a volunteer is assigned to an event by hand '
+            + 'Staff only: a volunteer is assigned to an event by hand '
             + 'rather than asked eight weeks out. Playing means they will be '
             + 'here but in the tournament rather than staffing it, so they do '
             + 'not count toward the number present.' }),

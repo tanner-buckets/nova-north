@@ -27,13 +27,18 @@ create table public.staff (
   display_name text not null check (length(trim(display_name)) > 0),
   -- Nullable, and the reason the staff screen offers to find or create a
   -- player. A judge earns a loyalty week and an attendance point like anybody
-  -- else, and that award needs a Player ID to hang on: a regular with no link
+  -- else, and that award needs a Player ID to hang on: somebody with no link
   -- here cannot be ticked on the upload screen, because there would be nobody
-  -- to pay.
+  -- to pay. Everybody added through the screen has one -- it either promotes a
+  -- player who already exists or creates the player and the roster row
+  -- together -- so a null here only comes from the seed below, where a
+  -- professor had no player record of their own.
   player_id text unique references public.players (player_id),
-  -- regular: here most weeks, offered as a judge on the upload screen.
-  -- volunteer: helps when they can, and is not.
-  kind text not null default 'regular' check (kind in ('regular', 'volunteer')),
+  -- staff: here most weeks. Asked for availability, and offered as a judge on
+  --   the upload screen.
+  -- volunteer: helps when they can. Neither asked in advance nor offered as a
+  --   judge; put on an event by hand.
+  kind text not null default 'staff' check (kind in ('staff', 'volunteer')),
   -- Retired, never deleted, like every other reference row here. A past event's
   -- staffing has to keep pointing at a row that still exists.
   is_active boolean not null default true,
@@ -52,7 +57,7 @@ comment on table public.staff is
 comment on column public.staff.player_id is
   'Their own player record, where they have one. Required before they can be ticked as a judge on the TDF upload screen, because that award needs somebody to pay.';
 comment on column public.staff.kind is
-  'regular is asked for availability and appears in the judges list on the TDF upload screen; volunteer is neither, and is assigned to an event by hand.';
+  'staff is asked for availability and appears in the judges list on the TDF upload screen; volunteer is neither, and is assigned to an event by hand.';
 
 revoke all on public.staff from anon, authenticated;
 grant select on public.staff to authenticated;
@@ -305,12 +310,12 @@ create trigger event_staffing_notes_stamp
 -- ---------------------------------------------------------------------------
 -- Read from the table rather than written out, so no name goes into a public
 -- repository and the seed cannot disagree with who is actually a professor.
--- They start as regulars, which is what they are; the screen can change it.
+-- They start as staff, which is what they are; the screen can change it.
 --
 -- player_id is carried across where the professor row has one. Where it does
--- not, the staff screen will ask: a regular without a Player ID cannot be
+-- not, the staff screen will ask: somebody without a Player ID cannot be
 -- ticked as a judge, because the award would have nobody to land on.
 insert into public.staff (display_name, player_id, kind)
-select p.display_name, p.player_id, 'regular'
+select p.display_name, p.player_id, 'staff'
 from public.professors p
 on conflict do nothing;

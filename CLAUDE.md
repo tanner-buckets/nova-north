@@ -497,20 +497,31 @@ printable lists and the attendance history.
   to get their name onto a rota would hand out read access to every child's full
   name and birth year to solve a scheduling problem. **Adding somebody to the
   roster grants them nothing**, and the screen says so where the button is.
-- **`regular` or `volunteer`, and the difference is twofold.** A regular is
-  asked for availability and is offered in the judges list when a TDF is
-  uploaded; a volunteer is neither, and is put on an event by hand. Eight weeks
-  of empty cells for somebody who helps when they happen to be free is eight
-  weeks of nobody waiting on an answer, and it drags the present figure down for
-  no reason. `loadJudges()` reads `staff` rather than `professors` for the same
+- **`staff` or `volunteer`, and the difference is twofold.** Staff are asked
+  for availability and are offered in the judges list when a TDF is uploaded; a
+  volunteer is neither, and is put on an event by hand. Eight weeks of empty
+  cells for somebody who helps when they happen to be free is eight weeks of
+  nobody waiting on an answer, and it drags the present figure down for no
+  reason. `loadJudges()` reads `staff` rather than `professors` for the same
   reason the grid does -- the two lists had always been assumed to be the same
   one and never were.
-- **A regular with no `player_id` cannot be ticked as a judge**, because the
-  loyalty week and the attendance point would have nobody to land on. The
-  roster says so on the row, where it can be fixed, rather than leaving somebody
-  wondering why a name is missing from the upload screen. Adding somebody offers
-  to find their player record or create one, the same picker the attendance
-  screen uses.
+- **Everybody on the roster is also a player**, and the screen has two doors to
+  make sure of it: *they are already a player*, which is the ordinary player
+  lookup and puts them straight on the roster, and *they are not a player yet*,
+  which creates the player record and the roster row together. There is
+  deliberately no third door marked "no player record" -- a judge earns a
+  loyalty week and an attendance point like anybody else, and that award needs
+  a Player ID to land on.
+- **The only rows without a `player_id` come from the seed**, where a professor
+  had no player record of their own. The roster marks those rather than hiding
+  them, because somebody with no ID cannot be ticked as a judge and the reason
+  should be visible where it can be fixed, not discovered as a missing name on
+  the upload screen.
+- **The player is written before the roster row.** The other way round leaves a
+  roster row pointing at a player that does not exist. A Player ID that already
+  belongs to somebody is refused as a typo rather than created, and `player_id`
+  is unique on `staff`, so a second roster row for one person is refused by the
+  table rather than by a check in page code.
 - **Availability is keyed on a DATE, not an event.** The question is "can you
   make Sunday the 25th", and it is worth asking eight weeks out -- long before
   anybody has created the events those Sundays will hold. Keyed on an event the
@@ -545,6 +556,11 @@ printable lists and the attendance history.
   per person is wide by nature, and a summary at the far right is the first
   thing off the side of a phone -- the same mistake the attendance table made
   with Total.
+- **The person columns are deliberately narrow.** The grid is as wide as the
+  roster, so every extra millimetre is one fewer person on screen before it
+  starts scrolling. "Not asked" is the longest thing a cell ever says and the
+  column is sized for it; the day column keeps its room, because it carries two
+  lines.
 - **Upcoming is editable and past is read only.** A rota is a plan, and it stops
   being one once the day has happened; what is left is a record, and a record
   with a dropdown on it invites somebody to tidy history. It also keeps the grid

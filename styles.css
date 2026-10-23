@@ -3863,20 +3863,37 @@ h1.event-name + .event-when {
   overflow-wrap: anywhere;
 }
 
+/* Narrow on purpose. A column per person means the grid is as wide as the
+   roster, and every extra centimetre here is one fewer person on screen before
+   it starts scrolling. The select holds "Not asked", which is the longest
+   thing it ever says. */
 .avail-cell {
   vertical-align: top;
-  min-width: 8.5rem;
+  min-width: 6rem;
+  padding-left: 0.3rem;
+  padding-right: 0.3rem;
 }
 
-.avail-cell select { width: 100%; }
+.avail-cell select {
+  width: 100%;
+  min-width: 0;
+  padding-left: 0.3rem;
+  padding-right: 1.1rem;
+  font-size: 0.85rem;
+}
 
 /* The reason, under the status rather than beside it: side by side, one of them
    was always too narrow to read what was in it. */
 .avail-why {
   width: 100%;
   margin-top: 0.25rem;
-  font-size: 0.85rem;
+  padding: 0.2rem 0.3rem;
+  font-size: 0.8rem;
 }
+
+/* The day column carries two lines and is the one that should keep its room. */
+.avail-table th[scope="row"] { padding-right: 0.6rem; }
+.avail-table td.count { padding-left: 0.3rem; padding-right: 0.5rem; }
 
 /* Past events: the same cell with nothing to click. Colour carries the status
    but never alone -- the word is there too. */
@@ -4035,3 +4052,13 @@ h1.event-name + .event-when {
   border-left: 3px solid var(--gold-line);
   padding-left: 0.5rem;
 }
+
+
+/* The two ways onto the roster, told apart by a rule rather than by reading
+   both and working it out. */
+.staff-mode {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+.staff-mode h4 { margin: 0 0 0.2rem; }
