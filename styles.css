@@ -4062,3 +4062,197 @@ h1.event-name + .event-when {
   border-top: 1px solid var(--line);
 }
 .staff-mode h4 { margin: 0 0 0.2rem; }
+
+
+/* --- The Trainer Card Program information sheet ----------------------------------
+   A handout for players, printed from the browser. One Letter page, laid out
+   the same on screen as on paper so what is reviewed is what comes out. */
+
+.info-sheet { display: none; }
+.info-sheet.is-ready { display: block; }
+
+.info-page {
+  box-sizing: border-box;
+  width: 8.5in;
+  min-height: 11in;
+  margin: 0 auto 1.5rem;
+  padding: 0.6in 0.65in;
+  background: #ffffff;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+/* The title block and the specimen card, side by side. The card is the one
+   picture on the sheet that answers "what am I being given". */
+.info-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 3px solid var(--gold-line);
+  margin-bottom: 0.9rem;
+}
+
+.info-title {
+  font-family: var(--font-head);
+  font-size: 30pt;
+  line-height: 1.02;
+  margin: 0;
+  color: var(--ink);
+}
+
+.info-subtitle {
+  font-family: var(--font-head);
+  font-size: 19pt;
+  line-height: 1.1;
+  margin: 0;
+  color: var(--gold);
+}
+
+.info-season {
+  margin: 0.25rem 0 0;
+  font-size: 9pt;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The real card at just over half size. Scaled with a transform rather than
+   rebuilt at smaller measurements: the card is one set of numbers taken off the
+   template, and a second set for a thumbnail would be a second thing to keep
+   right. transform does not affect layout, so the wrapper is given the scaled
+   size by hand. */
+.info-specimen {
+  flex: 0 0 auto;
+  width: 144pt;            /* 251.97pt * 0.5715 */
+  text-align: center;
+}
+
+.info-specimen .tcard {
+  transform: scale(0.5715);
+  transform-origin: top left;
+  /* The box the scaled card actually occupies, so nothing below it overlaps. */
+  margin-bottom: calc(158.7pt * 0.5715 - 158.7pt);
+}
+
+.info-specimen-note {
+  margin: 0.2rem 0 0;
+  font-size: 7.5pt;
+  line-height: 1.25;
+  color: var(--muted);
+}
+
+.info-section { margin-bottom: 0.85rem; }
+
+.info-section h3 {
+  font-family: var(--font-head);
+  font-size: 13pt;
+  margin: 0 0 0.25rem;
+  color: var(--gold);
+}
+
+.info-section p {
+  margin: 0 0 0.4rem;
+  font-size: 10pt;
+  line-height: 1.35;
+}
+
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9pt;
+}
+
+.info-table th,
+.info-table td {
+  border: 1px solid var(--line);
+  padding: 0.22rem 0.35rem;
+  text-align: left;
+  vertical-align: middle;
+  line-height: 1.25;
+}
+
+.info-table thead th {
+  background: var(--paper);
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.info-table tbody th[scope="row"] { font-weight: 700; }
+
+/* Badges run two to a row, which is how thirteen fit on one page. */
+.info-badges { table-layout: fixed; }
+.info-badge-art { width: 30pt; padding: 0.1rem 0.15rem; }
+.info-badge-art img {
+  display: block;
+  width: 26pt;
+  height: 26pt;
+  object-fit: contain;
+}
+.info-badge-name { width: 52pt; }
+.info-badge-task { font-size: 8.2pt; }
+
+.info-foot {
+  margin-top: 0.9rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--line);
+  font-size: 8.5pt;
+  color: var(--muted);
+}
+.info-foot p { margin: 0; }
+
+@media print {
+  /* Same trick the Trainer Card sheet needs, and for the same reason: main is
+     capped at 46rem, which is narrower than the page it would contain, and the
+     browser's answer is to shrink everything inside it. On this page the paper
+     IS the layout. Scoped to .info-print so the loyalty and registration
+     sheets keep their margins. */
+  .info-print main,
+  .info-print header,
+  .info-print footer { display: none; }
+
+  .info-print .info-sheet { display: block; }
+
+  /* A named page, so a bare @page here would not strip the margins off every
+     other printable in the site. */
+  @page info-sheet { size: Letter; margin: 0; }
+
+  .info-page {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+    page: info-sheet;
+    /* Without this a browser drops the card artwork and the badge fills, and
+       the corner comes out as an empty rectangle. */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* A table split across a page break loses its heading row, and this sheet is
+     meant to be one page anyway. */
+  .info-table { break-inside: avoid; }
+  .info-section { break-inside: avoid; }
+}
+
+/* SCREEN only. Without that word this also matches when printing -- the print
+   viewport is not the paper -- and the specimen card drops out of the corner
+   and under the title on the page that actually gets handed out. */
+@media screen and (max-width: 9in) {
+  /* On a phone the page is reviewed rather than read as paper, so it gives up
+     its fixed width instead of forcing the whole document sideways. */
+  .info-page {
+    width: auto;
+    min-height: 0;
+    padding: 1rem;
+  }
+  .info-head { flex-direction: column; }
+  .info-badges { font-size: 8pt; }
+}

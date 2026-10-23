@@ -838,6 +838,53 @@ professor-only pages.** Printed lists may show full names because they are hande
 to the store or used at the desk — this is a disclosure to the venue, not
 publication. Nothing printed is ever rendered on a public page.
 
+### Printable resources
+
+`admin/printables.html` is handouts for players, built from what is in the
+database rather than kept as a document somebody edits. The first is the
+Trainer Card Program information sheet.
+
+- **It exists because the Word version went stale.** That document still said
+  four badges for Cooltrainer and eight for Ace Trainer months after the ladder
+  was shortened to three and six. A handout that repeats the rules is a second
+  copy of them, and the second copy is the one nobody updates. This reads
+  `trainer_card_ranks` and `badges` every time it draws.
+- **Nothing on the sheet is a number typed into page code.** The rank table is
+  the rows as stored; the count of badges is how many there are; the threshold
+  in "you only need N" is `max(badges_required)` across the ranks, which is the
+  top rung reachable on badges alone and therefore what qualifies a Champion
+  attempt. Writing six here would be the fourth copy of a figure that has
+  already changed once.
+- **Secret badges are excluded.** One kept off the programs page so nothing
+  hints it exists would be announced by a handout listing it, which is the whole
+  of what secret means.
+- **The season is picked, and only the badges follow it.** Badges carry a
+  `season_year`; the ranks do not, and are the same on every sheet. A retired
+  season can still be printed, because last year's sheet is a real thing
+  somebody may want.
+- **The card in the corner is a specimen, not a player.** No badges, an invented
+  name and Player ID, and a birth year that belongs to nobody -- a real child's
+  details do not go on a sheet that gets left on a table. It is drawn by the
+  same `card()` the Creator prints, which is why that function moved to
+  `admin/trainer-card-art.js`: a specimen that drifts from the real card is
+  worse than none, because it teaches somebody what the card does not look like.
+  `trainer-cards.js` calls `start()` on load, so importing from it would have
+  mounted the Creator.
+- **The card is scaled with a transform, not rebuilt smaller.** The measurements
+  are one set taken off the template; a second set for a thumbnail would be a
+  second thing to keep right. `transform` does not affect layout, so the wrapper
+  carries the scaled height by hand.
+- **Every class on this page is `info-`, not `sheet-`.** `print.js` already owns
+  `sheet-table`, `sheet-head`, `sheet-section` and `sheet-foot` for the loyalty
+  and registration lists, and redefining them here silently restyled those two
+  as well. The names collided once; do not reuse them.
+- **The responsive rule is `@media screen and (...)`.** Without that word it
+  also matches when printing -- the print viewport is not the paper -- and the
+  specimen card drops out of the corner and under the title on the page that
+  actually gets handed out.
+- **`@page info-sheet` is named**, like the Trainer Card page box, so a bare
+  `@page` here cannot strip the margins off every other printable in the site.
+
 ### The Trainer Card Creator
 
 `admin/trainer-cards.html` prints membership cards, eight to a Letter page. The
@@ -949,6 +996,8 @@ rentals.js          the rental shelf and bounty list on the programs page
 home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
 admin/staff.html    the staffing roster, availability and event staffing
+admin/printables.html  handouts for players, built from the database
+admin/trainer-card-art.js  drawing one Trainer Card, shared by the Creator and the sheet
 data/source/*.csv   spreadsheet exports used to seed reference tables
 event-registration.js  the register and cancel forms, shared by both pages
 image-file.js       resizing, re-encoding and the decoded-size guard
