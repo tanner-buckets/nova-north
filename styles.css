@@ -4394,3 +4394,19 @@ h1.event-name + .event-when {
 @media print {
   .chaos-rounds { gap: 0.6rem; }
 }
+
+/* A condition between two ranks, not a rank. It spans the table because it is
+   a sentence rather than a row of fields, and it is quieter than the rows it
+   sits between so the ladder still reads as four rungs. */
+.rank-gate td {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--muted);
+  background: var(--paper);
+}
+
+.info-table .rank-gate td {
+  font-size: 8.5pt;
+  padding-top: 0.15rem;
+  padding-bottom: 0.15rem;
+}
