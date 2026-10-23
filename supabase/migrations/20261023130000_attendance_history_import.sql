@@ -227,8 +227,7 @@ values
   ('2026-09-27', 40, 5, 4, 'Anniversary party'),
   ('2026-10-04', 36, 4, 3, null),
   ('2026-10-11', 27, 2, 2, 'Challenge / Louisville'),
-  ('2026-10-18', 48, 2, 4, null);
-
+  ('2026-10-18', 48, 2, 4, null)
 on conflict (attended_on) do update set
   players = excluded.players,
   learn_to_play = excluded.learn_to_play,

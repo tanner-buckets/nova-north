@@ -63,21 +63,47 @@ function specimenCard() {
       birth_year: 1992,
       rank_name: 'League Trainer',
       badges: []
-    }),
-    el('p', { className: 'info-specimen-note', text: 'Your card. Badges fill the ring as you earn them.' })
+    })
   ]);
 }
 
 // --- The sheet -----------------------------------------------------------------
 
-// The badge threshold that opens the Elite 4, taken from the ladder rather than
-// written here. It is the largest badges_required on any rank: the top rung you
-// can reach on badges alone, which is exactly what qualifies a Champion
-// attempt. Written as a number in this file it would be the fourth copy of a
-// figure that has already changed once.
+// The badge threshold that opens the Elite 4. Its own column, because it is not
+// a rank threshold: Ace Trainer is six badges and challenging the Elite 4 needs
+// eight. This used to take max(badges_required) on the assumption that the top
+// rung reachable on badges alone was also what qualified a challenge, which
+// printed six on a sheet handed to players.
 function eliteThreshold() {
-  const counts = ranks.map((r) => r.badges_required || 0);
-  return counts.length ? Math.max(...counts) : null;
+  const counts = ranks.map((r) => r.elite_four_badges || 0);
+  const top = counts.length ? Math.max(...counts) : 0;
+  return top || null;
+}
+
+// Eight badges is not a rank, so it is not a rung on the ladder. It is the
+// condition an Ace Trainer meets on the way to Champion, and it reads as a line
+// between those two rows -- which is how the programme describes it.
+function rankRows() {
+  const elite = ranks.find((r) => r.elite_four_badges);
+  const out = [];
+  for (const r of ranks) {
+    if (elite && r.requires_elite_four) {
+      out.push(el('tr', { className: 'rank-gate' }, [
+        el('td', { colspan: '4',
+          text: `Ace Trainers who have earned ${elite.elite_four_badges} badges `
+              + 'can challenge the Elite 4.' })
+      ]));
+    }
+    out.push(el('tr', {}, [
+      el('th', { scope: 'row', text: r.name }),
+      el('td', { text: r.qualification || '' }),
+      // The Word version typed "N/A" into the empty cells. A dash is quieter
+      // and says the same thing.
+      el('td', { text: r.reward || '—' }),
+      el('td', { text: r.benefit || '—' })
+    ]));
+  }
+  return out;
 }
 
 function rankTable() {
@@ -90,14 +116,7 @@ function rankTable() {
         el('th', { scope: 'col', text: 'Benefit' })
       ])
     ]),
-    el('tbody', {}, ranks.map((r) => el('tr', {}, [
-      el('th', { scope: 'row', text: r.name }),
-      el('td', { text: r.qualification || '' }),
-      // The Word version typed "N/A" into the empty cells. A dash is quieter
-      // and says the same thing.
-      el('td', { text: r.reward || '—' }),
-      el('td', { text: r.benefit || '—' })
-    ])))
+    el('tbody', {}, rankRows())
   ]);
 }
 

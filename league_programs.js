@@ -36,13 +36,30 @@ fill('#ranks', async () => {
     .from('trainer_card_ranks').select('*').order('sort_order');
   if (error) throw error;
 
-  return table(['Rank', 'How to reach it', 'Reward', 'What it unlocks'],
-    data.map((r) => el('tr', {}, [
+  // Eight badges is not a rank, so it is not a row in the ladder. It is the
+  // condition an Ace Trainer meets on the way to Champion, and it reads as a
+  // line between those two rather than as a fifth rung somebody could be
+  // standing on.
+  const elite = data.find((r) => r.elite_four_badges);
+
+  const rows = [];
+  for (const r of data) {
+    if (elite && r.requires_elite_four) {
+      rows.push(el('tr', { className: 'rank-gate' }, [
+        el('td', { colspan: '4',
+          text: `Ace Trainers who have earned ${elite.elite_four_badges} badges `
+              + 'can challenge the Elite 4.' })
+      ]));
+    }
+    rows.push(el('tr', {}, [
       el('th', { scope: 'row', className: 'rank-name', text: r.name }),
       el('td', { text: r.qualification }),
       el('td', { text: r.reward || '—' }),
       el('td', { text: r.benefit || '—' })
-    ])));
+    ]));
+  }
+
+  return table(['Rank', 'How to reach it', 'Reward', 'What it unlocks'], rows);
 });
 
 fill('#badges', async () => {
@@ -54,15 +71,17 @@ fill('#badges', async () => {
     supabase.from('badges').select('*')
       .eq('is_active', true).eq('is_secret', false)
       .order('season_year', { ascending: false }).order('sort_order'),
-    supabase.from('trainer_card_ranks').select('badges_required'),
+    supabase.from('trainer_card_ranks').select('badges_required, elite_four_badges'),
     supabase.rpc('active_badge_seasons')
   ]);
   if (error || rankError || seasonError) throw error || rankError || seasonError;
 
-  // Read the threshold rather than repeating it. The highest badge-earned rank
-  // is the one that unlocks an Elite 4 challenge, so if that number is ever
-  // changed in the table, this sentence follows it instead of contradicting it.
-  const needed = Math.max(0, ...ranks.map((r) => r.badges_required || 0));
+  // The Elite 4 threshold, which is its own column and not the top rank's.
+  // This used to take max(badges_required), on the assumption that the highest
+  // rung reachable on badges alone was also what qualified a challenge -- and
+  // when the ladder was shortened to 3 and 6 that quietly started printing six
+  // where the programme says eight.
+  const needed = Math.max(0, ...ranks.map((r) => r.elite_four_badges || 0));
 
   // A season being retired is what takes its badges off this page, so more than
   // one list can be live during a changeover.
