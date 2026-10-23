@@ -914,6 +914,14 @@ so the tab matches the top of the page.
 - **The paths are relative**, like every other link here. Pages serves the site
   from the `/nova-north/` subpath, so a leading slash resolves to the domain root
   and 404s. An admin page needs `../`.
+- **That `../` has been lost once already.** A script that rewrote every nav
+  decided the prefix with `path.startswith('admin/')`, and Windows glob returns
+  `adminile.html` with a backslash, so the test was false for every admin page
+  and all of them shipped without it. From inside `admin/` that meant four nav
+  links 404ing and two silently landing on a different page — Home on the tools
+  page, Players on the admin Players tool. **Derive the prefix from the file's
+  depth** (`os.path.normpath(path).split(os.sep)`), never from a string test on
+  a path, and check afterwards that every nav href resolves to a file on disk.
 - `favicon.ico` sits at the repo root because browsers request it with no tag at
   all. It holds 16, 32 and 48 pixel versions.
 - Generated from `CC-Logo-No-Text.png` by fitting the mark to the tile height at
