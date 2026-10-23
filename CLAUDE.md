@@ -350,6 +350,29 @@ is applied to the production database.** There is no confirmation step.
   in `admin/events.js`, applied on the type dropdown's change event when `isNew`.
   Like the point values on the upload screen, they are defaults a professor
   edits, not rules.
+- **An event can be copied from one that already exists.** Most weeks are last
+  week again, and everything that makes an event -- the name, the kind, the fee,
+  the capacity, whether it is premier -- is the same. The picker sits above the
+  create form and reseeds it; `eventForm()` already keys on `!event.id`, so a
+  prefilled object with no id is a create form and needed no second form.
+- **The flight PIN is never copied.** This is the trap the rest of the feature
+  is built around. A PIN is what puts events in one group, and a copy carrying
+  it would quietly join the group it came from -- where a player already holding
+  a confirmed place would then be refused a place on the new event, for a reason
+  nothing on screen explains. A second flight is made by typing the PIN in,
+  which is a decision rather than a leftover.
+- **The date moves, the time of day does not.** A copy is dated to the next
+  Sunday at the hour the original ran, so a 5pm prerelease stays at 5pm. The
+  date is the first thing a professor will change and the field is right there,
+  so a sensible guess beats an empty box.
+- **A copied desk time counts as chosen only when it was not the default.** If
+  `registration_opens_at` was half an hour before the start, it stays following
+  the start time; if it was deliberately set to something else, it sticks when
+  the date is moved. Carrying the value without this distinction would freeze
+  every copied event's desk time, including the ones that never wanted one.
+- **Capacity comes across**, because it is the tedious half of a Cup and the
+  half most likely to be forgotten. Only where the source took registration: a
+  cap on an event that refuses registration caps nothing.
 - **An event carries two times, and they mean different things.** `starts_at` is
   when play starts and is what every rule keys on: the registration cutoff, the
   division calculation, the drop screen, the printable list.
@@ -458,6 +481,110 @@ is applied to the production database.** There is no confirmation step.
   again and everybody earned a point less, with nothing on screen saying so.
 
 ---
+
+## Staff scheduling
+
+`admin/staff.html` is the two sheets the league was keeping by hand: who can
+make each event, and who is doing what once they can. Professor-only, like the
+printable lists and the attendance history.
+
+- **`staff` is a roster, not an authorization table.** No policy consults it,
+  and this is the line to hold. `professors` is what `is_professor()` checks,
+  and its primary key is `user_id` -- a row there cannot exist without a login,
+  which is why the roster had to be a separate table rather than a few columns
+  added to that one. Half the people on the sheet have never had an account: a
+  volunteer who floor-judges twice a year does not need one, and giving them one
+  to get their name onto a rota would hand out read access to every child's full
+  name and birth year to solve a scheduling problem. **Adding somebody to the
+  roster grants them nothing**, and the screen says so where the button is.
+- **`staff` or `volunteer`, and the difference is twofold.** Staff are asked
+  for availability and are offered in the judges list when a TDF is uploaded; a
+  volunteer is neither, and is put on an event by hand. Eight weeks of empty
+  cells for somebody who helps when they happen to be free is eight weeks of
+  nobody waiting on an answer, and it drags the present figure down for no
+  reason. `loadJudges()` reads `staff` rather than `professors` for the same
+  reason the grid does -- the two lists had always been assumed to be the same
+  one and never were.
+- **Everybody on the roster is also a player**, and the screen has two doors to
+  make sure of it: *they are already a player*, which is the ordinary player
+  lookup and puts them straight on the roster, and *they are not a player yet*,
+  which creates the player record and the roster row together. There is
+  deliberately no third door marked "no player record" -- a judge earns a
+  loyalty week and an attendance point like anybody else, and that award needs
+  a Player ID to land on.
+- **The only rows without a `player_id` come from the seed**, where a professor
+  had no player record of their own. The roster marks those rather than hiding
+  them, because somebody with no ID cannot be ticked as a judge and the reason
+  should be visible where it can be fixed, not discovered as a missing name on
+  the upload screen.
+- **The player is written before the roster row.** The other way round leaves a
+  roster row pointing at a player that does not exist. A Player ID that already
+  belongs to somebody is refused as a typo rather than created, and `player_id`
+  is unique on `staff`, so a second roster row for one person is refused by the
+  table rather than by a check in page code.
+- **Availability is keyed on a DATE, not an event.** The question is "can you
+  make Sunday the 25th", and it is worth asking eight weeks out -- long before
+  anybody has created the events those Sundays will hold. Keyed on an event the
+  grid could only ever show the weeks somebody had already filled in, which is
+  backwards: knowing who is free is how you decide what to put on. The sheet had
+  this right, and its Event column was a description of the day rather than the
+  key to it. `event_staffing` still keys on an event, because you cannot staff a
+  day that has nothing on it.
+- **The Sundays are generated, not stored.** The grid draws the next eight
+  whether or not anything exists for them. Generating them means no list to keep
+  topped up and no week that silently stops appearing because a backfill ran
+  out. `availability_dates` holds only the exceptions -- a midweek prerelease, a
+  holiday Saturday -- and those rows are marked on the grid, because the eye
+  stops expecting anything but a Sunday in a column of them.
+- **A Sunday with nothing on it says so** rather than being left out. The day is
+  real; what is on it is not decided, and that is exactly the week somebody
+  needs to see.
+- **An added day can be removed only while removing it does something** --
+  nobody has answered for it, and no event has appeared on it. A day with
+  answers keeps its row because the answers are about that day; a day with an
+  event keeps its row whatever that table says, so offering to remove it is an
+  offer to do nothing.
+- **Four states, not two.** `available`, `out`, `playing`, `unsure`. `playing`
+  is the one worth keeping: somebody entered in the side event is in the room
+  and is not a judge, and folding that into `out` would have a professor ringing
+  round for a body who is standing ten feet away. It does not count toward the
+  number present, which is what the sheet already did.
+- **No row means nobody has been asked**, which is not `unsure`. One is a person
+  who has not been asked; the other has been asked and does not know. Clearing a
+  cell deletes the row rather than storing an empty status.
+- **The present count leads the table**, before the names. A table with a column
+  per person is wide by nature, and a summary at the far right is the first
+  thing off the side of a phone -- the same mistake the attendance table made
+  with Total.
+- **The person columns are deliberately narrow.** The grid is as wide as the
+  roster, so every extra millimetre is one fewer person on screen before it
+  starts scrolling. "Not asked" is the longest thing a cell ever says and the
+  column is sized for it; the day column keeps its room, because it carries two
+  lines.
+- **Upcoming is editable and past is read only.** A rota is a plan, and it stops
+  being one once the day has happened; what is left is a record, and a record
+  with a dropdown on it invites somebody to tidy history. It also keeps the grid
+  down to the events anybody is deciding about rather than two years of selects.
+- **Retired, never deleted.** A past event's staffing still points at the row,
+  and a retired member keeps their name on it while leaving the availability
+  grid. The active-name unique index is partial for this reason.
+- **Either a roster member or a one-off name, never both.** `event_staffing`
+  checks it. The guest is the point: the sheet has people in it who helped once,
+  and adding them to the roster to write them down would make the roster a list
+  of everybody who has ever held a pen. A guest chip is drawn dashed, because
+  the difference matters when deciding who to ask next time.
+- **Being down for two jobs at one event is a warning, not a refusal.** It is
+  usually a mistake and occasionally a small league. The same person twice in
+  the *same* job is a duplicate and the index refuses it.
+- **"Also on elsewhere" is its own table, not a column on `events`.** It is a
+  professor-only working note, and `events` is publicly readable -- a column
+  there would be one `select *` away from being on the schedule.
+- **Who last touched a row is stamped by a trigger**, and the grants are per
+  column, so a browser cannot write `updated_by`. Same arrangement as
+  `league_day_notes`.
+- The history is only events created through the site. The two years in the
+  spreadsheet were not imported: those events were never in `events`, and
+  inventing them to hang a rota on would put fiction in the events table.
 
 ## Rentable resources
 
@@ -711,6 +838,100 @@ professor-only pages.** Printed lists may show full names because they are hande
 to the store or used at the desk — this is a disclosure to the venue, not
 publication. Nothing printed is ever rendered on a public page.
 
+### Printable resources
+
+`admin/printables.html` is handouts for players, built from what is in the
+database rather than kept as a document somebody edits. Two so far: the Trainer
+Card Program information sheet and the Chaos Cup rules sheet.
+
+- **A shell and one module per handout.** `printables.js` only decides which is
+  on screen; each sheet module exports `NAME` and `mount(app, sheet)` and owns
+  its own loading, controls and paper. Two sheets in one file was already the
+  wrong shape at two, because only one can print at a time and the other has to
+  be out of the way rather than merely further down.
+
+- **It exists because the Word version went stale.** That document still said
+  four badges for Cooltrainer and eight for Ace Trainer months after the ladder
+  was shortened to three and six. A handout that repeats the rules is a second
+  copy of them, and the second copy is the one nobody updates. This reads
+  `trainer_card_ranks` and `badges` every time it draws.
+- **Nothing on the sheet is a number typed into page code.** The rank table is
+  the rows as stored; the count of badges is how many there are; the threshold
+  in "you only need N" is `max(badges_required)` across the ranks, which is the
+  top rung reachable on badges alone and therefore what qualifies a Champion
+  attempt. Writing six here would be the fourth copy of a figure that has
+  already changed once.
+- **Secret badges are excluded.** One kept off the programs page so nothing
+  hints it exists would be announced by a handout listing it, which is the whole
+  of what secret means.
+- **The season is picked, and only the badges follow it.** Badges carry a
+  `season_year`; the ranks do not, and are the same on every sheet. A retired
+  season can still be printed, because last year's sheet is a real thing
+  somebody may want.
+- **The card in the corner is a specimen, not a player.** No badges, an invented
+  name and Player ID, and a birth year that belongs to nobody -- a real child's
+  details do not go on a sheet that gets left on a table. It is drawn by the
+  same `card()` the Creator prints, which is why that function moved to
+  `admin/trainer-card-art.js`: a specimen that drifts from the real card is
+  worse than none, because it teaches somebody what the card does not look like.
+  `trainer-cards.js` calls `start()` on load, so importing from it would have
+  mounted the Creator.
+- **The card is scaled with a transform, not rebuilt smaller.** The measurements
+  are one set taken off the template; a second set for a thumbnail would be a
+  second thing to keep right. `transform` does not affect layout, so the wrapper
+  carries the scaled height by hand.
+- **Every class on this page is `info-`, not `sheet-`.** `print.js` already owns
+  `sheet-table`, `sheet-head`, `sheet-section` and `sheet-foot` for the loyalty
+  and registration lists, and redefining them here silently restyled those two
+  as well. The names collided once; do not reuse them.
+- **The responsive rule is `@media screen and (...)`.** Without that word it
+  also matches when printing -- the print viewport is not the paper -- and the
+  specimen card drops out of the corner and under the title on the page that
+  actually gets handed out.
+- **`@page info-sheet` is named**, like the Trainer Card page box, so a bare
+  `@page` here cannot strip the margins off every other printable in the site.
+
+#### The Chaos Cup rules sheet
+
+Follows the shape of the sheets the organiser has been writing by hand: a title,
+a paragraph of conditions for the day, then a numbered rule per round with
+lettered additional rules under it.
+
+- **The catalogue is the thing that is saved; the sheet is not.** A Chaos Cup
+  sheet is written on the day and handed out, and what is worth keeping between
+  events is the pool of rules rather than last week's running order. Keeping the
+  composition would mean deciding what a half-built sheet is, who owns it and
+  when it expires, which is a bigger question than this screen had to answer
+  first.
+- **`chaos_cup_rules` is professor-only**, unlike badges and prize items. The
+  whole point of a Chaos Cup is that nobody knows the rules until the day, and a
+  public catalogue would be every future event posted in advance.
+- **Seeded from the organiser's two documents**: the list of rules that have
+  been played, and the spreadsheet proposing six chains that build across
+  rounds. **The workbook's "Complicated" sheet is deliberately not seeded** --
+  it is a scratchpad with placeholders like "big change" and "small buff" where
+  the rule should be, and a catalogue a professor picks from on a Sunday must
+  not contain notes to self, because the sheet gets printed and handed out.
+- **A rule that appeared in both sources has one row.** The chain is recorded on
+  it rather than creating a second copy that would then drift.
+- **`code` records the tree without modelling one.** `1.a.i` is the first
+  round-3 option under option a of chain 1. That is the organiser's own
+  numbering, and it carries which rules follow which without this table having
+  to enforce a structure the screen does not yet use.
+- **Line breaks in a rule are kept**, on screen and on paper. One rule is a die
+  roll with an outcome per face, and flattening it to a sentence makes it
+  unreadable.
+- **No mark in the corner.** The Trainer Card sheet earns its specimen because
+  the card is the thing being explained; here the rules are, and a logo would be
+  decoration taking room from them.
+- **The conditions paragraph is prefilled and fully editable.** The default is
+  the organiser's own wording, which is right most weeks; the field exists
+  because the conditions change. Cleared, it does not print at all.
+- **The letters are spans, not list markers.** A flex list item draws no marker,
+  and those rows are flex so the remove button can sit at the end -- so the
+  letter the sheet refers to ("rules a through d") is written out rather than
+  left to the list.
+
 ### The Trainer Card Creator
 
 `admin/trainer-cards.html` prints membership cards, eight to a Letter page. The
@@ -821,6 +1042,11 @@ chaos-cup.html      what a Chaos Cup is, and example rules
 rentals.js          the rental shelf and bounty list on the programs page
 home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
+admin/staff.html    the staffing roster, availability and event staffing
+admin/printables.html  handouts for players, built from the database
+admin/sheet-trainer-card.js  the Trainer Card Program information sheet
+admin/sheet-chaos-cup.js     the Chaos Cup rules sheet and its catalogue
+admin/trainer-card-art.js  drawing one Trainer Card, shared by the Creator and the sheet
 data/source/*.csv   spreadsheet exports used to seed reference tables
 event-registration.js  the register and cancel forms, shared by both pages
 image-file.js       resizing, re-encoding and the decoded-size guard
@@ -882,12 +1108,68 @@ Players at the left with Others at the far right got read as the total, which it
 is not. A day nobody counted shows `11+`, a floor rather than a number. The
 division headings are `JR`, `SR` and `MA`: spelled out they are the three widest
 columns on a table that already scrolls on a phone.
-It writes nothing. Both figures come from `attendance_by_day()` and
+Both figures come from `attendance_by_day()` and
 `attendance_on()` rather than from queries in page code, because the division
 split needs birth years and a birth year is a protected field — a professor may
 read one, but shipping several hundred to a browser to bucket them is handing out
 protected data to do arithmetic SQL can do. Full names and divisions put it
 behind the sign-in with the printable lists.
+
+**Key statistics leads the page**: the last four weeks, this year, and the best
+day there has ever been. All three count the room — everybody present, not only
+the people holding a Player ID — and the card says so, because a day where
+nobody counted the others is a floor and an average spanning one is a little low
+rather than exact.
+
+### Two eras of attendance, one shape
+
+`attendance` holds one row per person per day and wants a Player ID on every
+one. The two years before the site existed are counts with no names behind them,
+so they live in **`attendance_history`** and `attendance_by_day()` reads both.
+Inventing a hundred people to make them fit `attendance` would have been worse
+than keeping them apart.
+
+- **Where the two have the same Sunday, the live records win.** A day with even
+  one row in `attendance` is reported from `attendance` and the imported row is
+  ignored for it, so nothing a professor entered can be contradicted by a
+  spreadsheet and re-importing is safe.
+- The sheet's columns map on as **players played, judges attended, learn-to-play
+  visitors are others**. Judging is not playing, which is already the rule for a
+  judge added by hand at the upload screen.
+- **An imported week has no birth years behind it**, so it reports its age split
+  as unknown and the table prints `not recorded` across the three division
+  columns. Three zeroes would claim no children came. This is the same rule the
+  Played column already followed, arrived at from a different direction.
+- **The chart gives those weeks a slate band of their own**, `#5b7a8c`,
+  deliberately outside the gold ramp. They are not a fourth division; they are a
+  different kind of knowledge about the room, and a fourth step on an ordinal
+  ramp would have read as one more age band.
+- **The chart is not capped at the width of its card.** A hundred-odd Sundays
+  fitted to a card is a hairline comb nobody can read or aim at, so it keeps its
+  own pitch and the wrapper scrolls — the bargain `.table-wrap` already makes.
+  It lands scrolled to the newest week, which is the one somebody opened the
+  page for.
+- A real zero is kept. 3 November 2024 is the Sportsball watch party and nobody
+  came; dropping it would quietly lift every average that spans it.
+
+### The note on a week is the one thing this page writes
+
+"Baltimore" is why twenty-five people came that Sunday, and without it the week
+reads as a problem. `league_day_notes` is separate from the import because a
+note is wanted for every Sunday and not only the imported ones, and the imported
+ones are seeded into it so there is a single place to read them from.
+
+- **Who wrote one is stamped by a trigger, not sent by the page.** An upsert
+  carrying its own author is an upsert that could name somebody else, and the
+  second write of a note would otherwise keep the first writer's name.
+- **The grants are per column** — `insert (attended_on, note)`,
+  `update (attended_on, note)` — so a browser cannot write `updated_by` even
+  with a valid session. Row Level Security is row-level; this is the column half.
+- **Emptying a note deletes the row.** The table holds notes that exist, and a
+  week with nothing to say should not hold an empty string.
+- A re-import does **not** overwrite an edited note: the seeding insert is
+  `on conflict do nothing`, so a professor correcting a spelling keeps the
+  correction.
 
 Running alongside phase 1: deploy a minimal static shell to GitHub Pages — one
 page and a nav, confirmed live. This proves the deploy chain works while nothing

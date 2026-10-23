@@ -1,7 +1,9 @@
 // Attendance read back: how many came each week, and who.
 //
-// Everything on this page is a read. Nothing here records, corrects or deletes,
-// which is why it carries no confirmations and no buttons that change anything.
+// Almost everything on this page is a read. The one exception is the note on a
+// week -- "Baltimore", "Prerelease" -- which is why that week looked the way it
+// did and is the only thing here a professor can type. Nothing else records,
+// corrects or deletes, which is why there are no confirmations anywhere else.
 //
 // Both figures come from RPCs rather than from queries here, because the
 // division split needs birth years and a birth year is a protected field. A
@@ -57,6 +59,10 @@ function weekRow(d, onPick) {
   // A day recorded before the split was tracked has nothing to show, and a zero
   // there would read as "nobody played" rather than "nobody wrote it down".
   const noSplit = d.split_unknown === d.total;
+  // Same rule one column over. A counted-by-hand week has no birth years behind
+  // it, so three zeroes would claim no children came rather than that nobody
+  // wrote down who did.
+  const noDivisions = d.total > 0 && d.division_unknown === d.total;
   const partial = d.split_unknown > 0 && !noSplit;
 
   const link = el('button', {
@@ -94,9 +100,18 @@ function weekRow(d, onPick) {
       ? el('td', { className: 'muted-note', colspan: '2', text: 'not recorded' })
       : played,
     noSplit ? null : num(d.attended_only),
-    num(d.junior),
-    num(d.senior),
-    num(d.master)
+    // Only the counted-by-hand weeks know this. On a week with per-player
+    // records a judge is an attendee like any other, and a zero here would
+    // claim nobody judged rather than that nobody wrote it down.
+    d.judges === null || d.judges === undefined
+      ? el('td', { className: 'muted-note', text: '—' })
+      : num(d.judges),
+    noDivisions
+      ? el('td', { className: 'muted-note', colspan: '3', text: 'not recorded' })
+      : num(d.junior),
+    noDivisions ? null : num(d.senior),
+    noDivisions ? null : num(d.master),
+    noteCell(d)
   ]);
 }
 
@@ -126,16 +141,31 @@ function weekTable(onPick) {
         el('thead', {}, [
           el('tr', {}, [
             el('th', { scope: 'col', text: 'Day' }),
-            el('th', { scope: 'col', text: 'Total' }),
-            el('th', { scope: 'col', text: 'Players' }),
-            el('th', { scope: 'col', text: 'Others' }),
-            el('th', { scope: 'col', text: 'Played' }),
-            el('th', { scope: 'col', text: 'Attended' }),
+            // Every heading carries what it actually counts, because the
+            // difference between Total, Players and Others is the thing that
+            // gets misread, and a footnote under the table is read once.
+            el('th', { scope: 'col', text: 'Total',
+              title: 'Everybody in the room: Players plus Others.' }),
+            el('th', { scope: 'col', text: 'Players',
+              title: 'People holding a Player ID, judges and staff included.' }),
+            el('th', { scope: 'col', text: 'Others',
+              title: 'Parents, siblings, learn-to-play visitors — anybody with '
+                   + 'no Player ID, counted by a professor on the day.' }),
+            el('th', { scope: 'col', text: 'Played',
+              title: 'Players who entered the tournament.' }),
+            el('th', { scope: 'col', text: 'Attended',
+              title: 'Players who were here but did not enter, judges and staff '
+                   + 'among them.' }),
+            el('th', { scope: 'col', text: 'Judges',
+              title: 'Judges and staff. Recorded for weeks counted by hand; not '
+                   + 'separated out on weeks with per-player records.' }),
             // Abbreviated, because the full division names are the three widest
             // headings on a table that already has to scroll on a phone.
             el('th', { scope: 'col', title: 'Junior', text: 'JR' }),
             el('th', { scope: 'col', title: 'Senior', text: 'SR' }),
-            el('th', { scope: 'col', title: 'Master', text: 'MA' })
+            el('th', { scope: 'col', title: 'Master', text: 'MA' }),
+            el('th', { scope: 'col', text: 'Note',
+              title: 'Why the week looks the way it does. Click to write one.' })
           ])
         ]),
         el('tbody', {}, days.map((d) => weekRow(d, onPick)))
@@ -152,6 +182,122 @@ function weekTable(onPick) {
           + 'Divisions are worked out as at the day itself, so somebody who has '
           + 'had a birthday since is still counted in the division they played '
           + 'in.' })
+  ]);
+}
+
+// --- Notes --------------------------------------------------------------------
+//
+// A note explains a week: "Baltimore" is why twenty-five people came, and
+// without it that Sunday reads as a problem. The imported ones came from the
+// spreadsheet that was keeping them; this is how the next one gets written
+// without waiting for another import.
+function noteCell(d) {
+  const cell = el('td', { className: 'note-cell' });
+
+  function show() {
+    const button = el('button', {
+      type: 'button',
+      className: d.note ? 'link-button note-text' : 'link-button note-add',
+      text: d.note || 'Add'
+    });
+    button.addEventListener('click', edit);
+    cell.replaceChildren(button);
+  }
+
+  function edit() {
+    const input = el('input', { value: d.note || '', 'aria-label': 'Note for this day' });
+    const save = el('button', { type: 'button', className: 'link-button', text: 'Save' });
+    const cancel = el('button', { type: 'button', className: 'link-button', text: 'Cancel' });
+
+    async function commit() {
+      const next = input.value.trim();
+      save.disabled = true;
+      cancel.disabled = true;
+
+      // An emptied note is a deletion, not an empty string: the table holds
+      // notes that exist, so a week with nothing to say has no row.
+      const { error } = next
+        ? await supabase.from('league_day_notes')
+            .upsert({ attended_on: d.attended_on, note: next },
+                    { onConflict: 'attended_on' })
+        : await supabase.from('league_day_notes')
+            .delete().eq('attended_on', d.attended_on);
+
+      if (error) {
+        save.disabled = false;
+        cancel.disabled = false;
+        input.setAttribute('aria-invalid', 'true');
+        return;
+      }
+      d.note = next || null;
+      show();
+    }
+
+    save.addEventListener('click', commit);
+    cancel.addEventListener('click', show);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') { e.preventDefault(); show(); }
+    });
+
+    cell.replaceChildren(el('span', { className: 'note-edit' }, [input, save, cancel]));
+    input.focus();
+  }
+
+  show();
+  return cell;
+}
+
+// --- Key statistics -----------------------------------------------------------
+//
+// The three figures a professor is actually asked for: how we are doing lately,
+// how the year is going, and the best day we have ever had.
+//
+// All three are built on the room, which is everybody present rather than
+// everybody with a Player ID. Where nobody counted the others the room is a
+// floor, so an average spanning such a day is slightly low; the note under the
+// figures says so rather than presenting them as exact.
+function keyStats(days) {
+  if (!days.length) return null;
+
+  // days arrives newest first.
+  const recent = days.slice(0, 4);
+  const rolling = recent.length
+    ? recent.reduce((t, d) => t + room(d), 0) / recent.length
+    : 0;
+
+  const year = new Date().getUTCFullYear();
+  const thisYear = days.filter((d) => Number(String(d.attended_on).slice(0, 4)) === year);
+  const yearAvg = thisYear.length
+    ? thisYear.reduce((t, d) => t + room(d), 0) / thisYear.length
+    : null;
+
+  const best = days.reduce((hi, d) => (room(d) > room(hi) ? d : hi), days[0]);
+  const anyFloor = days.some((d) => !roomKnown(d));
+
+  const stat = (label, value, sub) => el('div', { className: 'keystat' }, [
+    el('span', { className: 'keystat-label', text: label }),
+    el('span', { className: 'keystat-value', text: value }),
+    sub ? el('span', { className: 'keystat-sub', text: sub }) : null
+  ]);
+
+  const oneDp = (n) => (Math.round(n * 10) / 10).toFixed(1);
+
+  return el('section', { className: 'card' }, [
+    el('h2', { text: 'Key statistics' }),
+    el('div', { className: 'keystat-row' }, [
+      stat('Last 4 weeks', oneDp(rolling), 'average in the room'),
+      stat(String(year), yearAvg === null ? '—' : oneDp(yearAvg),
+        yearAvg === null ? 'no league days yet' : 'average in the room'),
+      stat('Best day', room(best) + (roomKnown(best) ? '' : '+'),
+        day(best.attended_on))
+    ]),
+    el('p', { className: 'field-help',
+      text: 'Everybody present, not only the people with a Player ID.'
+          + (anyFloor
+              ? ' Some days nobody counted the others, so those averages are a '
+                + 'little low rather than exact.'
+              : '') })
   ]);
 }
 
@@ -176,6 +322,12 @@ const BANDS = [
   { key: 'junior', label: 'JR', long: 'Junior', fill: '#b08420' },   // --gold-lift
   { key: 'division_unknown', label: 'No birth year', long: 'No birth year',
     fill: '#b8b5ad', optional: true },
+  // Weeks that were counted by hand before per-player records existed. A slate
+  // blue, deliberately outside the gold ramp: those weeks are not another age
+  // band, they are a different kind of knowledge about the room, and a fourth
+  // step on the ramp would have read as one more division.
+  { key: 'counted', label: 'Counted by hand', long: 'Counted by hand',
+    fill: '#5b7a8c', optional: true },
   // Just "Others". What it means is on the footnote under the table, and a
   // legend key is a name rather than a definition.
   { key: 'others', label: 'Others', long: 'Others', fill: '#d9a32c' }  // --amber
@@ -200,7 +352,15 @@ function shortDay(value) {
   return value ? SHORT.format(new Date(String(value).slice(0, 10) + 'T12:00:00Z')) : '';
 }
 
-const bandValue = (d, key) => (key === 'others' ? (d.other_attendees || 0) : (d[key] || 0));
+// A week is in one era or the other, never both, so each band reads zero for
+// the era it does not belong to. That is what keeps the two from stacking on
+// top of each other in the same column.
+const bandValue = (d, key) => {
+  if (key === 'others') return d.other_attendees || 0;
+  if (key === 'counted') return d.counted_by_hand ? (d.total || 0) : 0;
+  if (d.counted_by_hand) return 0;
+  return d[key] || 0;
+};
 
 // Clean axis steps. The axis carries the values no label is riding, so it has to
 // land on numbers somebody would say out loud.
@@ -402,8 +562,15 @@ function chart(onPick) {
 
   const anyFloor = pts.some((p) => !p.known);
 
+  // Scrolled to the newest end, not the oldest. Time runs left to right because
+  // that is how a reader expects it, but the week somebody opened this page for
+  // is the last one, and landing two years behind it means a long drag before
+  // the page says anything.
+  const wrap = el('div', { className: 'chart-wrap' }, [root, tip]);
+  requestAnimationFrame(() => { wrap.scrollLeft = wrap.scrollWidth; });
+
   return el('section', { className: 'card' }, [
-    el('h2', { text: 'How many came' }),
+    el('h2', { text: 'Weekly attendance' }),
     el('p', { className: 'field-help',
       text: 'One column per league day, oldest first, broken down by division '
           + 'with everybody who has no Player ID on top. The line is the total. '
@@ -418,7 +585,7 @@ function chart(onPick) {
         el('span', { className: 'chart-key', style: 'background:' + b.fill }),
         el('span', { text: b.long })
       ])))),
-    el('div', { className: 'chart-wrap' }, [root, tip]),
+    wrap,
     anyFloor
       ? el('p', { className: 'field-help',
           text: 'The line breaks where nobody counted the others: on those days '
@@ -527,12 +694,16 @@ async function refresh() {
     picker.node.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
-  app.replaceChildren(
+  // Filtered, because replaceChildren stringifies a null into the literal word
+  // "null" on the page. Both the figures and the chart withhold themselves when
+  // there is nothing to draw, which is the empty state this page starts in.
+  app.replaceChildren(...[
+    keyStats(days),
     chart(pick),
     el('section', { className: 'card' }, [
       el('h2', { text: 'Week by week' }),
       weekTable(pick)
     ]),
     picker.node
-  );
+  ].filter(Boolean));
 })();

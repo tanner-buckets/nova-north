@@ -69,6 +69,8 @@ const SECTIONS = [
     tools: [
       { href: 'events.html', name: 'Events',
         note: 'Create and edit events, set what they cost, and decide which take pre-registration.' },
+      { href: 'staff.html', name: 'Staff schedule',
+        note: 'Who can make each event, and who is organiser, head judge and floor judge on the day. Past events are kept.' },
       { href: 'upload.html', name: 'Upload a TDF',
         note: 'Records attendance and awards points for an event. The file is read in your browser and never uploaded anywhere.' },
       { href: 'attendance.html', name: 'Record attendance by hand',
@@ -113,6 +115,8 @@ const SECTIONS = [
     tools: [
       { href: 'trainer-cards.html', name: 'Trainer Card Creator',
         note: 'Print membership cards, eight to a page. Everyone active, everyone without one yet, or a list you build by hand.' },
+      { href: 'printables.html', name: 'Printable resources',
+        note: 'Handouts for players, built from what is in the database: the Trainer Card Program information sheet, and a Chaos Cup rules sheet composed from a catalogue.' },
       { href: 'print.html', name: 'Printable lists',
         note: 'Loyalty tiers for the store and pre-registration for the desk. Print stylesheets, never public.' },
       { href: 'resources.html', name: 'Resources',
@@ -187,14 +191,20 @@ function sectionBlock(section, counts) {
 function draw(counts) {
   const total = Object.values(counts).reduce((s, n) => s + (n || 0), 0);
 
-  tools.replaceChildren(
-    el('h2', { text: 'Professor tools' }),
+  // Filtered, because replaceChildren stringifies a null into the literal word
+  // "null" on the page -- which is what a quiet week looked like, since the
+  // waiting line withholds itself when nothing is waiting. el() drops a falsy
+  // child for this reason; replaceChildren is not el().
+  //
+  // No heading here either: the page's own h1 already says Professor tools, and
+  // a second one underneath read as a stray repeat of the title.
+  tools.replaceChildren(...[
     total
       ? el('p', { className: 'tool-waiting',
           text: `${total} thing${total === 1 ? '' : 's'} waiting for a professor.` })
       : null,
     ...SECTIONS.map((s) => sectionBlock(s, counts))
-  );
+  ].filter(Boolean));
 }
 
 async function render() {

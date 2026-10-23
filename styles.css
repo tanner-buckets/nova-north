@@ -2403,7 +2403,11 @@ h1.event-name + .event-when {
   /* Below this the columns and the tick labels stop being readable, so the
      wrapper scrolls rather than the chart shrinking into illegibility. */
   min-width: 30rem;
-  max-width: 100%;
+  /* Not capped at the container. Two years of Sundays is a hundred-odd columns,
+     and fitting them all on screen draws a hairline comb nobody can read or
+     aim at. The chart keeps its own pitch and the wrapper scrolls, which is
+     the same bargain .table-wrap makes. */
+  max-width: none;
   height: auto;
 }
 
@@ -3756,3 +3760,637 @@ h1.event-name + .event-when {
   border-radius: 8px;
 }
 .recolour p:last-child { margin-bottom: 0; }
+
+/* --- Attendance: key statistics -------------------------------------------------- */
+/* Three figures, equal weight, wrapping to one column on a phone. The summary
+   sits above the chart because it answers the question most people arrive
+   with, and the chart is the working-out. */
+.keystat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.8rem;
+  margin: 0 0 0.6rem;
+}
+
+.keystat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--paper);
+  border-radius: 8px;
+  border-left: 3px solid var(--gold-line);
+  min-width: 0;
+}
+
+.keystat-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.keystat-value {
+  font-family: var(--font-head);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.keystat-sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* --- Attendance: the note column ------------------------------------------------- */
+/* Notes are prose in a table of numbers, so the column is allowed to be wide
+   and is the only one that wraps. */
+.note-cell {
+  min-width: 9rem;
+  max-width: 16rem;
+  white-space: normal;
+}
+
+.note-text { text-align: left; }
+
+/* An empty note should be findable without shouting. Quiet until hovered. */
+.note-add { color: var(--muted); }
+.note-cell:hover .note-add,
+.note-add:focus-visible { color: var(--gold); }
+
+.note-edit {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+.note-edit input { min-width: 7rem; }
+
+/* --- The staff schedule ---------------------------------------------------------
+   Two views of the same events: a grid of who can come, and a card per event of
+   who is doing what. Both scroll sideways rather than shrinking, the same
+   bargain .table-wrap and the attendance chart already make. */
+
+.view-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  flex-wrap: wrap;
+}
+
+/* The grid. One column per person, so it is wide by nature and the wrapper is
+   what gives. */
+.avail-table th[scope="row"] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 10rem;
+}
+
+.avail-day {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.avail-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Narrow on purpose. A column per person means the grid is as wide as the
+   roster, and every extra centimetre here is one fewer person on screen before
+   it starts scrolling. The select holds "Not asked", which is the longest
+   thing it ever says. */
+.avail-cell {
+  vertical-align: top;
+  min-width: 6rem;
+  padding-left: 0.3rem;
+  padding-right: 0.3rem;
+}
+
+.avail-cell select {
+  width: 100%;
+  min-width: 0;
+  padding-left: 0.3rem;
+  padding-right: 1.1rem;
+  font-size: 0.85rem;
+}
+
+/* The reason, under the status rather than beside it: side by side, one of them
+   was always too narrow to read what was in it. */
+.avail-why {
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.2rem 0.3rem;
+  font-size: 0.8rem;
+}
+
+/* The day column carries two lines and is the one that should keep its room. */
+.avail-table th[scope="row"] { padding-right: 0.6rem; }
+.avail-table td.count { padding-left: 0.3rem; padding-right: 0.5rem; }
+
+/* Past events: the same cell with nothing to click. Colour carries the status
+   but never alone -- the word is there too. */
+.avail-static { white-space: nowrap; }
+.avail-static.is-available { color: var(--green); font-weight: 600; }
+.avail-static.is-out { color: var(--danger); }
+.avail-static.is-playing { color: var(--gold); }
+.avail-static.is-unsure { color: var(--muted); }
+
+/* --- One event's staffing ------------------------------------------------------ */
+
+.staff-events { margin-top: 1.5rem; }
+.staff-events > h2 { margin-bottom: 0.75rem; }
+
+.staff-event { margin-bottom: 1rem; }
+
+.staff-event h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+}
+
+.other-events { width: 100%; }
+
+.role-grid {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.role-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+
+.role-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  flex: 0 0 9.5rem;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.staff-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.3rem 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* A visiting judge is drawn differently from the roster, because the difference
+   matters when you are deciding who to ask next time. */
+.staff-chip.is-guest {
+  background: transparent;
+  border-style: dashed;
+}
+
+.chip-remove {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--muted);
+  border-radius: 999px;
+}
+.chip-remove:hover { color: var(--danger); }
+
+.role-add {
+  display: inline-flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.role-add select { max-width: 12rem; }
+.guest-name { max-width: 10rem; }
+
+/* --- The roster ----------------------------------------------------------------- */
+
+.roster-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.roster-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+
+/* Retired stays legible rather than being greyed into unreadability: it is
+   still a name somebody may need to find. */
+.roster-row.is-retired .roster-fields { opacity: 0.65; }
+
+.roster-fields {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.roster-fields input { max-width: 10rem; }
+
+.roster-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.roster-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: auto;
+}
+
+@media (max-width: 34rem) {
+  .role-label { flex-basis: 100%; }
+  .roster-actions { margin-left: 0; }
+}
+
+/* A day that is not a Sunday. Marked, because the grid is a column of Sundays
+   and the eye stops expecting anything else -- a midweek prerelease sitting
+   silently among them is the one row most worth not missing. */
+.avail-table tr.is-extra th[scope="row"] {
+  border-left: 3px solid var(--gold-line);
+  padding-left: 0.5rem;
+}
+
+
+/* The two ways onto the roster, told apart by a rule rather than by reading
+   both and working it out. */
+.staff-mode {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+.staff-mode h4 { margin: 0 0 0.2rem; }
+
+
+/* --- The Trainer Card Program information sheet ----------------------------------
+   A handout for players, printed from the browser. One Letter page, laid out
+   the same on screen as on paper so what is reviewed is what comes out. */
+
+.info-sheet { display: none; }
+.info-sheet.is-ready { display: block; }
+
+.info-page {
+  box-sizing: border-box;
+  width: 8.5in;
+  min-height: 11in;
+  margin: 0 auto 1.5rem;
+  padding: 0.6in 0.65in;
+  background: #ffffff;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+/* The title block and the specimen card, side by side. The card is the one
+   picture on the sheet that answers "what am I being given". */
+.info-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 3px solid var(--gold-line);
+  margin-bottom: 0.9rem;
+}
+
+.info-title {
+  font-family: var(--font-head);
+  font-size: 30pt;
+  line-height: 1.02;
+  margin: 0;
+  color: var(--ink);
+}
+
+.info-subtitle {
+  font-family: var(--font-head);
+  font-size: 19pt;
+  line-height: 1.1;
+  margin: 0;
+  color: var(--gold);
+}
+
+.info-season {
+  margin: 0.25rem 0 0;
+  font-size: 9pt;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The real card at just over half size. Scaled with a transform rather than
+   rebuilt at smaller measurements: the card is one set of numbers taken off the
+   template, and a second set for a thumbnail would be a second thing to keep
+   right. transform does not affect layout, so the wrapper is given the scaled
+   size by hand. */
+.info-specimen {
+  flex: 0 0 auto;
+  width: 144pt;            /* 251.97pt * 0.5715 */
+  text-align: center;
+}
+
+.info-specimen .tcard {
+  transform: scale(0.5715);
+  transform-origin: top left;
+  /* The box the scaled card actually occupies, so nothing below it overlaps. */
+  margin-bottom: calc(158.7pt * 0.5715 - 158.7pt);
+}
+
+.info-specimen-note {
+  margin: 0.2rem 0 0;
+  font-size: 7.5pt;
+  line-height: 1.25;
+  color: var(--muted);
+}
+
+.info-section { margin-bottom: 0.85rem; }
+
+.info-section h3 {
+  font-family: var(--font-head);
+  font-size: 13pt;
+  margin: 0 0 0.25rem;
+  color: var(--gold);
+}
+
+.info-section p {
+  margin: 0 0 0.4rem;
+  font-size: 10pt;
+  line-height: 1.35;
+}
+
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9pt;
+}
+
+.info-table th,
+.info-table td {
+  border: 1px solid var(--line);
+  padding: 0.22rem 0.35rem;
+  text-align: left;
+  vertical-align: middle;
+  line-height: 1.25;
+}
+
+.info-table thead th {
+  background: var(--paper);
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.info-table tbody th[scope="row"] { font-weight: 700; }
+
+/* Badges run two to a row, which is how thirteen fit on one page. */
+.info-badges { table-layout: fixed; }
+.info-badge-art { width: 30pt; padding: 0.1rem 0.15rem; }
+.info-badge-art img {
+  display: block;
+  width: 26pt;
+  height: 26pt;
+  object-fit: contain;
+}
+.info-badge-name { width: 52pt; }
+.info-badge-task { font-size: 8.2pt; }
+
+.info-foot {
+  margin-top: 0.9rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--line);
+  font-size: 8.5pt;
+  color: var(--muted);
+}
+.info-foot p { margin: 0; }
+
+@media print {
+  /* Same trick the Trainer Card sheet needs, and for the same reason: main is
+     capped at 46rem, which is narrower than the page it would contain, and the
+     browser's answer is to shrink everything inside it. On this page the paper
+     IS the layout. Scoped to .info-print so the loyalty and registration
+     sheets keep their margins. */
+  .info-print main,
+  .info-print header,
+  .info-print footer { display: none; }
+
+  .info-print .info-sheet { display: block; }
+
+  /* A named page, so a bare @page here would not strip the margins off every
+     other printable in the site. */
+  @page info-sheet { size: Letter; margin: 0; }
+
+  .info-page {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+    page: info-sheet;
+    /* Without this a browser drops the card artwork and the badge fills, and
+       the corner comes out as an empty rectangle. */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* A table split across a page break loses its heading row, and this sheet is
+     meant to be one page anyway. */
+  .info-table { break-inside: avoid; }
+  .info-section { break-inside: avoid; }
+}
+
+/* SCREEN only. Without that word this also matches when printing -- the print
+   viewport is not the paper -- and the specimen card drops out of the corner
+   and under the title on the page that actually gets handed out. */
+@media screen and (max-width: 9in) {
+  /* On a phone the page is reviewed rather than read as paper, so it gives up
+     its fixed width instead of forcing the whole document sideways. */
+  .info-page {
+    width: auto;
+    min-height: 0;
+    padding: 1rem;
+  }
+  .info-head { flex-direction: column; }
+  .info-badges { font-size: 8pt; }
+}
+
+/* --- The Chaos Cup rules sheet ---------------------------------------------------
+   Shares .info-page with the Trainer Card sheet: same paper, same margins. What
+   differs is what goes on it. */
+
+.chaos-head {
+  padding-bottom: 0.5rem;
+  border-bottom: 3px solid var(--gold-line);
+  margin-bottom: 0.8rem;
+}
+
+/* No corner mark here. The Trainer Card sheet earns its specimen because the
+   card is the thing being explained; on this one the rules are, and a logo in
+   the corner would be decoration taking room from them. */
+.chaos-title { margin: 0; }
+
+/* The conditions carry the weight the organiser's own sheets gave them: this is
+   the paragraph that says how the day runs, and a player who reads nothing else
+   should read it. */
+.chaos-conditions {
+  margin: 0 0 1rem;
+  font-size: 10.5pt;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.chaos-rounds {
+  margin: 0;
+  padding-left: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.chaos-round-item { break-inside: avoid; }
+
+.chaos-main {
+  margin: 0;
+  font-size: 10.5pt;
+  line-height: 1.35;
+  /* The catalogue keeps line breaks, because one rule is a die roll with an
+     outcome per face and flattening it to a sentence makes it unreadable. */
+  white-space: pre-line;
+}
+
+.chaos-main.is-empty { color: var(--muted); font-style: italic; }
+
+/* Lettered, which is what the numbered rule above it refers to: "rules a
+   through d". */
+.chaos-sub {
+  margin: 0.3rem 0 0;
+  padding-left: 1.3rem;
+  list-style: lower-alpha;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.chaos-sub li {
+  font-size: 9.5pt;
+  line-height: 1.3;
+  white-space: pre-line;
+}
+
+.chaos-empty { color: var(--muted); font-style: italic; }
+
+/* --- Composing one ---------------------------------------------------------------- */
+
+.chaos-round { margin-bottom: 0.75rem; }
+
+.chaos-round-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.chaos-round-head h3 { margin: 0; }
+
+.chaos-chosen {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--paper);
+  border-radius: 6px;
+  border-left: 3px solid var(--gold-line);
+  margin-bottom: 0.5rem;
+}
+
+.chaos-chosen-body {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: pre-line;
+}
+
+/* The letters are spans, not list markers. A flex list item draws no marker,
+   and these rows are flex so the remove button can sit at the end -- so the
+   letter the printed sheet refers to ("rules a through d") is written out. */
+.chaos-extras {
+  margin: 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.chaos-extra {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.chaos-letter {
+  flex: 0 0 1.1rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.chaos-extra-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: pre-line;
+  font-size: 0.95rem;
+}
+
+/* The picker holds ninety-odd rules, so it is allowed the full width -- a
+   truncated option is a rule you cannot tell from the one above it. */
+.chaos-pick { width: 100%; max-width: 100%; }
+
+#chaos-conditions { width: 100%; }
+
+@media print {
+  .chaos-rounds { gap: 0.6rem; }
+}
