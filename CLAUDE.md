@@ -882,12 +882,68 @@ Players at the left with Others at the far right got read as the total, which it
 is not. A day nobody counted shows `11+`, a floor rather than a number. The
 division headings are `JR`, `SR` and `MA`: spelled out they are the three widest
 columns on a table that already scrolls on a phone.
-It writes nothing. Both figures come from `attendance_by_day()` and
+Both figures come from `attendance_by_day()` and
 `attendance_on()` rather than from queries in page code, because the division
 split needs birth years and a birth year is a protected field — a professor may
 read one, but shipping several hundred to a browser to bucket them is handing out
 protected data to do arithmetic SQL can do. Full names and divisions put it
 behind the sign-in with the printable lists.
+
+**Key statistics leads the page**: the last four weeks, this year, and the best
+day there has ever been. All three count the room — everybody present, not only
+the people holding a Player ID — and the card says so, because a day where
+nobody counted the others is a floor and an average spanning one is a little low
+rather than exact.
+
+### Two eras of attendance, one shape
+
+`attendance` holds one row per person per day and wants a Player ID on every
+one. The two years before the site existed are counts with no names behind them,
+so they live in **`attendance_history`** and `attendance_by_day()` reads both.
+Inventing a hundred people to make them fit `attendance` would have been worse
+than keeping them apart.
+
+- **Where the two have the same Sunday, the live records win.** A day with even
+  one row in `attendance` is reported from `attendance` and the imported row is
+  ignored for it, so nothing a professor entered can be contradicted by a
+  spreadsheet and re-importing is safe.
+- The sheet's columns map on as **players played, judges attended, learn-to-play
+  visitors are others**. Judging is not playing, which is already the rule for a
+  judge added by hand at the upload screen.
+- **An imported week has no birth years behind it**, so it reports its age split
+  as unknown and the table prints `not recorded` across the three division
+  columns. Three zeroes would claim no children came. This is the same rule the
+  Played column already followed, arrived at from a different direction.
+- **The chart gives those weeks a slate band of their own**, `#5b7a8c`,
+  deliberately outside the gold ramp. They are not a fourth division; they are a
+  different kind of knowledge about the room, and a fourth step on an ordinal
+  ramp would have read as one more age band.
+- **The chart is not capped at the width of its card.** A hundred-odd Sundays
+  fitted to a card is a hairline comb nobody can read or aim at, so it keeps its
+  own pitch and the wrapper scrolls — the bargain `.table-wrap` already makes.
+  It lands scrolled to the newest week, which is the one somebody opened the
+  page for.
+- A real zero is kept. 3 November 2024 is the Sportsball watch party and nobody
+  came; dropping it would quietly lift every average that spans it.
+
+### The note on a week is the one thing this page writes
+
+"Baltimore" is why twenty-five people came that Sunday, and without it the week
+reads as a problem. `league_day_notes` is separate from the import because a
+note is wanted for every Sunday and not only the imported ones, and the imported
+ones are seeded into it so there is a single place to read them from.
+
+- **Who wrote one is stamped by a trigger, not sent by the page.** An upsert
+  carrying its own author is an upsert that could name somebody else, and the
+  second write of a note would otherwise keep the first writer's name.
+- **The grants are per column** — `insert (attended_on, note)`,
+  `update (attended_on, note)` — so a browser cannot write `updated_by` even
+  with a valid session. Row Level Security is row-level; this is the column half.
+- **Emptying a note deletes the row.** The table holds notes that exist, and a
+  week with nothing to say should not hold an empty string.
+- A re-import does **not** overwrite an edited note: the seeding insert is
+  `on conflict do nothing`, so a professor correcting a spelling keeps the
+  correction.
 
 Running alongside phase 1: deploy a minimal static shell to GitHub Pages — one
 page and a nav, confirmed live. This proves the deploy chain works while nothing
