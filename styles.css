@@ -4256,3 +4256,141 @@ h1.event-name + .event-when {
   .info-head { flex-direction: column; }
   .info-badges { font-size: 8pt; }
 }
+
+/* --- The Chaos Cup rules sheet ---------------------------------------------------
+   Shares .info-page with the Trainer Card sheet: same paper, same margins. What
+   differs is what goes on it. */
+
+.chaos-head {
+  padding-bottom: 0.5rem;
+  border-bottom: 3px solid var(--gold-line);
+  margin-bottom: 0.8rem;
+}
+
+/* No corner mark here. The Trainer Card sheet earns its specimen because the
+   card is the thing being explained; on this one the rules are, and a logo in
+   the corner would be decoration taking room from them. */
+.chaos-title { margin: 0; }
+
+/* The conditions carry the weight the organiser's own sheets gave them: this is
+   the paragraph that says how the day runs, and a player who reads nothing else
+   should read it. */
+.chaos-conditions {
+  margin: 0 0 1rem;
+  font-size: 10.5pt;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.chaos-rounds {
+  margin: 0;
+  padding-left: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.chaos-round-item { break-inside: avoid; }
+
+.chaos-main {
+  margin: 0;
+  font-size: 10.5pt;
+  line-height: 1.35;
+  /* The catalogue keeps line breaks, because one rule is a die roll with an
+     outcome per face and flattening it to a sentence makes it unreadable. */
+  white-space: pre-line;
+}
+
+.chaos-main.is-empty { color: var(--muted); font-style: italic; }
+
+/* Lettered, which is what the numbered rule above it refers to: "rules a
+   through d". */
+.chaos-sub {
+  margin: 0.3rem 0 0;
+  padding-left: 1.3rem;
+  list-style: lower-alpha;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.chaos-sub li {
+  font-size: 9.5pt;
+  line-height: 1.3;
+  white-space: pre-line;
+}
+
+.chaos-empty { color: var(--muted); font-style: italic; }
+
+/* --- Composing one ---------------------------------------------------------------- */
+
+.chaos-round { margin-bottom: 0.75rem; }
+
+.chaos-round-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.chaos-round-head h3 { margin: 0; }
+
+.chaos-chosen {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--paper);
+  border-radius: 6px;
+  border-left: 3px solid var(--gold-line);
+  margin-bottom: 0.5rem;
+}
+
+.chaos-chosen-body {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: pre-line;
+}
+
+/* The letters are spans, not list markers. A flex list item draws no marker,
+   and these rows are flex so the remove button can sit at the end -- so the
+   letter the printed sheet refers to ("rules a through d") is written out. */
+.chaos-extras {
+  margin: 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.chaos-extra {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.chaos-letter {
+  flex: 0 0 1.1rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.chaos-extra-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: pre-line;
+  font-size: 0.95rem;
+}
+
+/* The picker holds ninety-odd rules, so it is allowed the full width -- a
+   truncated option is a rule you cannot tell from the one above it. */
+.chaos-pick { width: 100%; max-width: 100%; }
+
+#chaos-conditions { width: 100%; }
+
+@media print {
+  .chaos-rounds { gap: 0.6rem; }
+}

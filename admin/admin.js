@@ -116,7 +116,7 @@ const SECTIONS = [
       { href: 'trainer-cards.html', name: 'Trainer Card Creator',
         note: 'Print membership cards, eight to a page. Everyone active, everyone without one yet, or a list you build by hand.' },
       { href: 'printables.html', name: 'Printable resources',
-        note: 'Handouts for players, built from what is in the database. The Trainer Card Program information sheet is the first.' },
+        note: 'Handouts for players, built from what is in the database: the Trainer Card Program information sheet, and a Chaos Cup rules sheet composed from a catalogue.' },
       { href: 'print.html', name: 'Printable lists',
         note: 'Loyalty tiers for the store and pre-registration for the desk. Print stylesheets, never public.' },
       { href: 'resources.html', name: 'Resources',

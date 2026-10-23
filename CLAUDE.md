@@ -841,8 +841,14 @@ publication. Nothing printed is ever rendered on a public page.
 ### Printable resources
 
 `admin/printables.html` is handouts for players, built from what is in the
-database rather than kept as a document somebody edits. The first is the
-Trainer Card Program information sheet.
+database rather than kept as a document somebody edits. Two so far: the Trainer
+Card Program information sheet and the Chaos Cup rules sheet.
+
+- **A shell and one module per handout.** `printables.js` only decides which is
+  on screen; each sheet module exports `NAME` and `mount(app, sheet)` and owns
+  its own loading, controls and paper. Two sheets in one file was already the
+  wrong shape at two, because only one can print at a time and the other has to
+  be out of the way rather than merely further down.
 
 - **It exists because the Word version went stale.** That document still said
   four badges for Cooltrainer and eight for Ace Trainer months after the ladder
@@ -884,6 +890,47 @@ Trainer Card Program information sheet.
   actually gets handed out.
 - **`@page info-sheet` is named**, like the Trainer Card page box, so a bare
   `@page` here cannot strip the margins off every other printable in the site.
+
+#### The Chaos Cup rules sheet
+
+Follows the shape of the sheets the organiser has been writing by hand: a title,
+a paragraph of conditions for the day, then a numbered rule per round with
+lettered additional rules under it.
+
+- **The catalogue is the thing that is saved; the sheet is not.** A Chaos Cup
+  sheet is written on the day and handed out, and what is worth keeping between
+  events is the pool of rules rather than last week's running order. Keeping the
+  composition would mean deciding what a half-built sheet is, who owns it and
+  when it expires, which is a bigger question than this screen had to answer
+  first.
+- **`chaos_cup_rules` is professor-only**, unlike badges and prize items. The
+  whole point of a Chaos Cup is that nobody knows the rules until the day, and a
+  public catalogue would be every future event posted in advance.
+- **Seeded from the organiser's two documents**: the list of rules that have
+  been played, and the spreadsheet proposing six chains that build across
+  rounds. **The workbook's "Complicated" sheet is deliberately not seeded** --
+  it is a scratchpad with placeholders like "big change" and "small buff" where
+  the rule should be, and a catalogue a professor picks from on a Sunday must
+  not contain notes to self, because the sheet gets printed and handed out.
+- **A rule that appeared in both sources has one row.** The chain is recorded on
+  it rather than creating a second copy that would then drift.
+- **`code` records the tree without modelling one.** `1.a.i` is the first
+  round-3 option under option a of chain 1. That is the organiser's own
+  numbering, and it carries which rules follow which without this table having
+  to enforce a structure the screen does not yet use.
+- **Line breaks in a rule are kept**, on screen and on paper. One rule is a die
+  roll with an outcome per face, and flattening it to a sentence makes it
+  unreadable.
+- **No mark in the corner.** The Trainer Card sheet earns its specimen because
+  the card is the thing being explained; here the rules are, and a logo would be
+  decoration taking room from them.
+- **The conditions paragraph is prefilled and fully editable.** The default is
+  the organiser's own wording, which is right most weeks; the field exists
+  because the conditions change. Cleared, it does not print at all.
+- **The letters are spans, not list markers.** A flex list item draws no marker,
+  and those rows are flex so the remove button can sit at the end -- so the
+  letter the sheet refers to ("rules a through d") is written out rather than
+  left to the list.
 
 ### The Trainer Card Creator
 
@@ -997,6 +1044,8 @@ home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
 admin/staff.html    the staffing roster, availability and event staffing
 admin/printables.html  handouts for players, built from the database
+admin/sheet-trainer-card.js  the Trainer Card Program information sheet
+admin/sheet-chaos-cup.js     the Chaos Cup rules sheet and its catalogue
 admin/trainer-card-art.js  drawing one Trainer Card, shared by the Creator and the sheet
 data/source/*.csv   spreadsheet exports used to seed reference tables
 event-registration.js  the register and cancel forms, shared by both pages
