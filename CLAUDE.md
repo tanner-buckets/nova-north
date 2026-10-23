@@ -505,6 +505,12 @@ printable lists and the attendance history.
   reason. `loadJudges()` reads `staff` rather than `professors` for the same
   reason the grid does -- the two lists had always been assumed to be the same
   one and never were.
+- **The Ace Trainer row does not say it can challenge the Elite 4.** That is
+  said once, on its own line between Ace Trainer and Champion, because the
+  condition is eight badges rather than the rank. Having it in the benefit cell
+  as well put the same fact twice on one table, and the two did not agree -- the
+  cell implied reaching Ace Trainer was enough.
+
 - **Everybody on the roster is also a player**, and the screen has two doors to
   make sure of it: *they are already a player*, which is the ordinary player
   lookup and puts them straight on the roster, and *they are not a player yet*,
@@ -907,23 +913,50 @@ lettered additional rules under it.
   whole point of a Chaos Cup is that nobody knows the rules until the day, and a
   public catalogue would be every future event posted in advance.
 - **Seeded from the organiser's two documents**: the list of rules that have
-  been played, and the spreadsheet proposing six chains that build across
-  rounds. **The workbook's "Complicated" sheet is deliberately not seeded** --
-  it is a scratchpad with placeholders like "big change" and "small buff" where
-  the rule should be, and a catalogue a professor picks from on a Sunday must
-  not contain notes to self, because the sheet gets printed and handed out.
-- **A rule that appeared in both sources has one row.** The chain is recorded on
-  it rather than creating a second copy that would then drift.
-- **`code` records the tree without modelling one.** `1.a.i` is the first
-  round-3 option under option a of chain 1. That is the organiser's own
-  numbering, and it carries which rules follow which without this table having
-  to enforce a structure the screen does not yet use.
+  been played, and a workbook proposing six chains that build across rounds.
+  **The workbook's "Complicated" sheet is deliberately not seeded** -- it is a
+  scratchpad with placeholders like "big change" and "small buff" where the rule
+  should be, and a catalogue a professor picks from on a Sunday must not contain
+  notes to self, because the sheet gets printed and handed out.
+- **A rule is a rule and a category, and nothing else.** The chains, the codes
+  (`1.a.i`) and the round a rule was written for are all gone: the workbook was
+  a direction being explored rather than how these are picked, and carrying its
+  structure made the catalogue look like it had an order somebody had to obey.
+  What is left is what a person composing a sheet is actually choosing between.
+- **Grouped by what kind of rule it is**: drawing and your hand, prize cards,
+  status conditions, energy and attacks, Trainer cards, the bench and the board,
+  damage and knockouts. The categories were assigned by reading all seventy-six,
+  not by keyword -- "draw four extra cards and take a damage counter for each"
+  is a drawing rule with a cost, and "play a Trainer card and take a damage
+  counter" is a Trainer rule with the same cost.
+- **`category` is free text, not an enum.** A professor adding a rule under a
+  heading nobody thought of should not need a migration, and the list of
+  categories is simply the distinct values in use -- so one whose last rule is
+  retired stops appearing. Same arrangement as rental deck tags.
+- **Sixteen seeded rows were removed, not retired.** The chain structure
+  repeated the same rule under different parents: "Pokemon may have 2 Tool cards
+  attached to them" was three rows. Identical text, seeded hours earlier, never
+  referenced by anything -- that is deduplicating an import rather than
+  discarding history, which is the one case where removing beats retiring.
+- **The dedupe normalises case and the accent on Pokémon.** One pair differed
+  only in that, because one came from the spreadsheet and one from the rules
+  document, and an exact-text match would have left both. The accented spelling
+  is the one kept.
+- **A rule can be edited after it is written.** The catalogue is a list a
+  professor typed, so without editing a typo in it is permanent -- and the first
+  thing wanted after adding a rule is to fix the rule just added. Retiring is
+  the other half: it takes a rule out of the pickers without removing it,
+  because a rule that was played is part of what happened.
 - **Line breaks in a rule are kept**, on screen and on paper. One rule is a die
   roll with an outcome per face, and flattening it to a sentence makes it
   unreadable.
 - **No mark in the corner.** The Trainer Card sheet earns its specimen because
   the card is the thing being explained; here the rules are, and a logo would be
   decoration taking room from them.
+- **The printed sheet still numbers its rounds**, with lettered rules beneath
+  them. That numbering is the organiser's own format and has nothing to do with
+  the codes that were dropped from the catalogue: one is how a sheet reads on
+  the day, the other was a filing scheme for a structure that was abandoned.
 - **The conditions paragraph is prefilled and fully editable.** The default is
   the organiser's own wording, which is right most weeks; the field exists
   because the conditions change. Cleared, it does not print at all.

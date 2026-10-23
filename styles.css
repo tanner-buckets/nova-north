@@ -4410,3 +4410,57 @@ h1.event-name + .event-when {
   padding-top: 0.15rem;
   padding-bottom: 0.15rem;
 }
+
+/* --- The Chaos Cup rule catalogue ------------------------------------------------
+   A list a professor edits in place, grouped the way the pickers are so that
+   finding a rule to fix works like finding one to use. */
+
+.chaos-cat { margin-bottom: 1rem; }
+.chaos-cat h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.chaos-rule-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chaos-rule-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 11rem auto;
+  align-items: start;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.chaos-rule-row textarea {
+  width: 100%;
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
+.chaos-rule-meta { min-width: 0; }
+.chaos-rule-meta input { width: 100%; }
+
+.chaos-rule-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 42rem) {
+  /* Three columns is two too many on a phone. */
+  .chaos-rule-row { grid-template-columns: minmax(0, 1fr); }
+  .chaos-rule-actions { justify-content: flex-start; }
+}
