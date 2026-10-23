@@ -459,6 +459,69 @@ is applied to the production database.** There is no confirmation step.
 
 ---
 
+## Staff scheduling
+
+`admin/staff.html` is the two sheets the league was keeping by hand: who can
+make each event, and who is doing what once they can. Professor-only, like the
+printable lists and the attendance history.
+
+- **`staff` is a roster, not an authorization table.** No policy consults it,
+  and this is the line to hold. `professors` is what `is_professor()` checks,
+  and its primary key is `user_id` -- a row there cannot exist without a login,
+  which is why the roster had to be a separate table rather than a few columns
+  added to that one. Half the people on the sheet have never had an account: a
+  volunteer who floor-judges twice a year does not need one, and giving them one
+  to get their name onto a rota would hand out read access to every child's full
+  name and birth year to solve a scheduling problem. **Adding somebody to the
+  roster grants them nothing**, and the screen says so where the button is.
+- **`regular` or `volunteer`, and the difference is the upload screen.** A
+  regular is offered in the judges list when a TDF is uploaded; a volunteer is
+  not. `loadJudges()` reads `staff` rather than `professors` for exactly this
+  reason -- the two lists had always been assumed to be the same one and never
+  were.
+- **A regular with no `player_id` cannot be ticked as a judge**, because the
+  loyalty week and the attendance point would have nobody to land on. The
+  roster says so on the row, where it can be fixed, rather than leaving somebody
+  wondering why a name is missing from the upload screen. Adding somebody offers
+  to find their player record or create one, the same picker the attendance
+  screen uses.
+- **Four states, not two.** `available`, `out`, `playing`, `unsure`. `playing`
+  is the one worth keeping: somebody entered in the side event is in the room
+  and is not a judge, and folding that into `out` would have a professor ringing
+  round for a body who is standing ten feet away. It does not count toward the
+  number present, which is what the sheet already did.
+- **No row means nobody has been asked**, which is not `unsure`. One is a person
+  who has not been asked; the other has been asked and does not know. Clearing a
+  cell deletes the row rather than storing an empty status.
+- **The present count leads the table**, before the names. A table with a column
+  per person is wide by nature, and a summary at the far right is the first
+  thing off the side of a phone -- the same mistake the attendance table made
+  with Total.
+- **Upcoming is editable and past is read only.** A rota is a plan, and it stops
+  being one once the day has happened; what is left is a record, and a record
+  with a dropdown on it invites somebody to tidy history. It also keeps the grid
+  down to the events anybody is deciding about rather than two years of selects.
+- **Retired, never deleted.** A past event's staffing still points at the row,
+  and a retired member keeps their name on it while leaving the availability
+  grid. The active-name unique index is partial for this reason.
+- **Either a roster member or a one-off name, never both.** `event_staffing`
+  checks it. The guest is the point: the sheet has people in it who helped once,
+  and adding them to the roster to write them down would make the roster a list
+  of everybody who has ever held a pen. A guest chip is drawn dashed, because
+  the difference matters when deciding who to ask next time.
+- **Being down for two jobs at one event is a warning, not a refusal.** It is
+  usually a mistake and occasionally a small league. The same person twice in
+  the *same* job is a duplicate and the index refuses it.
+- **"Also on elsewhere" is its own table, not a column on `events`.** It is a
+  professor-only working note, and `events` is publicly readable -- a column
+  there would be one `select *` away from being on the schedule.
+- **Who last touched a row is stamped by a trigger**, and the grants are per
+  column, so a browser cannot write `updated_by`. Same arrangement as
+  `league_day_notes`.
+- The history is only events created through the site. The two years in the
+  spreadsheet were not imported: those events were never in `events`, and
+  inventing them to hang a rota on would put fiction in the events table.
+
 ## Rentable resources
 
 The section at the foot of `league_programs.html`, filled by `rentals.js`, and
@@ -821,6 +884,7 @@ chaos-cup.html      what a Chaos Cup is, and example rules
 rentals.js          the rental shelf and bounty list on the programs page
 home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
+admin/staff.html    the staffing roster, availability and event staffing
 data/source/*.csv   spreadsheet exports used to seed reference tables
 event-registration.js  the register and cancel forms, shared by both pages
 image-file.js       resizing, re-encoding and the decoded-size guard
