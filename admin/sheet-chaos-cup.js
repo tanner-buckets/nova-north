@@ -40,38 +40,32 @@ const byId = (id) => catalogue.find((r) => r.id === id) || null;
 async function load() {
   const { data, error } = await supabase
     .from('chaos_cup_rules').select('*').eq('is_active', true)
-    .order('chain', { nullsFirst: false }).order('sort_order');
+    .order('category').order('sort_order');
   if (error) throw error;
   catalogue = data || [];
 }
 
+// The categories in use, which is where the list of them lives: a professor
+// adding a rule under a new heading creates that heading, and one whose last
+// rule is retired stops appearing. No table of categories to keep in step.
+const categories = () =>
+  [...new Set(catalogue.map((r) => r.category).filter(Boolean))].sort();
+
 // --- Picking a rule -------------------------------------------------------------
 
-// A select rather than a search box. Ninety-odd rules sounds like a lot to put
-// in a dropdown, but they arrive already grouped into the chains the organiser
-// wrote them in, and an optgroup per chain is a shorter list to read than a
-// search field is to type into when you do not yet know what you are looking
-// for. The standalone rules lead, because those are the ones that have been
-// played.
+// A select rather than a search box. Seventy-odd rules sounds like a lot to put
+// in a dropdown, but grouped by what kind of rule they are it is a shorter list
+// to read than a search field is to type into when you do not yet know what you
+// are looking for -- which is the usual state when writing a Chaos Cup.
 function rulePicker(label, onPick, { exclude = [] } = {}) {
   const used = new Set(exclude.filter(Boolean));
-  const loose = catalogue.filter((r) => !r.chain && !used.has(r.id));
-  const chains = [...new Set(catalogue.filter((r) => r.chain).map((r) => r.chain))];
 
-  const option = (r) => el('option', {
-    value: r.id,
-    // The code is the organiser's own and says where a rule sits in its chain,
-    // which is the thing you need when picking the next round's rule.
-    text: (r.code ? `${r.code}  ` : '') + oneLine(r.body)
-  });
+  const option = (r) => el('option', { value: r.id, text: oneLine(r.body) });
 
   const groups = [el('option', { value: '', text: label })];
-  if (loose.length) {
-    groups.push(el('optgroup', { label: 'Played before' }, loose.map(option)));
-  }
-  for (const chain of chains) {
-    const inChain = catalogue.filter((r) => r.chain === chain && !used.has(r.id));
-    if (inChain.length) groups.push(el('optgroup', { label: chain }, inChain.map(option)));
+  for (const category of categories()) {
+    const inCat = catalogue.filter((r) => r.category === category && !used.has(r.id));
+    if (inCat.length) groups.push(el('optgroup', { label: category }, inCat.map(option)));
   }
 
   const sel = el('select', { className: 'chaos-pick' }, groups);
@@ -205,18 +199,82 @@ function composer(redraw, note) {
 
 // --- Adding to the catalogue ----------------------------------------------------
 
-function addRulePanel(redraw, note) {
-  const body = el('textarea', { id: 'new-rule', rows: '3' });
-  const chain = el('input', { id: 'new-chain', placeholder: 'Draw Crazy' });
-  const code = el('input', { id: 'new-code', placeholder: '1.a.i' });
-  const stage = el('select', { id: 'new-stage' }, [
-    el('option', { value: '', text: 'Any round' }),
-    el('option', { value: '1', text: 'Round 1' }),
-    el('option', { value: '2', text: 'Round 2' }),
-    el('option', { value: '3', text: 'Round 3' })
-  ]);
+// A category is picked from the ones in use, or typed to start a new one. Free
+// text in the column and a datalist here rather than an enum: a professor
+// should be able to group a rule under a heading nobody thought of without a
+// migration, which is the arrangement rental deck tags already have.
+function categoryField(uid, value) {
+  const listId = `cats-${uid}`;
+  const input = el('input', {
+    id: `cat-${uid}`, value: value || '', list: listId,
+    placeholder: 'Status conditions'
+  });
+  const list = el('datalist', { id: listId },
+    categories().map((c) => el('option', { value: c })));
+  return { input, nodes: [input, list] };
+}
 
-  const go = el('button', { type: 'button', className: 'button', text: 'Add to the catalogue' });
+// Editing one. The catalogue is a list a professor wrote, so a typo in it is
+// permanent otherwise -- and the first thing anybody wanted after adding a rule
+// was to fix the rule they had just added.
+function ruleRow(rule, reload, note) {
+  const uid = rule.id.slice(0, 8);
+  const body = el('textarea', { id: `body-${uid}`, rows: '2' });
+  body.value = rule.body;
+  const cat = categoryField(uid, rule.category);
+
+  const save = el('button', { type: 'button', className: 'button button-quiet',
+    text: 'Save' });
+  save.addEventListener('click', async () => {
+    if (!body.value.trim()) {
+      status(note, 'A rule needs some text.', 'error');
+      return;
+    }
+    save.disabled = true;
+    const { error } = await supabase.from('chaos_cup_rules').update({
+      body: body.value.trim(),
+      category: cat.input.value.trim() || 'Other'
+    }).eq('id', rule.id);
+    save.disabled = false;
+    if (error) {
+      status(note, `That did not save: ${error.message}`, 'error');
+      return;
+    }
+    status(note, 'Saved.', 'good');
+    await load();
+    reload();
+  });
+
+  // Retired, never deleted: a rule that was played is part of what happened.
+  const retire = el('button', { type: 'button', className: 'link-button',
+    text: 'Retire' });
+  retire.addEventListener('click', async () => {
+    retire.disabled = true;
+    const { error } = await supabase.from('chaos_cup_rules')
+      .update({ is_active: false }).eq('id', rule.id);
+    retire.disabled = false;
+    if (error) {
+      status(note, `That did not save: ${error.message}`, 'error');
+      return;
+    }
+    await load();
+    reload();
+  });
+
+  return el('li', { className: 'chaos-rule-row' }, [
+    body,
+    el('span', { className: 'chaos-rule-meta' }, cat.nodes),
+    el('span', { className: 'chaos-rule-actions' }, [save, retire])
+  ]);
+}
+
+function cataloguePanel(reload, note) {
+  const uid = 'new';
+  const body = el('textarea', { id: 'new-rule', rows: '3' });
+  const cat = categoryField(uid, '');
+
+  const go = el('button', { type: 'button', className: 'button',
+    text: 'Add to the catalogue' });
   go.addEventListener('click', async () => {
     if (!body.value.trim()) {
       status(note, 'A rule needs some text.', 'error');
@@ -225,32 +283,40 @@ function addRulePanel(redraw, note) {
     go.disabled = true;
     const { error } = await supabase.from('chaos_cup_rules').insert({
       body: body.value.trim(),
-      chain: chain.value.trim() || null,
-      code: code.value.trim() || null,
-      stage: stage.value ? Number(stage.value) : null,
+      category: cat.input.value.trim() || 'Other',
       sort_order: catalogue.length + 1
     });
     go.disabled = false;
     if (error) {
-      status(note, /duplicate|unique/i.test(error.message)
-        ? `${code.value.trim()} is already a code in the catalogue.`
-        : `That did not save: ${error.message}`, 'error');
+      status(note, `That did not save: ${error.message}`, 'error');
       return;
     }
     body.value = '';
-    code.value = '';
     status(note, 'Added.', 'good');
     await load();
-    redraw();
+    reload();
   });
 
+  // Grouped the way the pickers are, so finding a rule to fix works the same
+  // way as finding one to use.
+  const groups = categories().map((category) => el('div', { className: 'chaos-cat' }, [
+    el('h4', { text: category }),
+    el('ul', { className: 'chaos-rule-list' },
+      catalogue.filter((r) => r.category === category)
+        .map((r) => ruleRow(r, reload, note)))
+  ]));
+
   return el('details', { className: 'disclosure' }, [
-    el('summary', { text: `Add a rule to the catalogue (${catalogue.length} in it)` }),
+    el('summary', { text: `The rule catalogue (${catalogue.length} rules)` }),
     el('div', { className: 'disclosure-body' }, [
       el('p', { className: 'field-help',
-        text: 'Rules stay in the catalogue once added, so a rule written for one '
-            + 'event can be picked again. Retired, never deleted — a rule that '
-            + 'was played is part of what happened.' }),
+        text: 'Rules stay here once added, so one written for a single event can '
+            + 'be picked again. Editing one changes it everywhere it is used '
+            + 'from now on; retiring takes it out of the pickers without '
+            + 'removing it, because a rule that was played is part of what '
+            + 'happened.' }),
+
+      el('h3', { text: 'Add a rule' }),
       el('p', { className: 'field' }, [
         el('label', { for: body.id, text: 'The rule' }), body,
         el('span', { className: 'field-help',
@@ -258,22 +324,16 @@ function addRulePanel(redraw, note) {
               + 'makes a die-roll rule readable.' })
       ]),
       el('p', { className: 'field' }, [
-        el('label', { for: chain.id, text: 'Chain' }), chain,
+        el('label', { for: cat.input.id, text: 'Kind of rule' }), ...cat.nodes,
         el('span', { className: 'field-help',
-          text: 'Optional. Rules that build on each other across rounds share a '
-              + 'chain name, and the picker groups them by it.' })
-      ]),
-      el('p', { className: 'field' }, [
-        el('label', { for: code.id, text: 'Code' }), code,
-        el('span', { className: 'field-help',
-          text: 'Optional, and must be unique. 1.a.i is the first round-3 option '
-              + 'under option a of chain 1.' })
-      ]),
-      el('p', { className: 'field' }, [
-        el('label', { for: stage.id, text: 'Written for' }), stage
+          text: 'Pick one that exists or type a new one. It is what the pickers '
+              + 'group by.' })
       ]),
       el('p', {}, [go]),
-      note
+      note,
+
+      el('h3', { text: 'Edit a rule' }),
+      ...groups
     ])
   ]);
 }
@@ -323,7 +383,7 @@ export async function mount(app, sheet) {
   const note = el('p', { className: 'form-status', role: 'status' });
 
   const redraw = () => {
-    app.replaceChildren(composer(redraw, note), addRulePanel(redraw, note));
+    app.replaceChildren(composer(redraw, note), cataloguePanel(redraw, note));
     drawSheet(sheet);
   };
 
