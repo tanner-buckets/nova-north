@@ -2163,15 +2163,29 @@ a.player-button:hover .player-label {
    casual Sunday, so it is marked rather than only labelled. */
 .event-premier {
   position: relative;
-  padding-right: 3.4rem;
+  padding-right: 5.8rem;
 }
+
+/* Twice the old mark. These are the official Play! Pokémon marks for the two
+   sanctioned events, and at the old 2.1rem the words LEAGUE CHALLENGE were a
+   smudge -- which is the half that tells you which one it is.
+
+   They are taller than they are wide, unlike the square mark they replace, so
+   the card reserves width for the mark and lets the height run. */
 .event-premier-mark {
   position: absolute;
   top: 0.9rem;
   right: 0.9rem;
-  width: 2.1rem;
+  width: 4.2rem;
   height: auto;
   display: block;
+}
+
+/* On a narrow phone a 4.2rem mark plus its gutter leaves too little for an
+   event name, so it steps back down. Still larger than it was. */
+@media (max-width: 26rem) {
+  .event-premier { padding-right: 4.4rem; }
+  .event-premier-mark { width: 3.2rem; }
 }
 
 /* --- Badge art, on the reference screen ------------------------------------- */

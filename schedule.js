@@ -1,6 +1,6 @@
 import {
   supabase, el, problem, formatEventDay, formatEventTime, leagueDayKey,
-  eventShortcuts, arriveAt
+  eventShortcuts, arriveAt, premierMark
 } from './supabase-client.js';
 import {
   TYPE_LABELS, spotsHost, fillSpots, registrationBlock, eventPath
@@ -116,14 +116,14 @@ function eventCard(event, counts) {
   }
 
   // A League Cup or Challenge is a sanctioned premier event, which is a
-  // different kind of afternoon from a casual Sunday. is_premier is the flag
-  // that says so, and it is set on exactly those two.
-  if (event.is_premier) {
+  // different kind of afternoon from a casual Sunday, and each has its own
+  // official mark. premierMark() picks which; is_premier decides whether.
+  const mark = premierMark(event);
+  if (mark) {
     body.unshift(el('img', {
       className: 'event-premier-mark',
-      src: 'images/worlds.png',
-      width: '48', height: '49',
-      alt: 'Premier event',
+      src: mark.src, alt: mark.alt,
+      width: '320', height: '365',
       loading: 'lazy', decoding: 'async'
     }));
   }

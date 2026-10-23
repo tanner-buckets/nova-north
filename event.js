@@ -10,7 +10,8 @@
 // code, and ?g=<code> opens the whole group, because a player looking at a
 // prerelease has to be able to pick a flight.
 import {
-  supabase, el, problem, formatEventDay, formatEventTime, leagueDayKey, arriveAt
+  supabase, el, problem, formatEventDay, formatEventTime, leagueDayKey, arriveAt,
+  premierMark
 } from './supabase-client.js';
 import {
   TYPE_LABELS, spotsHost, fillSpots, registrationBlock, registrationState
@@ -62,13 +63,17 @@ function detail(event, counts, { onChange, heading, tag = 'div' }) {
   // The name leads, unlike on the schedule, where the date is the heading of the
   // group and the card only has to say the time. Somebody arriving from a posted
   // link is asking what this is before they ask when it is.
+  // The official mark for whichever sanctioned event this is. See
+  // premierMark(): is_premier decides whether there is one, the type decides
+  // which.
+  const mark = premierMark(event);
+
   const body = [
-    event.is_premier
+    mark
       ? el('img', {
           className: 'event-premier-mark',
-          src: 'images/worlds.png',
-          width: '48', height: '49',
-          alt: 'Premier event',
+          src: mark.src, alt: mark.alt,
+          width: '320', height: '365',
           loading: 'lazy', decoding: 'async'
         })
       : null,

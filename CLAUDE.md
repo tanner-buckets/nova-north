@@ -63,7 +63,13 @@ If a task seems to need a framework or a build step, stop and ask. Do not add on
   - `images/badges/*.png` — character art for the original thirteen badges
   - the `badge-art` storage bucket — artwork uploaded by a professor since
   - `images/play-pokemon.png` — the Play! Pokémon mark, footer of every page
-  - `images/worlds.png` — the World Championships mark, on premier events
+  - `images/league-challenge.png`, `images/league-cup.png` — the official marks
+    for the two sanctioned events, supplied by the organiser. Quantised to a
+    64-colour palette: they are flat logo art, and RGBA cost five times as much
+    for a picture with no gradients in it.
+  - `images/worlds.png` — the World Championships mark. It was the single mark
+    for every premier event and is now the fallback for one that is neither a
+    Cup nor a Challenge. Still here on purpose.
   - `images/cc-logo.png` — the venue's own mark, behind every earned badge
   - `images/icon-32.png`, `images/icon-180.png`, `favicon.ico` — the same venue
     mark, on graphite, as the tab icon. Chosen by the organiser over an original
@@ -928,9 +934,22 @@ so the tab matches the top of the page.
   10% padding and reducing from 8× with Lanczos. Regenerating from a different
   picture is the way to change it; the sizes are not hand-drawn.
 
-A premier event carries the World Championships mark in its top right corner.
-`is_premier` is the flag, and it is set on exactly the League Cups and
-Challenges.
+A premier event carries a mark in its top right corner. `is_premier` decides
+**whether** there is one; `event_type` decides **which** — a League Challenge
+and a League Cup are different sanctioned events with their own official marks,
+so the card carries the right one rather than a stand-in for both.
+`premierMark()` in `supabase-client.js` holds that mapping, because the schedule
+and the event page both draw it and two copies would drift.
+
+It is **4.2rem wide, twice what the old mark was**. These are official marks and
+half of what they say is the words along the bottom; at 2.1rem LEAGUE CHALLENGE
+was a smudge. They are also taller than wide, unlike the near-square mark they
+replace, so the card reserves width and lets the height run. Below 26rem it
+steps back to 3.2rem, where an event name still has somewhere to go.
+
+`worlds.png` is the fallback. `is_premier` is set on exactly Cups and Challenges
+today, but it is a column somebody can tick, and a premier event that is neither
+should still read as one rather than quietly losing its mark.
 
 ### Charts
 
