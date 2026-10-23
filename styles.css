@@ -2403,7 +2403,11 @@ h1.event-name + .event-when {
   /* Below this the columns and the tick labels stop being readable, so the
      wrapper scrolls rather than the chart shrinking into illegibility. */
   min-width: 30rem;
-  max-width: 100%;
+  /* Not capped at the container. Two years of Sundays is a hundred-odd columns,
+     and fitting them all on screen draws a hairline comb nobody can read or
+     aim at. The chart keeps its own pitch and the wrapper scrolls, which is
+     the same bargain .table-wrap makes. */
+  max-width: none;
   height: auto;
 }
 
@@ -3756,3 +3760,72 @@ h1.event-name + .event-when {
   border-radius: 8px;
 }
 .recolour p:last-child { margin-bottom: 0; }
+
+/* --- Attendance: key statistics -------------------------------------------------- */
+/* Three figures, equal weight, wrapping to one column on a phone. The summary
+   sits above the chart because it answers the question most people arrive
+   with, and the chart is the working-out. */
+.keystat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.8rem;
+  margin: 0 0 0.6rem;
+}
+
+.keystat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--paper);
+  border-radius: 8px;
+  border-left: 3px solid var(--gold-line);
+  min-width: 0;
+}
+
+.keystat-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.keystat-value {
+  font-family: var(--font-head);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.keystat-sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* --- Attendance: the note column ------------------------------------------------- */
+/* Notes are prose in a table of numbers, so the column is allowed to be wide
+   and is the only one that wraps. */
+.note-cell {
+  min-width: 9rem;
+  max-width: 16rem;
+  white-space: normal;
+}
+
+.note-text { text-align: left; }
+
+/* An empty note should be findable without shouting. Quiet until hovered. */
+.note-add { color: var(--muted); }
+.note-cell:hover .note-add,
+.note-add:focus-visible { color: var(--gold); }
+
+.note-edit {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+.note-edit input { min-width: 7rem; }
