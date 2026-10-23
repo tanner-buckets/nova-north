@@ -331,7 +331,9 @@ as $function$
       select 1 from public.attendance a where a.attended_on = h.attended_on
     )
   ),
-  both as (
+  -- Not named "both": that is a reserved word in Postgres, from
+  -- trim(both ... from ...), and will not serve as a CTE name.
+  either_era as (
     select * from live
     union all
     select * from imported
@@ -340,7 +342,7 @@ as $function$
     b.attended_on, b.total, b.played, b.attended_only, b.split_unknown,
     b.junior, b.senior, b.master, b.division_unknown, b.other_attendees,
     b.judges, b.counted_by_hand, n.note
-  from both b
+  from either_era b
   left join public.league_day_notes n on n.attended_on = b.attended_on
   where public.is_professor()
     and (p_from is null or b.attended_on >= p_from)
