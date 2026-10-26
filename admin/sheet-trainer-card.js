@@ -142,6 +142,19 @@ function badgeTable() {
   ];
 
   return el('table', { className: 'info-table info-badges' }, [
+    // The widths live here, not on the cells. With table-layout: fixed a
+    // browser takes its column widths from the FIRST ROW -- which is the head,
+    // and the head is two colspan="2" cells per pair with no width on them, so
+    // every width set on a body cell was silently ignored and all six columns
+    // came out equal. A col element is what fixed layout actually reads.
+    el('colgroup', {}, [
+      el('col', { className: 'info-col-art' }),
+      el('col', { className: 'info-col-name' }),
+      el('col', { className: 'info-col-task' }),
+      el('col', { className: 'info-col-art' }),
+      el('col', { className: 'info-col-name' }),
+      el('col', { className: 'info-col-task' })
+    ]),
     el('thead', {}, [
       el('tr', {}, [
         el('th', { scope: 'col', colspan: '2', text: 'Badge' }),
