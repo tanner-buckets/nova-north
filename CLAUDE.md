@@ -896,6 +896,24 @@ Card Program information sheet and the Chaos Cup rules sheet.
   actually gets handed out.
 - **`@page info-sheet` is named**, like the Trainer Card page box, so a bare
   `@page` here cannot strip the margins off every other printable in the site.
+- **In print the page's own padding IS the margin, and it is the number that
+  decides whether the sheet survives a strange machine.** `@page` asks for no
+  margin, but a browser may ignore that and a professor may leave Margins on
+  Default in the dialog -- and then the browser's own half inch top and bottom
+  is *added* to this padding. The sheet had about seventy points of slack, and
+  a default margin costs seventy-two: that is why it fitted on one page here
+  and not everywhere. Print padding is 0.35in where the screen keeps 0.6in,
+  which leaves about 116pt of slack -- enough to absorb a full default margin
+  and still have an inch to spare.
+- **The badge art was never what set the row height.** Halving the picture and
+  narrowing the name column bought four points; the task text wrapping is what
+  makes a row tall, and widening that column is what the narrowing is actually
+  for. Measure before concluding that a change bought height.
+- **Headroom is measured through the real print pipeline**, by adding a spacer
+  of known height and binary-searching the point where the sheet breaks to a
+  second page. A spacer of 120pt reliably produces two pages, which is what
+  makes a one-page result mean anything: a page count that cannot go up is not
+  a measurement.
 
 #### The Chaos Cup rules sheet
 
@@ -964,6 +982,58 @@ lettered additional rules under it.
   and those rows are flex so the remove button can sit at the end -- so the
   letter the sheet refers to ("rules a through d") is written out rather than
   left to the list.
+
+### How to print this
+
+`admin/print-guidelines.js` is the settings that keep a sheet the right size,
+shared by the Trainer Card Creator and the printable resources page.
+
+- **One copy, for the same reason `image-file.js` and `trainer-card-art.js` are
+  shared.** It is a list of settings that will change as browsers change, and
+  two copies would mean one of them quietly going wrong.
+- **Everything in it is downstream of the page.** The sheets are laid out at
+  real measurements on a Letter page with no margin, and nothing in a browser
+  reports back what the printer did -- so when a print comes out wrong the
+  thing to change is almost never the site. The list says that plainly rather
+  than inviting somebody to go and edit the CSS.
+- **Two halves, because the second one is the hard one.** The dialog settings
+  are findable; the printer driver's own "shrink oversized pages", a PDF reader
+  defaulting to "Fit", a different browser and a stray zoom level are all
+  outside the browser, which is exactly why they are what is left when the
+  dialog looks right.
+- **It takes an `exact` flag.** The Trainer Card Creator says a card at the
+  wrong size is a card that does not fit its sleeve and points at the test
+  sheet; a handout only has to stay on one page, so that page is not told to go
+  and measure anything.
+- **A definition list, not bullets.** Every line is a setting and the value it
+  wants, which is a term and its definition.
+- **It never prints.** Advice about printing is not part of what is being
+  printed.
+
+### The test sheet
+
+`admin/trainer-cards.html` carries a **Print a test sheet** button: eight empty
+card boxes at exactly the positions real cards print at, each with a rounded
+rectangle the size of a credit card centred inside it.
+
+- **It exists because "the cards print at the wrong size" is not a thing a page
+  can see.** Nothing reports back what the printer did, and a card at 94% still
+  looks like a trainer card. The only way to know is to put a ruler on it, and
+  the only way to know what to blame is a sheet with nothing on it but the
+  measurements.
+- **ID-1 is the card standard**: 85.60 by 53.98 mm, which at 72pt to the inch is
+  242.65 by 153.01. It sits *inside* the 251.97 by 158.70 card box with a little
+  air around it rather than filling it, because the two are different things --
+  the box is where the artwork goes, the rectangle is what a bank card measures.
+- **The measurements are printed inside the shape being measured**, in millimetres
+  and in inches, so whatever the professor measures with, the target is on the
+  paper next to it.
+- **It has its own container**, so building one never disturbs a list of real
+  cards already composed, and only one sheet prints at a time -- otherwise a
+  test costs a sheet of card stock and leaves somebody wondering which to
+  measure.
+- **Nothing is recorded by printing it.** No card is used up and no print run is
+  logged, unlike Create the cards.
 
 ### The Trainer Card Creator
 
@@ -1080,6 +1150,7 @@ admin/printables.html  handouts for players, built from the database
 admin/sheet-trainer-card.js  the Trainer Card Program information sheet
 admin/sheet-chaos-cup.js     the Chaos Cup rules sheet and its catalogue
 admin/trainer-card-art.js  drawing one Trainer Card, shared by the Creator and the sheet
+admin/print-guidelines.js  how to print, shared by the Creator and the handouts
 data/source/*.csv   spreadsheet exports used to seed reference tables
 event-registration.js  the register and cancel forms, shared by both pages
 image-file.js       resizing, re-encoding and the decoded-size guard

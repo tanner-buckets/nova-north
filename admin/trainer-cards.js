@@ -15,10 +15,12 @@ import { status, playerPicker } from './attendance-core.js';
 // One copy of the card, shared with the printable information sheet. See
 // trainer-card-art.js for why the measurements are what they are.
 import { card, shortRank, badgeArtHref } from './trainer-card-art.js';
+import { printGuidelines } from './print-guidelines.js';
 
 const gate = document.querySelector('#gate');
 const app = document.querySelector('#app');
 const sheet = document.querySelector('#sheet');
+const calibration = document.querySelector('#calibration');
 
 // The two seasons, and they are deliberately different.
 //
@@ -299,6 +301,68 @@ function refreshCounts() {
   freshButton.textContent = `No ${CARD_SEASON} card yet (${fresh.length})`;
 }
 
+// --- The test sheet --------------------------------------------------------------
+//
+// Eight empty card boxes at exactly the positions real cards print at, each
+// with a rounded rectangle the size of a credit card centred inside it.
+//
+// It exists because "the cards print at the wrong size" is not a thing a page
+// can see. Nothing reports back what the printer did, and a card that is 94%
+// of the right size still looks like a trainer card -- the only way to know is
+// to put a ruler on it, and the only way to know what to blame is a sheet with
+// nothing on it but the measurements.
+//
+// ID-1 is the card standard: 85.60 by 53.98 mm. In points, at 72 to the inch,
+// that is 242.65 by 153.01 -- which is why it sits inside the 251.97 by 158.70
+// card box with a little air around it rather than filling it.
+const CREDIT_W = 242.65;
+const CREDIT_H = 153.01;
+
+function calibrationCard() {
+  return el('div', { className: 'cal-card' }, [
+    el('div', { className: 'cal-credit' }, [
+      // Printed inside the shape being measured, so whatever the professor
+      // measures with, the target is on the paper next to it.
+      el('span', { className: 'cal-mm', text: '85.6 \u00d7 54 mm' }),
+      el('span', { className: 'cal-in', text: '3\u215c \u00d7 2\u215b in' })
+    ])
+  ]);
+}
+
+function calibrationPage() {
+  return el('div', { className: 'card-page cal-page' },
+    Array.from({ length: 8 }, calibrationCard));
+}
+
+function showCalibration() {
+  calibration.replaceChildren(
+    el('div', { className: 'cal-explain no-print' }, [
+      el('h3', { text: 'Test sheet' }),
+      el('p', { text: 'Print this, then measure the rounded rectangle inside any '
+        + 'box. It should be exactly the size of a credit card: 85.6 by 54 mm, '
+        + 'or 3\u215c by 2\u215b inches. Hold a bank card against it \u2014 that '
+        + 'is the quickest check there is.' }),
+      el('p', { text: 'If it comes out smaller, the printer or the browser is '
+        + 'scaling the page down. In the print dialog set Scale to 100% (not '
+        + '\u201cFit to page\u201d), Margins to None, Paper to Letter, and turn '
+        + 'headers and footers off.' }),
+      el('p', { className: 'field-help',
+        text: 'Nothing is recorded by printing this, and no card is used up.' })
+    ]),
+    calibrationPage()
+  );
+
+  document.body.classList.add('is-calibrating');
+  calibration.classList.add('is-ready');
+  calibration.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hideCalibration() {
+  document.body.classList.remove('is-calibrating');
+  calibration.classList.remove('is-ready');
+  calibration.replaceChildren();
+}
+
 function draw() {
   const { active, fresh } = countsNote();
 
@@ -352,6 +416,21 @@ function draw() {
   ]);
   undoWrap.hidden = true;
 
+  // The test sheet lives beside the real one rather than behind a menu: it is
+  // reached for exactly when something has already gone wrong, which is the
+  // worst moment to go hunting.
+  const calButton = el('button', { type: 'button', className: 'button button-quiet',
+    text: 'Print a test sheet' });
+  calButton.addEventListener('click', showCalibration);
+
+  const calPrint = el('button', { type: 'button', className: 'button',
+    text: 'Print the test sheet' });
+  calPrint.addEventListener('click', () => window.print());
+
+  const calHide = el('button', { type: 'button', className: 'link-button',
+    text: 'Put it away' });
+  calHide.addEventListener('click', hideCalibration);
+
   app.replaceChildren(
     el('section', { className: 'panel' }, [
       el('h2', { text: 'Who gets a card' }),
@@ -376,6 +455,17 @@ function draw() {
             + 'did not print, say so below and everyone goes back on the list.' }),
       goNote,
       undoWrap
+    ]),
+
+    el('section', { className: 'panel' }, [
+      el('h2', { text: 'Printing at the right size' }),
+      el('p', { className: 'field-help',
+        text: 'A card is 251.97 by 158.70pt on a Letter page with no margin, and '
+            + 'nothing tells this page what the printer actually did. If cards '
+            + 'are coming out the wrong size, print a sheet with nothing on it '
+            + 'but the measurements and hold a bank card against it.' }),
+      el('p', { className: 'button-row' }, [calButton, calPrint, calHide]),
+      printGuidelines({ exact: true })
     ])
   );
 
