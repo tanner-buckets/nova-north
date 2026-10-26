@@ -4187,22 +4187,29 @@ h1.event-name + .event-when {
 .info-table tbody th[scope="row"] { font-weight: 700; }
 
 /* Badges run two to a row, which is how thirteen fit on one page. */
-/* Fixed layout, so narrowing the two left columns hands the space straight to
-   the task column rather than redistributing it by content. The art and the
-   name were what set the row height -- a 26pt picture floors a row at 26pt --
-   and taller rows are what pushed this onto a second page on machines whose
-   print margins are a little larger than mine. Half the art and three quarters
-   of the name buys the task column 56pt per row and lets the rows settle to
-   the height of their own text. */
+/* The badge table, two badges to a row.
+   THE WIDTHS ARE ON THE col ELEMENTS, not on the cells. table-layout: fixed
+   reads its columns from the first row, and the first row here is the head --
+   two colspan="2" cells per pair carrying no width -- so widths set on body
+   cells were ignored and all six columns rendered equal at 86pt each. That is
+   why narrowing them appeared to do nothing.
+   The art column is as narrow as the picture it holds and no narrower: 26pt of
+   badge plus its padding. Shrinking the picture to shrink the column would be
+   making the artwork worse to buy width the name column has to spare. */
 .info-badges { table-layout: fixed; }
-.info-badge-art { width: 15pt; padding: 0.1rem 0.12rem; }
+
+.info-col-art { width: 30pt; }
+.info-col-name { width: 52pt; }
+/* No width: the two task columns take everything the other four do not, which
+   is what the narrowing is for. */
+
+.info-badge-art { padding: 0.1rem 0.15rem; }
 .info-badge-art img {
   display: block;
-  width: 13pt;
-  height: 13pt;
+  width: 26pt;
+  height: 26pt;
   object-fit: contain;
 }
-.info-badge-name { width: 39pt; }
 .info-badge-task { font-size: 8.2pt; }
 
 .info-foot {

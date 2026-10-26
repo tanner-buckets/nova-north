@@ -338,7 +338,7 @@ function showCalibration() {
   calibration.replaceChildren(
     el('div', { className: 'cal-explain no-print' }, [
       el('h3', { text: 'Test sheet' }),
-      el('p', { text: 'Print this, then measure the rounded rectangle inside any '
+      el('p', { text: 'Measure the rounded rectangle inside any '
         + 'box. It should be exactly the size of a credit card: 85.6 by 54 mm, '
         + 'or 3\u215c by 2\u215b inches. Hold a bank card against it \u2014 that '
         + 'is the quickest check there is.' }),
@@ -355,6 +355,16 @@ function showCalibration() {
   document.body.classList.add('is-calibrating');
   calibration.classList.add('is-ready');
   calibration.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Read a layout property before asking for the dialog. The page has just been
+  // built, and printing into one the browser has not laid out yet is how a
+  // sheet comes out blank -- reading offsetHeight forces that layout now,
+  // synchronously. A requestAnimationFrame would do it too, right up until the
+  // tab is not painting, at which point the callback never runs and the dialog
+  // never opens. The preview stays on screen afterwards, so a cancelled dialog
+  // can be printed again from the browser's own menu.
+  void calibration.offsetHeight;
+  window.print();
 }
 
 function hideCalibration() {
@@ -416,16 +426,12 @@ function draw() {
   ]);
   undoWrap.hidden = true;
 
-  // The test sheet lives beside the real one rather than behind a menu: it is
-  // reached for exactly when something has already gone wrong, which is the
-  // worst moment to go hunting.
-  const calButton = el('button', { type: 'button', className: 'button button-quiet',
+  // One button. Building the sheet and then asking for it to be printed were
+  // two presses for one intention, and the first of them put a page on screen
+  // whose only purpose was to be printed.
+  const calButton = el('button', { type: 'button', className: 'button',
     text: 'Print a test sheet' });
   calButton.addEventListener('click', showCalibration);
-
-  const calPrint = el('button', { type: 'button', className: 'button',
-    text: 'Print the test sheet' });
-  calPrint.addEventListener('click', () => window.print());
 
   const calHide = el('button', { type: 'button', className: 'link-button',
     text: 'Put it away' });
@@ -464,7 +470,7 @@ function draw() {
             + 'nothing tells this page what the printer actually did. If cards '
             + 'are coming out the wrong size, print a sheet with nothing on it '
             + 'but the measurements and hold a bank card against it.' }),
-      el('p', { className: 'button-row' }, [calButton, calPrint, calHide]),
+      el('p', { className: 'button-row' }, [calButton, calHide]),
       printGuidelines({ exact: true })
     ])
   );

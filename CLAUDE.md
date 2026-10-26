@@ -905,10 +905,23 @@ Card Program information sheet and the Chaos Cup rules sheet.
   and not everywhere. Print padding is 0.35in where the screen keeps 0.6in,
   which leaves about 116pt of slack -- enough to absorb a full default margin
   and still have an inch to spare.
-- **The badge art was never what set the row height.** Halving the picture and
-  narrowing the name column bought four points; the task text wrapping is what
-  makes a row tall, and widening that column is what the narrowing is actually
-  for. Measure before concluding that a change bought height.
+- **THE BADGE TABLE'S WIDTHS LIVE ON `col` ELEMENTS, NOT ON THE CELLS.**
+  `table-layout: fixed` takes its column widths from the FIRST ROW, and the
+  first row here is the head -- two `colspan="2"` cells per pair carrying no
+  width. So every width set on a body cell was silently ignored and all six
+  columns rendered equal at 86pt. Narrowing them appeared to do nothing for the
+  same reason it actually did nothing. A `colgroup` is what fixed layout reads.
+- **The art column is as narrow as the picture it holds and no narrower.**
+  30pt: a 26pt badge and its padding. Shrinking the picture to shrink the
+  column makes the artwork worse to buy width that the name column has to
+  spare, and the name column is where the slack is.
+- **The task column takes whatever the other four do not**, and that is the
+  point of narrowing them: it went from 86pt to 176pt, which is the difference
+  between a task wrapping to four lines and fitting on one. One-page headroom
+  went from 71pt to 216pt once the widths actually applied.
+- **Measure before concluding that a change bought height.** Halving the badge
+  picture appeared to buy four points, which should have been the clue that the
+  widths were not applying at all.
 - **Headroom is measured through the real print pipeline**, by adding a spacer
   of known height and binary-searching the point where the sheet breaks to a
   second page. A spacer of 120pt reliably produces two pages, which is what
@@ -1032,6 +1045,17 @@ rectangle the size of a credit card centred inside it.
   cards already composed, and only one sheet prints at a time -- otherwise a
   test costs a sheet of card stock and leaves somebody wondering which to
   measure.
+- **One button, and it prints.** Building the sheet and then asking for it to
+  be printed were two presses for one intention, and the first of them put a
+  page on screen whose only purpose was to be printed. The preview stays up
+  afterwards, so a cancelled dialog can be printed again from the browser's own
+  menu, and "Put it away" clears it.
+- **Layout is forced synchronously before the dialog opens**, by reading
+  `offsetHeight`. Printing into a page the browser has not laid out yet is how
+  a sheet comes out blank. A `requestAnimationFrame` does the same job right up
+  until the tab is not painting, at which point the callback never runs and the
+  dialog never opens -- which is exactly what happened the first time this was
+  tested.
 - **Nothing is recorded by printing it.** No card is used up and no print run is
   logged, unlike Create the cards.
 
