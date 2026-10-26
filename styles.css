@@ -4187,15 +4187,22 @@ h1.event-name + .event-when {
 .info-table tbody th[scope="row"] { font-weight: 700; }
 
 /* Badges run two to a row, which is how thirteen fit on one page. */
+/* Fixed layout, so narrowing the two left columns hands the space straight to
+   the task column rather than redistributing it by content. The art and the
+   name were what set the row height -- a 26pt picture floors a row at 26pt --
+   and taller rows are what pushed this onto a second page on machines whose
+   print margins are a little larger than mine. Half the art and three quarters
+   of the name buys the task column 56pt per row and lets the rows settle to
+   the height of their own text. */
 .info-badges { table-layout: fixed; }
-.info-badge-art { width: 30pt; padding: 0.1rem 0.15rem; }
+.info-badge-art { width: 15pt; padding: 0.1rem 0.12rem; }
 .info-badge-art img {
   display: block;
-  width: 26pt;
-  height: 26pt;
+  width: 13pt;
+  height: 13pt;
   object-fit: contain;
 }
-.info-badge-name { width: 52pt; }
+.info-badge-name { width: 39pt; }
 .info-badge-task { font-size: 8.2pt; }
 
 .info-foot {
@@ -4230,6 +4237,15 @@ h1.event-name + .event-when {
     border: none;
     box-shadow: none;
     page: info-sheet;
+    /* THE PADDING IS THE MARGIN, and this is the number that decides whether
+       the sheet survives a strange machine. @page asks for no margin, but a
+       browser is free to ignore that and a professor is free to leave Margins
+       on Default in the dialog -- and then the browser'''s own half inch top and
+       bottom is ADDED to this, costing 72pt of a page that only had about
+       seventy to spare. 0.35in leaves enough that the sheet still fits with a
+       default margin on top of it. On screen it keeps the roomier 0.6in,
+       because there the padding really is the only margin. */
+    padding: 0.35in 0.5in;
     /* Without this a browser drops the card artwork and the badge fills, and
        the corner comes out as an empty rectangle. */
     -webkit-print-color-adjust: exact;
@@ -4463,4 +4479,87 @@ h1.event-name + .event-when {
   /* Three columns is two too many on a phone. */
   .chaos-rule-row { grid-template-columns: minmax(0, 1fr); }
   .chaos-rule-actions { justify-content: flex-start; }
+}
+
+/* --- The Trainer Card test sheet -------------------------------------------------
+   Eight empty card boxes where real cards print, each holding a rounded
+   rectangle the size of a credit card. It exists because nothing reports back
+   what a printer did: a card at 94% still looks like a trainer card, and the
+   only way to know is to put a ruler on it. */
+
+.cal-sheet { display: none; }
+.cal-sheet.is-ready { display: block; }
+
+.cal-explain { margin: 1.5rem 0 1rem; }
+.cal-explain h3 { margin: 0 0 0.3rem; }
+.cal-explain p { margin: 0 0 0.4rem; max-width: 34rem; }
+
+/* The grid comes from .card-page, so the boxes sit exactly where cards do.
+   What differs is that these are drawn rather than filled. */
+.cal-page {
+  background: #ffffff;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.cal-card {
+  box-sizing: border-box;
+  border: 0.75pt solid #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ID-1, the card standard: 85.60 by 53.98 mm, which at 72pt to the inch is
+   242.65 by 153.01. Not a round number and not meant to be -- it is the thing
+   being measured, so it is written as what it is. The 3.18mm corner is the
+   standard radius too. */
+.cal-credit {
+  box-sizing: border-box;
+  width: 242.65pt;
+  height: 153.01pt;
+  border: 1pt solid #000000;
+  border-radius: 9pt;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2pt;
+}
+
+.cal-mm,
+.cal-in {
+  font-family: var(--font-body);
+  color: #000000;
+  line-height: 1;
+}
+.cal-mm { font-size: 10pt; font-weight: 700; }
+.cal-in { font-size: 8pt; }
+
+@media print {
+  /* Only one sheet prints at a time. Without this the real cards and the test
+     sheet would both come out, which is a wasted sheet of card stock and a
+     professor wondering which one to measure. */
+  body.is-calibrating .card-sheet { display: none !important; }
+  body.is-calibrating .cal-explain { display: none !important; }
+
+  .cal-sheet.is-ready { display: block; }
+  .cal-page {
+    border: none;
+    box-shadow: none;
+    margin: 0;
+    page: trainer-cards;
+    break-after: page;
+  }
+  .cal-page:last-child { break-after: auto; }
+}
+
+@media screen {
+  /* Shown the way the real sheet is shown, so the preview looks like the paper. */
+  .cal-sheet.is-ready .cal-page {
+    border: 1px solid var(--line);
+    margin: 0 auto 1rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+    overflow-x: auto;
+  }
 }
