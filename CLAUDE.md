@@ -983,6 +983,33 @@ lettered additional rules under it.
   letter the sheet refers to ("rules a through d") is written out rather than
   left to the list.
 
+### How to print this
+
+`admin/print-guidelines.js` is the settings that keep a sheet the right size,
+shared by the Trainer Card Creator and the printable resources page.
+
+- **One copy, for the same reason `image-file.js` and `trainer-card-art.js` are
+  shared.** It is a list of settings that will change as browsers change, and
+  two copies would mean one of them quietly going wrong.
+- **Everything in it is downstream of the page.** The sheets are laid out at
+  real measurements on a Letter page with no margin, and nothing in a browser
+  reports back what the printer did -- so when a print comes out wrong the
+  thing to change is almost never the site. The list says that plainly rather
+  than inviting somebody to go and edit the CSS.
+- **Two halves, because the second one is the hard one.** The dialog settings
+  are findable; the printer driver's own "shrink oversized pages", a PDF reader
+  defaulting to "Fit", a different browser and a stray zoom level are all
+  outside the browser, which is exactly why they are what is left when the
+  dialog looks right.
+- **It takes an `exact` flag.** The Trainer Card Creator says a card at the
+  wrong size is a card that does not fit its sleeve and points at the test
+  sheet; a handout only has to stay on one page, so that page is not told to go
+  and measure anything.
+- **A definition list, not bullets.** Every line is a setting and the value it
+  wants, which is a term and its definition.
+- **It never prints.** Advice about printing is not part of what is being
+  printed.
+
 ### The test sheet
 
 `admin/trainer-cards.html` carries a **Print a test sheet** button: eight empty
@@ -1123,6 +1150,7 @@ admin/printables.html  handouts for players, built from the database
 admin/sheet-trainer-card.js  the Trainer Card Program information sheet
 admin/sheet-chaos-cup.js     the Chaos Cup rules sheet and its catalogue
 admin/trainer-card-art.js  drawing one Trainer Card, shared by the Creator and the sheet
+admin/print-guidelines.js  how to print, shared by the Creator and the handouts
 data/source/*.csv   spreadsheet exports used to seed reference tables
 event-registration.js  the register and cancel forms, shared by both pages
 image-file.js       resizing, re-encoding and the decoded-size guard

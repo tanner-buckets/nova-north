@@ -10,6 +10,7 @@
 // browser's own Save as PDF is what makes the file.
 import { el, problem } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
+import { printGuidelines } from './print-guidelines.js';
 import * as trainerCard from './sheet-trainer-card.js';
 import * as chaosCup from './sheet-chaos-cup.js';
 
@@ -17,6 +18,7 @@ const gate = document.querySelector('#gate');
 const app = document.querySelector('#app');
 const sheet = document.querySelector('#sheet');
 const chooser = document.querySelector('#chooser');
+const guide = document.querySelector('#guide');
 
 const SHEETS = [trainerCard, chaosCup];
 
@@ -70,4 +72,7 @@ function tabs() {
 
   await show(0);
   chooser.replaceChildren(tabs());
+  // Under the tabs rather than inside a sheet: the advice is the same whichever
+  // handout is showing, and it should not vanish when the tab changes.
+  guide.replaceChildren(printGuidelines());
 })();

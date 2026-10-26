@@ -15,6 +15,7 @@ import { status, playerPicker } from './attendance-core.js';
 // One copy of the card, shared with the printable information sheet. See
 // trainer-card-art.js for why the measurements are what they are.
 import { card, shortRank, badgeArtHref } from './trainer-card-art.js';
+import { printGuidelines } from './print-guidelines.js';
 
 const gate = document.querySelector('#gate');
 const app = document.querySelector('#app');
@@ -463,7 +464,8 @@ function draw() {
             + 'nothing tells this page what the printer actually did. If cards '
             + 'are coming out the wrong size, print a sheet with nothing on it '
             + 'but the measurements and hold a bank card against it.' }),
-      el('p', { className: 'button-row' }, [calButton, calPrint, calHide])
+      el('p', { className: 'button-row' }, [calButton, calPrint, calHide]),
+      printGuidelines({ exact: true })
     ])
   );
 

@@ -4563,3 +4563,51 @@ h1.event-name + .event-when {
     overflow-x: auto;
   }
 }
+
+/* --- How to print this -----------------------------------------------------------
+   Shared by the Trainer Card Creator and the printable resources page. A
+   definition list, because every line is a setting and the value it wants --
+   which is a term and its definition, not a bullet. */
+
+.print-guide-block { margin-top: 0.75rem; }
+.print-guide-block h4 {
+  margin: 0.9rem 0 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.print-guide-block h4:first-child { margin-top: 0; }
+
+.print-guide {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: 0.3rem 0.9rem;
+  align-items: baseline;
+}
+
+.print-guide dt {
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.print-guide dd {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  min-width: 0;
+}
+
+@media (max-width: 34rem) {
+  /* The setting and what it should be stack, rather than the value being
+     squeezed into a column too narrow to read a sentence in. */
+  .print-guide { grid-template-columns: minmax(0, 1fr); gap: 0 0; }
+  .print-guide dt { margin-top: 0.5rem; }
+}
+
+@media print {
+  /* Advice about printing is not part of what is being printed. */
+  .print-guide-block { display: none !important; }
+}
