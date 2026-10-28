@@ -83,11 +83,19 @@ async function loyaltyRows(release) {
   return (players || []).map((p) => ({ ...p, weeks: byId.get(p.player_id) || 0 }));
 }
 
-export function loyaltySheet(release, tiers, rows) {
+// How close to the bottom tier counts as nearly there. Three Sundays is about a
+// month of league: near enough that a word at the desk still changes the
+// outcome, and not so far back that the list is everybody who ever came once.
+const NEARLY_WITHIN = 3;
+
+// Where everybody lands. The tiers and the nearly-there list are worked out in
+// one place because they are one walk down the sheet -- a player is in the best
+// tier they reached, and nearly there is what is left immediately below the
+// bottom one. Pure, so the panel can say what it is about to print without a
+// second copy of the rule that could disagree with this one.
+function placeRows(tiers, rows) {
   // Highest threshold first, so a player lands in the best tier they reached and
-  // appears once. Anyone below every threshold is left off entirely: the sheet is
-  // what the store hands out against, and a name on it that earns nothing is a
-  // name somebody has to check and then ignore.
+  // appears once.
   const ordered = [...tiers].sort((a, b) => b.weeks_required - a.weeks_required);
   const placed = new Set();
 
@@ -98,6 +106,57 @@ export function loyaltySheet(release, tiers, rows) {
     members.forEach((m) => placed.add(m.player_id));
     return { tier, members };
   });
+
+  const bottom = ordered[ordered.length - 1] || null;
+
+  // Closest first: this list answers who to have a word with, and that is read
+  // from the top rather than looked up by name. Somebody on no Sundays at all is
+  // not nearly there -- they have not started -- and a carryover row of zero
+  // weeks is how one of those gets this far.
+  const nearly = bottom
+    ? rows
+        .filter((r) => !placed.has(r.player_id) && r.weeks > 0
+          && r.weeks >= bottom.weeks_required - NEARLY_WITHIN)
+        .sort((a, b) => b.weeks - a.weeks || byFirstName(a, b))
+    : [];
+
+  return { groups, nearly, bottom };
+}
+
+// Nobody on this list has earned anything, which is the whole of why it carries
+// no tick column: a box to tick is an invitation to hand something over.
+function nearlySection(bottom, members) {
+  return el('section', { className: 'sheet-group' }, [
+    el('h3', { text: `Nearly there — within ${NEARLY_WITHIN} Sundays of ${bottom.tier_name}` }),
+    el('p', { className: 'muted-note',
+      text: `${bottom.tier_name} is ${bottom.weeks_required} Sundays. Nothing here `
+          + 'is earned yet.' }),
+    members.length
+      ? el('table', { className: 'sheet-table' }, [
+          el('thead', {}, [el('tr', {}, [
+            el('th', { text: 'Name' }),
+            el('th', { text: 'Player ID' }),
+            el('th', { text: 'Sundays' }),
+            el('th', { text: 'Short by' })
+          ])]),
+          el('tbody', {}, members.map((m) => el('tr', {}, [
+            el('td', { text: `${m.first_name} ${m.last_name}`.trim() }),
+            el('td', { className: 'count', text: m.player_id }),
+            el('td', { className: 'count', text: m.weeks }),
+            el('td', { className: 'count', text: bottom.weeks_required - m.weeks })
+          ])))
+        ])
+      // Asked for and empty still prints, like a tier nobody reached. Leaving
+      // the section out would read on paper as the box not having worked.
+      : el('p', { className: 'muted-note', text: 'Nobody is this close yet.' })
+  ]);
+}
+
+// Anyone below every threshold is left off unless the professor asked for them.
+// The sheet is what the store hands out against, and a name on it that earns
+// nothing is a name somebody has to check and then ignore.
+export function loyaltySheet(release, tiers, rows, { nearly: showNearly = false } = {}) {
+  const { groups, nearly, bottom } = placeRows(tiers, rows);
 
   return el('article', { className: 'sheet' }, [
     el('header', { className: 'sheet-head' }, [
@@ -127,6 +186,8 @@ export function loyaltySheet(release, tiers, rows) {
           ])
         : el('p', { className: 'muted-note', text: 'Nobody has reached this tier.' })
     ])),
+
+    showNearly && bottom ? nearlySection(bottom, nearly) : null,
 
     printedAt()
   ]);
@@ -228,6 +289,8 @@ async function loyaltyPanel(releases) {
   // selected, which is what the dropdown would have shown anyway.
   const wanted = new URLSearchParams(location.search).get('release');
   if (wanted && releases.some((r) => r.id === wanted)) select.value = wanted;
+
+  const nearly = el('input', { type: 'checkbox', id: 'nearly' });
   const note = el('p', { className: 'form-status', role: 'status' });
   const go = el('button', { type: 'submit', className: 'button', text: 'Build the loyalty sheet' });
 
@@ -237,8 +300,21 @@ async function loyaltyPanel(releases) {
     ]),
     el('p', { className: 'field-help',
       text: 'For the store. Who reached which tier, with a column to tick as each '
-          + 'is handed over. Anyone short of every tier is left off. Building it '
-          + 'opens the print dialog.' }),
+          + 'is handed over. Building it opens the print dialog.' }),
+
+    // Off by default, because the sheet's job is what the store is handing over
+    // and a list of people owed nothing on the same paper is a list somebody has
+    // to work out they can ignore. Worth asking every time, though: a word at the
+    // desk is what turns three Sundays into four.
+    el('p', { className: 'field field-inline' }, [
+      nearly,
+      el('label', { for: 'nearly', text: 'Add the players who are nearly there' })
+    ]),
+    el('p', { className: 'field-help',
+      text: `Everybody within ${NEARLY_WITHIN} Sundays of the bottom tier, closest `
+          + 'first, with how many they are short. Nothing on that list is earned '
+          + 'yet, so there is nothing to tick.' }),
+
     el('p', {}, [go]),
     note
   ]);
@@ -253,9 +329,18 @@ async function loyaltyPanel(releases) {
       const { data: tiers } = await supabase.from('loyalty_tiers')
         .select('*').eq('release_id', release.id);
       const rows = await loyaltyRows(release);
-      show(loyaltySheet(release, tiers || [], rows));
+      show(loyaltySheet(release, tiers || [], rows, { nearly: nearly.checked }));
       go.disabled = false;
-      status(note, `${rows.length} player${rows.length === 1 ? '' : 's'} on the sheet.`, 'good');
+
+      // What is on the paper, not what was fetched. loyaltyRows() returns
+      // everybody with attendance in the window, and the sheet leaves most of
+      // them off, so counting that said forty where the sheet listed nine.
+      const placed = placeRows(tiers || [], rows);
+      const earned = placed.groups.reduce((n, g) => n + g.members.length, 0);
+      const also = nearly.checked
+        ? `, and ${placed.nearly.length} nearly there` : '';
+      status(note,
+        `${earned} player${earned === 1 ? '' : 's'} on the sheet${also}.`, 'good');
     } catch (err) {
       console.error(err);
       go.disabled = false;
