@@ -844,6 +844,37 @@ professor-only pages.** Printed lists may show full names because they are hande
 to the store or used at the desk — this is a disclosure to the venue, not
 publication. Nothing printed is ever rendered on a public page.
 
+#### Nearly there
+
+The loyalty sheet lists who reached a tier and leaves everybody else off, because
+it is what the store hands out against and a name on it that earns nothing is a
+name somebody has to check and then ignore. **Nearly there is the opt-in
+exception**: a checkbox that adds everybody within three Sundays of the bottom
+tier.
+
+- **Off by default**, and a question asked every time the sheet is built. The
+  default protects the sheet's job; the checkbox exists because a word at the
+  desk is what turns three Sundays into four, and nothing else on the site could
+  answer who to have that word with.
+- **Three Sundays is about a month of league.** Near enough that it can still be
+  made up inside the release, far enough back that the list is not two names.
+- **Closest first, with how many they are short.** It is read from the top rather
+  than looked up by name, which is the opposite of the tier tables above it.
+- **No tick column.** Nothing on that list is earned, and a box to tick is an
+  invitation to hand something over.
+- **Somebody on no Sundays at all is not nearly there** — they have not started.
+  A carryover row of zero weeks is how one of those reaches the filter, so the
+  rule tests weeks above zero rather than trusting the fetch.
+- **Asked for and empty still prints**, saying nobody is that close, like a tier
+  nobody reached. Leaving the section out would read on paper as the checkbox
+  not having worked.
+- **`placeRows()` is one walk down the sheet**, deciding the tiers and the
+  nearly-there list together, because nearly there is defined as what is left
+  immediately below the bottom tier. It is pure so the panel can say what it is
+  about to print: the count under the button used to be `loyaltyRows()`, which is
+  everybody with attendance in the window, so it said forty where the sheet
+  listed nine.
+
 ### Printable resources
 
 `admin/printables.html` is handouts for players, built from what is in the
