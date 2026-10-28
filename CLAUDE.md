@@ -1183,6 +1183,35 @@ makes the file.
 - **The counts on the two source buttons are live.** They were drawn once at
   startup, which left them stale from the first print onward — the figure on
   "no card yet" is the whole reason that button exists.
+- **How much attendance counts as active is a dropdown, one to four Sundays.**
+  `trainer_card_roster` used to return `attended_recently`, a boolean: did this
+  player turn up at all in the last three months. That is the right question for
+  consent, which is where the window came from, and a blunt one for deciding who
+  gets a printed card — somebody who came once in August sat on the same footing
+  as somebody who has not missed a week. It now returns `recent_days`, the count
+  behind that boolean, and the screen picks the threshold. **One is what the
+  boolean meant**, so the default changes nothing.
+- **Distinct days, not attendance rows.** A player entered in two events on one
+  Sunday has two rows, and the league's own rule is one loyalty week per calendar
+  day however many events were played. `count(*)` would quietly promote anybody
+  who plays the side event.
+- **The window does not move, and it is not offered.** Three months is what
+  consent uses, and active has to mean one thing across this site. What is
+  configurable is how much attendance counts as active, not how far back anybody
+  looks. Four is the ceiling because the window is roughly thirteen Sundays:
+  past that the button starts refusing regulars who missed a fortnight.
+- **Both buttons follow the threshold; the picker ignores it.** "No card yet" is
+  a subset of active and would be incoherent on a different rule. Adding
+  somebody by name is a decision rather than a filter, and a filter that
+  overrode it would make the search box lie.
+- **The dropdown redraws the counts as it moves**, which is how it explains
+  itself. A professor raising it from one to three and watching forty become
+  nine has been told what it does without pressing anything.
+- **Changing that function meant dropping it, not replacing it.** A
+  `returns table` column list is part of the signature and Postgres refuses to
+  change one in place — and **a drop takes the grants with it**, so the
+  migration reissues `grant execute ... to authenticated` or every professor
+  gets "permission denied for function".
 
 ---
 

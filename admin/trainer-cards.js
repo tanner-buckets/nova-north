@@ -41,7 +41,17 @@ function fullName(row) {
   return `${row.first_name || ''} ${row.last_name || ''}`.trim();
 }
 
+// How many Sundays in the last three months a player needs before the two
+// source buttons count them as active. One is what the roster's old boolean
+// meant, so that is the default and it changes nothing. Four is the ceiling
+// because the window is roughly thirteen Sundays: past that the button starts
+// refusing regulars who missed a fortnight, which is not what anybody meant by
+// active. The window itself stays at three months -- it is the one consent
+// uses, and active has to mean one thing across this site.
+const RECENT_CHOICES = [1, 2, 3, 4];
+
 let professor = null;
+let recentDays = RECENT_CHOICES[0];
 let roster = [];               // every player, no birth years
 let ranks = [];                // trainer_card_ranks, for the override dropdown
 let championRanks = new Set(); // the names that earn a star
@@ -286,7 +296,10 @@ async function refreshRoster() {
 }
 
 function countsNote() {
-  const active = roster.filter((r) => r.attended_recently);
+  // recent_days is distinct days inside the window, counted in SQL. Two events
+  // on one Sunday is one day there, which is the league's own rule about a
+  // loyalty week and the reason this is not a count of attendance rows.
+  const active = roster.filter((r) => (r.recent_days || 0) >= recentDays);
   const fresh = active.filter((r) => !r.has_card);
   return { active, fresh };
 }
@@ -299,6 +312,25 @@ function refreshCounts() {
   const { active, fresh } = countsNote();
   activeButton.textContent = `Everyone active (${active.length})`;
   freshButton.textContent = `No ${CARD_SEASON} card yet (${fresh.length})`;
+}
+
+// The threshold is the only thing on this screen that changes what those two
+// numbers mean, so it redraws them as it moves. A professor raising it from
+// one to three and watching forty become nine has been told what the filter
+// does without having to press anything.
+function thresholdField() {
+  const select = el('select', { id: 'recent-days' },
+    RECENT_CHOICES.map((n) => el('option', {
+      value: n, text: `${n} Sunday${n === 1 ? '' : 's'}` })));
+  select.value = String(recentDays);
+  select.addEventListener('change', () => {
+    recentDays = Number(select.value) || RECENT_CHOICES[0];
+    refreshCounts();
+  });
+
+  return el('p', { className: 'field' }, [
+    el('label', { for: 'recent-days', text: 'Active means at least' }), select
+  ]);
 }
 
 // --- The test sheet --------------------------------------------------------------
@@ -444,10 +476,17 @@ function draw() {
         text: `Rank and badges come from the ${BADGE_SEASON} season, which is the `
             + `one that has been played. The card itself counts as a `
             + `${CARD_SEASON} card.` }),
+      thresholdField(),
+      el('p', { className: 'field-help',
+        text: 'Counted over the last three months, the same window consent uses '
+            + 'everywhere else on this site. Roughly thirteen Sundays, so one '
+            + 'means anybody who has been in at all and four means somebody who '
+            + 'is actually around. A day is a day however many events were '
+            + 'played on it.' }),
       el('p', { className: 'button-row' }, [activeButton, freshButton]),
       el('p', { className: 'field-help',
-        text: 'Active means somebody with attendance in the last three months, '
-            + 'the same window consent uses everywhere else on this site.' }),
+        text: 'Both buttons follow the threshold. Adding somebody by name below '
+            + 'ignores it, because that is a decision rather than a filter.' }),
       picker
     ]),
 
