@@ -20,7 +20,7 @@ const SETTINGS = [
     + 'to about 97% to fit on it.'],
   ['Scale', '100%, or Default. Not "Fit to printable area" — that shrinks the '
     + 'page to clear the margin the printer physically cannot print into, '
-    + 'which is usually about 94%.'],
+    + 'usually to somewhere between 94% and 97%.'],
   ['Margins', 'None. The sheets carry their own margins at the right size, and '
     + 'a margin set here is added on top of them.'],
   ['Headers and footers', 'Off. They reserve space, which forces a shrink.'],
@@ -83,8 +83,10 @@ export function printGuidelines({ exact = false } = {}) {
         ? el('p', { className: 'field-help',
             text: 'Print a test sheet above and hold a bank card against the '
                 + 'rectangle. If it matches, the settings are right and the '
-                + 'cards will be too — and if it does not, change one thing at '
-                + 'a time until it does.' })
+                + 'cards will be too. If it does not, change one thing at a '
+                + 'time — and if every setting is right and it is still small, '
+                + 'the printer is shrinking the page on its own, which the '
+                + 'correction above makes up for.' })
         : null
     ])
   ]);

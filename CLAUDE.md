@@ -1090,6 +1090,39 @@ rectangle the size of a credit card centred inside it.
 - **Nothing is recorded by printing it.** No card is used up and no print run is
   logged, unlike Create the cards.
 
+#### The printer correction
+
+Some printers shrink every page whatever the dialog says. An Epson XP-330
+printing straight from Chrome, with every guideline followed, put the rectangle
+at about 83.2 mm -- 97%, shrunk toward the centre of the page -- and Chrome's
+Scale set to 103 printed an identical sheet. Other professors' printers did
+the same. The dialog cannot undo it, so the page does: a professor enters what
+the rectangle measured and every sheet is drawn that much bigger.
+
+- **Kept in the browser, not the database.** It belongs to a printer, not to a
+  professor: one person at home and at the store is two printers. Browser
+  storage can refuse, so it is guarded and the page prints at 100% without it.
+- **A `transform: scale()` on `.card-page`, about the centre, print only.** The
+  measured sheet was smaller *and* further in from every edge, so the printer
+  shrinks toward the centre and the correction grows from it. A transform does
+  not touch layout, so a page is still one sheet.
+- **The sheet container clips its overflow when printing, and the correction
+  does not work without it.** Scaled up, the blank edge of the page box sticks
+  out past the paper, and Chrome reads anything wider than the page as content
+  that will not fit and shrinks the whole sheet to make room: a 103% correction
+  came out at 101.5%. Verified in the PDF's own matrices -- with the clip, 1.03
+  and 1.10 come out as exactly that.
+- **A new measurement compounds the old one**, because it was taken from a
+  sheet already printed with a correction. So the test sheet prints which
+  correction it was made with, inside the rectangle: a sheet on a desk does not
+  otherwise say.
+- **90% to 111%, and nothing outside it.** Past 111% the outermost card would
+  run off the paper before the printer shrank it back, and anything that far
+  out is a mismeasured side or a wrong unit rather than a printer.
+- Millimetres or inches, including a ruler reading like `3 5/16`. Millimetres
+  are the more precise and the form says so: a sixteenth of an inch is nearly
+  2% of the card.
+
 ### The Trainer Card Creator
 
 `admin/trainer-cards.html` prints membership cards, eight to a Letter page. The
