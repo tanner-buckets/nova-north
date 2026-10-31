@@ -3178,7 +3178,23 @@ h1.event-name + .event-when {
     box-shadow: none;
     margin: 0;
     break-after: page;
+    /* The printer correction, set by trainer-cards.js from a measured test
+       sheet. About the centre, because that is where the printers that shrink
+       shrink toward: the measured sheet was smaller AND further in from every
+       edge. A transform does not touch layout, so the page is still exactly
+       one sheet and no card moves to the next. Print only -- the preview on
+       screen stays at its true size. */
+    transform: scale(var(--print-correction, 1));
+    transform-origin: 50% 50%;
   }
+  /* Scaled up, the white page box sticks out past the paper -- only the blank
+     margin, never a card -- and Chrome reads anything wider than the page as
+     content that will not fit and shrinks the WHOLE sheet to make room. A 103%
+     correction came out at 101.5%. Clipping the overflow here keeps it from
+     counting, so the page stays 612pt wide and the correction is the
+     correction. */
+  .card-sheet,
+  .cal-sheet { overflow: hidden; }
   .card-page:last-child { break-after: auto; }
 }
 
@@ -4542,6 +4558,15 @@ h1.event-name + .event-when {
 }
 .cal-mm { font-size: 10pt; font-weight: 700; }
 .cal-in { font-size: 8pt; }
+/* Which correction the sheet was printed with, because the next correction is
+   worked out from it and a sheet on a desk does not otherwise say. */
+.cal-note { font-size: 6.5pt; margin-top: 3pt; }
+
+.cal-correct { margin: 1.25rem 0 1rem; }
+.cal-correct h3 { margin: 0 0 0.3rem; }
+.cal-input { display: flex; gap: 0.4rem; align-items: center; }
+.cal-input input { width: 7rem; }
+.cal-input select { width: auto; }
 
 @media print {
   /* Only one sheet prints at a time. Without this the real cards and the test

@@ -350,15 +350,177 @@ function thresholdField() {
 const CREDIT_W = 242.65;
 const CREDIT_H = 153.01;
 
+// --- The printer correction --------------------------------------------------
+//
+// Some printers shrink every page they are sent, whatever the print dialog
+// says. An Epson XP-330 printing straight from Chrome put the test rectangle
+// at 83.2 mm instead of 85.6 -- about 97%, centred on the page -- with Scale at
+// 100%, and Chrome's Scale set to 103 printed exactly the same sheet. So the
+// dialog cannot undo it and the driver will not, which leaves the page:
+// measure the test sheet, and the sheet is drawn that much bigger so the
+// printer's shrink lands it on the right size.
+//
+// It is kept in this browser, not in the database. It belongs to a printer,
+// and a professor at home and the same professor at the store are two
+// printers. Browser storage can be missing or refuse, so every touch of it is
+// guarded and the page simply prints at 100% without it.
+const CORRECTION_KEY = 'loco.trainerCards.printCorrection';
+const CREDIT_LONG_MM = 85.6;
+const MM_PER_IN = 25.4;
+// The sheet is scaled about the centre of the page, and the outermost card
+// edge is 35.74pt from the side and 42pt from the top: past about 111% it
+// would run off the paper. 90% is as far the other way as anything plausible.
+// Anything outside this is a mismeasurement, not a printer.
+const CORRECTION_MIN = 0.9;
+const CORRECTION_MAX = 1.11;
+
+let correction = readCorrection();
+
+function readCorrection() {
+  try {
+    const value = Number(window.localStorage.getItem(CORRECTION_KEY));
+    return value >= CORRECTION_MIN && value <= CORRECTION_MAX ? value : 1;
+  } catch {
+    return 1;
+  }
+}
+
+function applyCorrection(value) {
+  correction = value;
+  // A custom property rather than an inline transform, so the print stylesheet
+  // decides where it applies and the on-screen preview stays at its true size.
+  document.documentElement.style.setProperty('--print-correction', String(value));
+  try {
+    if (value === 1) window.localStorage.removeItem(CORRECTION_KEY);
+    else window.localStorage.setItem(CORRECTION_KEY, String(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function percent(value) {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+// Accepts millimetres as a decimal, or inches as a decimal or a ruler reading
+// like "3 5/16". Returns millimetres, or null for anything it cannot read.
+function measuredMm(text, unit) {
+  const raw = String(text || '').trim();
+  if (!raw) return null;
+  let value;
+  const mixed = raw.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+  const fraction = raw.match(/^(\d+)\s*\/\s*(\d+)$/);
+  if (mixed) value = Number(mixed[1]) + Number(mixed[2]) / Number(mixed[3]);
+  else if (fraction) value = Number(fraction[1]) / Number(fraction[2]);
+  else if (/^\d*[.,]?\d+$/.test(raw)) value = Number(raw.replace(',', '.'));
+  else return null;
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return unit === 'in' ? value * MM_PER_IN : value;
+}
+
+// What the test sheet says about itself. A correction is measured on a sheet
+// printed WITH the correction then in force, so the new one compounds the old
+// -- and the only way to be sure which sheet is on the desk is for the sheet to
+// say so.
+function correctionLabel() {
+  return correction === 1 ? 'Printed with no correction'
+    : `Printed with a ${percent(correction)} correction`;
+}
+
 function calibrationCard() {
   return el('div', { className: 'cal-card' }, [
     el('div', { className: 'cal-credit' }, [
       // Printed inside the shape being measured, so whatever the professor
       // measures with, the target is on the paper next to it.
       el('span', { className: 'cal-mm', text: '85.6 \u00d7 54 mm' }),
-      el('span', { className: 'cal-in', text: '3\u215c \u00d7 2\u215b in' })
+      el('span', { className: 'cal-in', text: '3\u215c \u00d7 2\u215b in' }),
+      el('span', { className: 'cal-note', text: correctionLabel() })
     ])
   ]);
+}
+
+function correctionField() {
+  const statusLine = el('p', { className: 'form-status', role: 'status' });
+  const describe = () => {
+    statusLine.textContent = correction === 1
+      ? 'No correction. Sheets print at their true size.'
+      : `This browser enlarges every sheet by ${percent(correction)} to make up `
+        + 'for the printer shrinking it.';
+    reset.hidden = correction === 1;
+  };
+
+  const input = el('input', { id: 'cal-measured', type: 'text',
+    inputmode: 'decimal', autocomplete: 'off', size: '8' });
+  const unit = el('select', { id: 'cal-unit',
+    'aria-label': 'Unit of the measurement' }, [
+    el('option', { value: 'mm', text: 'mm' }),
+    el('option', { value: 'in', text: 'inches' })
+  ]);
+  const save = el('button', { type: 'submit', className: 'button button-quiet',
+    text: 'Correct for it' });
+  const reset = el('button', { type: 'button', className: 'link-button',
+    text: 'Remove the correction' });
+  const problemLine = el('p', { className: 'form-status', role: 'alert' });
+
+  const form = el('form', { className: 'cal-correct', novalidate: '' }, [
+    el('h3', { text: 'If the test sheet is still the wrong size' }),
+    el('p', { className: 'field-help',
+      text: 'Some printers shrink every page whatever the print dialog says. '
+          + 'Measure the long side of the rounded rectangle on a test sheet and '
+          + 'enter it here, and every sheet from this browser is drawn that much '
+          + 'bigger to make up for it. Millimetres are the more precise.' }),
+    el('p', { className: 'field' }, [
+      el('label', { for: 'cal-measured', text: 'The long side measured' }),
+      el('span', { className: 'cal-input' }, [input, unit])
+    ]),
+    el('p', { className: 'button-row' }, [save, reset]),
+    problemLine,
+    statusLine,
+    el('p', { className: 'field-help',
+      text: 'Measure a sheet printed with the setting shown here: the sheet says '
+          + 'on it which one it was printed with. This is kept in this browser '
+          + 'only, because it belongs to the printer. Another computer, or '
+          + 'another printer, needs its own test sheet.' })
+  ]);
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    problemLine.textContent = '';
+    const mm = measuredMm(input.value, unit.value);
+    if (mm === null) {
+      problemLine.textContent = 'That is not a measurement this can read. Enter '
+        + 'a number, like 83.2 for millimetres or 3 5/16 for inches.';
+      return;
+    }
+    const next = correction * (CREDIT_LONG_MM / mm);
+    if (next < CORRECTION_MIN || next > CORRECTION_MAX) {
+      problemLine.textContent = `That would scale the sheet to ${percent(next)}, `
+        + 'which is further than any printer setting goes. Check it is the long '
+        + 'side of the rounded rectangle, in the unit chosen, measured on a sheet '
+        + `${correctionLabel().toLowerCase()}.`;
+      return;
+    }
+    // Within a tenth of a millimetre of right is right: rounding the factor
+    // keeps a second measurement of a good sheet from nudging it for nothing.
+    const rounded = Math.abs(next - 1) < 0.0012 ? 1 : Math.round(next * 1000) / 1000;
+    const kept = applyCorrection(rounded);
+    input.value = '';
+    describe();
+    if (!kept) {
+      problemLine.textContent = 'This browser would not save the setting, so it '
+        + 'lasts until the page is closed. Print the cards before leaving it.';
+    }
+  });
+
+  reset.addEventListener('click', () => {
+    problemLine.textContent = '';
+    applyCorrection(1);
+    describe();
+  });
+
+  describe();
+  return form;
 }
 
 function calibrationPage() {
@@ -377,7 +539,9 @@ function showCalibration() {
       el('p', { text: 'If it comes out smaller, the printer or the browser is '
         + 'scaling the page down. In the print dialog set Scale to 100% (not '
         + '\u201cFit to page\u201d), Margins to None, Paper to Letter, and turn '
-        + 'headers and footers off.' }),
+        + 'headers and footers off. If it is still smaller with all of that '
+        + 'right, enter what you measured under \u201cIf the test sheet is '
+        + 'still the wrong size\u201d.' }),
       el('p', { className: 'field-help',
         text: 'Nothing is recorded by printing this, and no card is used up.' })
     ]),
@@ -510,6 +674,7 @@ function draw() {
             + 'are coming out the wrong size, print a sheet with nothing on it '
             + 'but the measurements and hold a bank card against it.' }),
       el('p', { className: 'button-row' }, [calButton, calHide]),
+      correctionField(),
       printGuidelines({ exact: true })
     ])
   );
@@ -518,6 +683,8 @@ function draw() {
 }
 
 async function start() {
+  // Before anything is drawn, so a sheet printed from this visit carries it.
+  applyCorrection(correction);
   professor = await currentProfessor();
   if (!professor) {
     gate.replaceChildren(el('p', { className: 'notice notice-problem' }, [
