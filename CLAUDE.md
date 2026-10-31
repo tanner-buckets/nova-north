@@ -1175,11 +1175,18 @@ makes the file.
   loyalty and registration sheets keep theirs.
 - **The page box is a NAMED page**, `@page trainer-cards`. A bare `@page` with
   no margin would strip the margins off every other printable page too.
+- **The artwork was redrawn once, in colour only.** The gold went from
+  `#b99d2c` to a brighter `#d1a213` and the grey behind it darkened slightly;
+  the circle, the boxes and the band were checked pixel for pixel and did not
+  move, so every measurement here still holds. Three things are written in the
+  artwork's gold and changed with it: the "League" and rank lines, the
+  Champion star, and the fallback badge fill. A replacement that moves a shape
+  needs re-measuring, which is what the edge check is for -- not a glance.
 - **A Champion gets a gold star**, on the white below the gold band and in from
   the right edge, about a fifth taller than a field box and dropped by its own
   height so it sits clear of the band. It is drawn as an SVG polygon rather than typed
   as a star glyph: there are no web fonts here, so a glyph would be whatever
-  shape the reading font happens to carry. The gold is `#b99d2c`, sampled from
+  shape the reading font happens to carry. The gold is `#d1a213`, sampled from
   the band itself. Its shadow is a `drop-shadow`, which follows the polygon,
   rather than a `box-shadow`, which would outline the square the star is drawn
   in — and it is **darker than the two text lines use**, because those sit on

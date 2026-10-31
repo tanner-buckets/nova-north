@@ -1397,7 +1397,7 @@ those sit on the grey building, the star sits on white, and the same alpha washe
 out there. The artwork's own label shadow averages (86, 83, 72); 0.65 black over
 white renders (89, 89, 89). It is an SVG polygon
 rather than a star glyph, because there are no web fonts here and a glyph is
-whatever shape the reading font happens to carry; the gold is `#b99d2c`, sampled
+whatever shape the reading font happens to carry; the gold is `#d1a213`, sampled
 off the band. Which rank earns it comes from `requires_elite_four` on
 `trainer_card_ranks` rather than from matching the word "Champion".
 
