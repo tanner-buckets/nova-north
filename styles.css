@@ -3020,9 +3020,11 @@ h1.event-name + .event-when {
 }
 
 /* The gold and the shadow are sampled from the labels already drawn on the
-   template -- #b99d2c is the exact colour of "Name:" -- so the two lines read
+   template -- #d1a213 is the exact colour of "Name:" -- so the two lines read
    as part of the card rather than as something typed over it. Slightly larger
-   than those labels, which measure about 9.2pt on this card. */
+   than those labels, which measure about 9.2pt on this card. The artwork's
+   gold was #b99d2c until it was redrawn brighter; change the art and this
+   is re-sampled with it, or the two lines stop matching the labels. */
 .tcard-league,
 .tcard-rank {
   margin: 0;
@@ -3031,7 +3033,7 @@ h1.event-name + .event-when {
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: 0.01em;
-  color: #b99d2c;
+  color: #d1a213;
   text-shadow: 0.6pt 0.6pt 0 rgba(0, 0, 0, 0.45);
   white-space: nowrap;
 }
@@ -3074,7 +3076,7 @@ h1.event-name + .event-when {
   width: var(--size, 8pt);
   height: var(--size, 8pt);
   transform: translate(-50%, -50%);
-  background-color: var(--fill, #b99d2c);
+  background-color: var(--fill, #d1a213);
   -webkit-mask-image: var(--art);
   mask-image: var(--art);
   -webkit-mask-size: contain;
