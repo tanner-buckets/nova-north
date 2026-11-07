@@ -342,6 +342,12 @@ prevents a caller writing their own status.
 Requires both Player ID and matching first name. Sets status to `drop_requested`.
 Does not remove the registration.
 
+**`check_registration(p_player_id text, p_first_name text, p_event_id uuid)`**
+Read only. Same proof as `request_drop()`. Returns `found`, the status, and on the
+waiting list the current place in the queue (not the stored position, which keeps
+gaps). Every kind of no-match returns the same `found: false`. Never returns
+division.
+
 ---
 
 ## Professor-only functions

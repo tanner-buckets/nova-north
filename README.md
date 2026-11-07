@@ -198,6 +198,10 @@ someone through the function. A direct insert would let a caller write their own
   has room and who is not already confirmed on another flight.
 - **`request_drop()` returns the same result whether or not anything matched**,
   so it cannot be used to discover which Player IDs are registered.
+- **`check_registration()` is how a player confirms a place**, from a "Check my
+  registration" dropdown on the event card. Player ID and first name, the same
+  proof as a drop, and the same answer for every kind of no-match. It reads the
+  registration itself, so no player record is needed.
 - **`public_event_counts` emits integers only** — capacity, confirmed, waitlist,
   per event and division. No names, no IDs, at any consent level.
 
@@ -239,8 +243,8 @@ Built so far:
 | File | In the nav | Reads from |
 |---|---|---|
 | `index.html` | Home | nothing — static copy, plus two outside links |
-| `schedule.html` | Schedule | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
-| `event.html` | no — reached by link | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
+| `schedule.html` | Schedule | `events`, `public_event_counts`, `register_for_event()`, `check_registration()`, `request_drop()` |
+| `event.html` | no — reached by link | `events`, `public_event_counts`, `register_for_event()`, `check_registration()`, `request_drop()` |
 | `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers`, `active_badge_seasons()` |
 | `prize-items.html` | no | `prize_items`, the `prize-art` bucket |
 | `players.html` | Players | `get_player_summary()`, `public_players` |
