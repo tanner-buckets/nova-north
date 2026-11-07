@@ -300,6 +300,19 @@ is applied to the production database.** There is no confirmation step.
   on-screen confirmation naming who was promoted.
 - Drop requests require Player ID **and** matching name, and do not take effect
   until a professor confirms.
+- **A player checks a registration on the event card, not the player page.**
+  "Check my registration" sits between Register and Cancel and calls
+  `check_registration()` with Player ID and first name -- the drop proof -- and
+  every kind of no-match gets the same answer. Showing registrations on a public
+  player card was considered and refused: who registered is never public, and
+  the lookup only finds a player who is public, which a first-timer or a child is
+  not. The check reads the registration row, so it needs no player record. It
+  stays after registration closes, because the morning of the event is when
+  "am I in?" is asked.
+- **The waiting list place a player is told is their place now**, counted from
+  the live queue, not the stored `waitlist_position`, which keeps its gaps after
+  promotions. It is a place in the queue and not a promise of the next spot:
+  promotion skips anyone whose division is still full, and the wording says so.
 - **Registration closes when the event starts.** Enforced in
   `register_for_event()`, not in page code: the anon key can call the function
   directly, so a check on the schedule is not a check.

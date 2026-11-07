@@ -15,7 +15,8 @@ const REGISTER_MESSAGES = {
   missing_details: 'Please fill in every field except the contact, which is optional.',
   unknown_event: 'That event could not be found. Reload the page and try again.',
   registration_closed: 'Registration is not open for this event.',
-  already_registered: 'That Player ID is already registered for this event.',
+  already_registered: 'That Player ID is already registered for this event. Use Check '
+    + 'my registration to see where you stand.',
   // Both of these can arrive at a form that was open when the page loaded: an
   // event can start, or a professor can close it, while somebody is still
   // filling the thing in. Neither is the player's fault and both say what to do.
@@ -172,17 +173,94 @@ export function registerForm(event, { onChange, prefix = '' } = {}) {
     status.className = 'form-status is-good';
     if (result.status === 'confirmed') {
       status.textContent = `You are registered, in the ${capitalise(result.division)} division. `
-        + 'There is no confirmation email, so this message is your confirmation.';
+        + 'There is no confirmation email. To check again later, use Check my '
+        + 'registration on this event with your Player ID and first name.';
     } else {
       status.textContent = 'This event is full, so you are on the waiting list at number '
         + `${result.waitlist_position}, in the ${capitalise(result.division)} division. `
-        + 'A professor will be in touch if a place opens up.';
+        + 'A professor will be in touch if a place opens up. To check where you stand, '
+        + 'use Check my registration on this event.';
     }
     form.querySelectorAll('input').forEach((i) => { i.value = ''; });
     if (onChange) onChange();
   });
 
   return form;
+}
+
+// What check_registration() found, in words. The waiting list sentence is
+// careful about "next": places go to the first person waiting whose division
+// has room, so first in the queue is not a promise of the next place.
+function checkMessage(result) {
+  if (!result.found) {
+    return 'No registration was found for that Player ID and first name. Check both '
+      + 'are typed the way you registered. If you are still unsure, speak to a professor.';
+  }
+  return {
+    confirmed: 'You are registered for this event.',
+    waitlist: `You are on the waiting list, number ${result.waitlist_place} in the queue. `
+      + 'A place that opens goes to the first person waiting whose division has room, '
+      + 'and a professor will be in touch if it is you.',
+    drop_requested: 'You have asked to cancel this registration. Your place is held '
+      + 'until a professor confirms it.',
+    dropped: 'This registration has been cancelled. If that is a surprise, speak to '
+      + 'a professor.'
+  }[result.status] || 'Your registration was found. Speak to a professor if you need more detail.';
+}
+
+// Player ID and first name, the same proof the cancel form asks for. The
+// function answers the same for a wrong ID, a wrong name and no registration,
+// so this cannot be used to find out who is signed up.
+export function checkForm(event) {
+  const status = el('p', { className: 'form-status', role: 'status' });
+
+  const form = el('form', { className: 'check-form' }, [
+    el('p', { className: 'field' }, [
+      el('label', { for: `check-id-${event.id}`, text: 'Player ID' }),
+      el('input', { id: `check-id-${event.id}`, name: 'player_id', required: 'required', inputmode: 'numeric' })
+    ]),
+    el('p', { className: 'field' }, [
+      el('label', { for: `check-name-${event.id}`, text: 'First name' }),
+      el('input', { id: `check-name-${event.id}`, name: 'first_name', required: 'required' })
+    ]),
+    el('p', {}, [el('button', { type: 'submit', className: 'button button-quiet', text: 'Check' })]),
+    status
+  ]);
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const button = form.querySelector('button');
+    button.disabled = true;
+    status.className = 'form-status';
+    status.textContent = 'Checking...';
+
+    const data = Object.fromEntries(new FormData(form).entries());
+    const { data: result, error } = await supabase.rpc('check_registration', {
+      p_player_id: data.player_id,
+      p_first_name: data.first_name,
+      p_event_id: event.id
+    });
+
+    button.disabled = false;
+
+    if (error || !result?.ok) {
+      status.className = 'form-status is-error';
+      status.textContent = 'That did not go through. Check your connection and try again.';
+      return;
+    }
+
+    status.className = result.found && result.status !== 'dropped'
+      ? 'form-status is-good' : 'form-status';
+    status.textContent = checkMessage(result);
+  });
+
+  return form;
+}
+
+function checkDisclosure(event) {
+  return el('details', { className: 'disclosure' }, [
+    el('summary', { text: 'Check my registration' }), checkForm(event)
+  ]);
 }
 
 export function cancelForm(event) {
@@ -258,12 +336,17 @@ export function registrationBlock(event, counts, { onChange, open = false, prefi
     // The cancel form stays. Somebody who registered before it closed may still
     // need to say they cannot come, and that is exactly when they most need to:
     // their place is the one that could go to whoever is waiting.
-    const cancel = state === 'none' ? null
-      : el('details', { className: 'disclosure' }, [
-          el('summary', { text: 'Cancel a registration' }), cancelForm(event)
-        ]);
+    // Checking stays for the same reason: "am I in?" is asked hardest on the
+    // morning of the event, which is after registration has closed.
+    if (state === 'none') return [el('p', { className: 'event-note', text: note })];
 
-    return [el('p', { className: 'event-note', text: note }), cancel].filter(Boolean);
+    return [
+      el('p', { className: 'event-note', text: note }),
+      checkDisclosure(event),
+      el('details', { className: 'disclosure' }, [
+        el('summary', { text: 'Cancel a registration' }), cancelForm(event)
+      ])
+    ];
   }
 
   const register = registerForm(event, { onChange, prefix });
@@ -274,6 +357,7 @@ export function registrationBlock(event, counts, { onChange, open = false, prefi
       el('details', { className: 'disclosure' }, [
         el('summary', { text: 'Register for this event' }), register
       ]),
+      checkDisclosure(event),
       el('details', { className: 'disclosure' }, [
         el('summary', { text: 'Cancel a registration' }), cancel
       ])
@@ -283,6 +367,7 @@ export function registrationBlock(event, counts, { onChange, open = false, prefi
   return [
     el('h3', { text: 'Register' }),
     register,
+    checkDisclosure(event),
     el('details', { className: 'disclosure' }, [
       el('summary', { text: 'Cancel a registration' }), cancel
     ])
