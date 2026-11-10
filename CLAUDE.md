@@ -1252,6 +1252,36 @@ makes the file.
   change one in place — and **a drop takes the grants with it**, so the
   migration reissues `grant execute ... to authenticated` or every professor
   gets "permission denied for function".
+- **An Ace Trainer holding eight badges can be printed as a Champion**, from a
+  checkbox on the list. The Elite 4 is run on a league day and the cards are
+  printed the same afternoon, so the professor at the printer already knows who
+  came through it — and setting forty dropdowns one at a time is the long way
+  round to saying so.
+- **It changes the cards and nothing else.** No rank is written anywhere:
+  `player_rank()` still reads the badge ladder, the player's own page still says
+  Ace Trainer, and the print log records who holds a card rather than what it
+  said. Promotion in the system is beating the Elite 4, which is not a checkbox.
+- **Eight is read from `elite_four_badges`, never typed.** It is not a rank
+  threshold — `badges_required` is that, and it is six — which is why it has a
+  column of its own, and `20261023160000` exists because deriving it from the
+  ladder got the wrong number. Both rank names are found the same way: Champion
+  is `requires_elite_four`, and the rank it promotes from is the last in sort
+  order that is not. Even the article in front of them is worked out rather
+  than written, or a reworded ladder leaves "an Champion" on the screen.
+- **A rank set by hand beats the box**, the same way adding somebody by name
+  ignores the attendance threshold: one is a decision about a person, the other
+  a rule about a list. It is also the only way to leave one player out of a
+  promotion that is right for everybody else on the sheet.
+- **`cardRank()` is both what the dropdown shows and what the sheet prints**,
+  one function for the two, so the list cannot promise a rank the paper does not
+  carry. It writes nothing onto the chosen row, so unticking puts everybody back
+  and the star follows the resolved name with no second rule of its own.
+- **Ticking it does not forget the last print run.** The list has not changed,
+  only what would be printed on it, so the redraw goes through `renderChosen()`
+  rather than `drawChosen()` — an undo that vanished there would be an undo lost
+  for a run still on screen.
+- **Off at load, every time.** It is a decision about one afternoon, like Nearly
+  there on the loyalty sheet, and nothing about it is stored.
 
 ---
 

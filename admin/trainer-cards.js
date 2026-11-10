@@ -52,10 +52,53 @@ const RECENT_CHOICES = [1, 2, 3, 4];
 
 let professor = null;
 let recentDays = RECENT_CHOICES[0];
+let promoteAces = false;       // print a qualifying Ace Trainer as a Champion
 let roster = [];               // every player, no birth years
 let ranks = [];                // trainer_card_ranks, for the override dropdown
 let championRanks = new Set(); // the names that earn a star
+let championRank = null;       // the rank that requires the Elite 4
+let aceRank = null;            // the top rank reachable on badges alone
+let eliteBadges = null;        // badges that qualify a challenge, from the table
 const chosen = new Map();      // player_id -> { ...roster row, rank_name }
+
+// --- Printing an Ace Trainer as a Champion -----------------------------------
+//
+// Eight badges is the condition an Ace Trainer meets on the way to Champion.
+// The Elite 4 is run on a league day and the cards are printed the same
+// afternoon, so the professor at the printer already knows who came through it
+// -- and changing the rank one dropdown at a time, down a list of forty, is the
+// long way round to saying so.
+//
+// It decides what is printed and nothing else. No rank is written anywhere:
+// player_rank() still reads the badge ladder, the player's own page still says
+// Ace Trainer, and the next print starts with the box unticked. Promoting
+// somebody in the system is beating the Elite 4, which is not a checkbox.
+//
+// The number is read from the rank table, not typed. Eight is not a rank
+// threshold -- badges_required is that, and it is six -- which is exactly why
+// it has a column of its own, and a copy of it here would be the copy that
+// goes stale.
+function promotable(row) {
+  return Boolean(championRank && aceRank && eliteBadges)
+    && row.rank_name === aceRank.name
+    && (row.badge_count || 0) >= eliteBadges;
+}
+
+// A rank set by hand wins over the box, the same way adding somebody by name
+// ignores the attendance threshold: one is a decision about a person, the other
+// a rule about a list. It is also the only way to leave one Ace Trainer out of
+// a promotion that is right for everybody else on the sheet.
+function promoted(row) {
+  return promoteAces && !row.rank_set_by_hand && promotable(row);
+}
+
+// What the card will say, which is also what the dropdown in the list shows.
+// One function for both, so the screen cannot promise a rank the sheet does
+// not print.
+function cardRank(row) {
+  if (!row) return '';
+  return promoted(row) ? championRank.name : row.rank_name;
+}
 
 // --- The sheet ---------------------------------------------------------------
 
@@ -101,8 +144,13 @@ function addMany(rows) {
 function chosenRow(row) {
   const rank = el('select', { 'aria-label': `Rank for ${fullName(row)}` },
     ranks.map((r) => el('option', { value: r.name, text: shortRank(r.name) })));
-  rank.value = row.rank_name || (ranks[0] && ranks[0].name) || '';
-  rank.addEventListener('change', () => { row.rank_name = rank.value; });
+  rank.value = cardRank(row) || (ranks[0] && ranks[0].name) || '';
+  rank.addEventListener('change', () => {
+    row.rank_name = rank.value;
+    // Chosen by a person, so the box above stops deciding for this row.
+    row.rank_set_by_hand = true;
+    renderPromote();
+  });
 
   const drop = el('button', {
     type: 'button', className: 'link-button',
@@ -130,6 +178,8 @@ let undoWrap = null;
 let undoButton = null;
 let activeButton = null;
 let freshButton = null;
+let promoteBox = null;
+let promoteNote = null;
 
 // The print run from the last press of Create the cards, so it can be undone
 // without guessing which rows it was. Cleared once it has been undone, and
@@ -137,7 +187,11 @@ let freshButton = null;
 // list has moved on would undo something the professor is no longer looking at.
 let lastBatch = null;
 
-function drawChosen() {
+// The table alone. Ticking the Champion box redraws it through here rather
+// than through drawChosen(), because the list has not changed -- only what will
+// be printed on the cards in it -- and forgetting the last run there would take
+// away an undo that still belongs to the run on screen.
+function renderChosen() {
   const rows = [...chosen.values()];
   const sheets = Math.ceil(rows.length / 8);
 
@@ -165,7 +219,26 @@ function drawChosen() {
 
   goButton.disabled = rows.length === 0;
   if (!rows.length) status(goNote, '');
+  renderPromote();
+}
+
+function drawChosen() {
+  renderChosen();
   forgetBatch();
+}
+
+// The live half of the explanation. A professor who ticks the box and reads
+// "3 cards on this list print as Champion" has been told what it did; a box
+// that silently moved three dropdowns further down a long table has not.
+function renderPromote() {
+  if (!promoteNote) return;
+  const n = [...chosen.values()].filter(promoted).length;
+  promoteNote.textContent = !promoteAces ? ''
+    : n
+      ? `${n} card${n === 1 ? '' : 's'} on this list print`
+        + `${n === 1 ? 's' : ''} as ${shortRank(championRank.name)}. Change one `
+        + 'in the table above to leave that player out.'
+      : 'Nobody on this list qualifies, so no card changes.';
 }
 
 // The undo offer belongs to one print run and one list. Change either and it
@@ -192,11 +265,12 @@ async function createCards() {
     });
     if (error) throw error;
 
-    // The professor may have overridden a rank on screen, so what was chosen
-    // wins over what the season says. That is the whole point of the dropdown.
+    // The professor may have overridden a rank on screen, or ticked the box
+    // that prints a qualifying Ace Trainer as a Champion, so what the list
+    // showed wins over what the season says. That is the point of both.
     const rows = (data || []).map((row) => ({
       ...row,
-      rank_name: chosen.get(row.player_id)?.rank_name || row.rank_name
+      rank_name: cardRank(chosen.get(row.player_id)) || row.rank_name
     }));
 
     sheet.replaceChildren(...pages(rows));
@@ -586,6 +660,43 @@ function draw() {
     text: 'Start the list again' });
   clear.addEventListener('click', () => { chosen.clear(); drawChosen(); });
 
+  promoteBox = el('input', { type: 'checkbox', id: 'promote-aces' });
+  promoteBox.addEventListener('change', () => {
+    promoteAces = promoteBox.checked;
+    renderChosen();
+  });
+  promoteNote = el('p', { className: 'form-status', role: 'status' });
+
+  // Only where the rank table says what qualifies a challenge. Without that
+  // number there is no question to ask, so the box is absent rather than
+  // asking one with a blank in it.
+  //
+  // Both rank names are read rather than written, so the article in front of
+  // them has to be worked out rather than typed -- the ladder has been
+  // reworded once already, and "an Champion" is the sort of thing that
+  // survives a rename unnoticed.
+  const article = (word) => (/^[aeiou]/i.test(word) ? 'an' : 'a');
+  const ace = aceRank ? shortRank(aceRank.name) : '';
+  const champ = championRank ? shortRank(championRank.name) : '';
+  const promoteField = eliteBadges && aceRank && championRank
+    ? el('div', {}, [
+        el('p', { className: 'field field-inline' }, [
+          promoteBox,
+          el('label', { for: 'promote-aces',
+            text: `Print ${article(ace)} ${ace} with ${eliteBadges} or more `
+                + `badges as ${article(champ)} ${champ}` })
+        ]),
+        el('p', { className: 'field-help',
+          text: `${eliteBadges} badges is what lets ${article(ace)} ${ace} `
+              + 'challenge the Elite 4, so this is for the afternoon it was '
+              + 'run. It changes the cards being printed and nothing else: '
+              + `the rank on the site is still ${ace} until the Elite 4 is `
+              + 'actually beaten, and the box is off again the next time this '
+              + 'page is opened.' }),
+        promoteNote
+      ])
+    : null;
+
   const picker = playerPicker({
     label: 'Add somebody by Player ID or name',
     onPick(player) {
@@ -657,6 +768,7 @@ function draw() {
     el('section', { className: 'panel' }, [
       el('h2', { text: 'The list' }),
       chosenHost,
+      promoteField,
       el('p', { className: 'button-row' }, [goButton, clear]),
       el('p', { className: 'field-help',
         text: 'A card is counted as printed the moment the dialog opens, because '
@@ -697,7 +809,8 @@ async function start() {
   try {
     const rankResult = await supabase
       .from('trainer_card_ranks')
-      .select('name, sort_order, requires_elite_four').order('sort_order');
+      .select('name, sort_order, requires_elite_four, elite_four_badges')
+      .order('sort_order');
     if (rankResult.error) throw rankResult.error;
     ranks = rankResult.data || [];
     // Champion is the rank that needs the Elite 4 beaten, which is a column
@@ -705,6 +818,18 @@ async function start() {
     // somebody rewords the ladder.
     championRanks = new Set(
       ranks.filter((r) => r.requires_elite_four).map((r) => r.name));
+    championRank = ranks.find((r) => r.requires_elite_four) || null;
+    // The rank the box promotes FROM is the top rung reachable on badges
+    // alone: the last in sort order that does not need the Elite 4. Found by
+    // the column for the same reason Champion is, since the ladder has already
+    // been reworded once.
+    const ladder = ranks.filter((r) => !r.requires_elite_four);
+    aceRank = ladder[ladder.length - 1] || null;
+    // Not max(badges_required). That is six, the Ace Trainer threshold, and
+    // deriving this from it is the exact mistake the elite_four_badges column
+    // was added to stop.
+    eliteBadges =
+      Math.max(0, ...ranks.map((r) => r.elite_four_badges || 0)) || null;
 
     await refreshRoster();
     draw();
