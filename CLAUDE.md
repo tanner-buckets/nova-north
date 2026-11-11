@@ -1265,6 +1265,95 @@ makes the file.
   change one in place — and **a drop takes the grants with it**, so the
   migration reissues `grant execute ... to authenticated` or every professor
   gets "permission denied for function".
+- **An Ace Trainer holding eight badges can be printed as a Champion**, from a
+  checkbox on the list. The Elite 4 is run on a league day and the cards are
+  printed the same afternoon, so the professor at the printer already knows who
+  came through it — and setting forty dropdowns one at a time is the long way
+  round to saying so.
+- **It changes the cards and nothing else.** No rank is written anywhere:
+  `player_rank()` still reads the badge ladder, the player's own page still says
+  Ace Trainer, and the print log records who holds a card rather than what it
+  said. Promotion in the system is beating the Elite 4, which is not a checkbox.
+- **Eight is read from `elite_four_badges`, never typed.** It is not a rank
+  threshold — `badges_required` is that, and it is six — which is why it has a
+  column of its own, and `20261023160000` exists because deriving it from the
+  ladder got the wrong number. Both rank names are found the same way: Champion
+  is `requires_elite_four`, and the rank it promotes from is the last in sort
+  order that is not. Even the article in front of them is worked out rather
+  than written, or a reworded ladder leaves "an Champion" on the screen.
+- **A rank set by hand beats the box**, the same way adding somebody by name
+  ignores the attendance threshold: one is a decision about a person, the other
+  a rule about a list. It is also the only way to leave one player out of a
+  promotion that is right for everybody else on the sheet.
+- **`cardRank()` is both what the dropdown shows and what the sheet prints**,
+  one function for the two, so the list cannot promise a rank the paper does not
+  carry. It writes nothing onto the chosen row, so unticking puts everybody back
+  and the star follows the resolved name with no second rule of its own.
+- **Ticking it does not forget the last print run.** The list has not changed,
+  only what would be printed on it, so the redraw goes through `renderChosen()`
+  rather than `drawChosen()` — an undo that vanished there would be an undo lost
+  for a run still on screen.
+- **Off at load, every time.** It is a decision about one afternoon, like Nearly
+  there on the loyalty sheet, and nothing about it is stored.
+
+#### The cards as pictures
+
+**Make the images** sits beside Create the cards and gives the same cards as
+PNGs: one to copy, one to save, or the lot as a zip. It is for handing a card
+over without a printer in the room.
+
+- **THE CARD IS NOT REDRAWN.** `trainer-card-image.js` serialises the DOM
+  `card()` already builds into an SVG `foreignObject` and rasterises that, so
+  the artwork, the measurements, the badge arc and the fields are the same ones
+  the sheet prints. A canvas renderer was the obvious way and the wrong one:
+  the measurements live in one place precisely so a second copy cannot drift,
+  and a picture is the copy that ends up in a Discord post and outlives the
+  mistake.
+- **A foreignObject fetches nothing.** An SVG loaded through an `<img>` has no
+  network of its own, so the background artwork and every badge silhouette are
+  inlined as data URIs first. A url() in a rule is resolved against **its own
+  stylesheet's href**, not the page, which is why each rule is inlined against
+  the sheet it came from.
+- **Its content is XHTML, so anything in another namespace must say so.** The
+  Champion star is an inline `<svg>`; with no `xmlns` of its own it inherited
+  the XHTML namespace, became an unknown HTML element and drew nothing. One
+  attribute in `championStar()`, free in an HTML page, and the difference
+  between a star and a blank corner. It cost a silent, Champions-only defect to
+  find, which is the kind this arrangement can still produce.
+- **CSS masks do survive**, which is what makes the whole approach work: the
+  badges are artwork used as a mask filled with the stored colour, and a
+  rasteriser that dropped them would quietly make cards with no badges on them.
+  Verify that again before changing how a badge is drawn.
+- **The stylesheet is read from `document.styleSheets`, not copied.** A second
+  copy of the card's CSS would go stale exactly like a second copy of its
+  measurements. Only rules whose selector mentions `tcard`, plus `:root` for the
+  font token; `@media` blocks are skipped, because screen-only dress is not part
+  of a card.
+- **300dpi, and the physical size is written into the file.** A PNG with no
+  `pHYs` chunk has no size, only a pixel count, so a word processor assumes
+  96dpi and an 1050-pixel card arrives eleven inches wide. The chunk is what
+  makes "the same dimensions as the printed card" true rather than a promise
+  about how it was rendered.
+- **The zip is written by hand, stored, with no library.** `zip-store.js`, about
+  a hundred lines of a format finished in 1989. Every entry is a PNG and already
+  deflated, so compressing again would save a fraction of a percent in exchange
+  for a second implementation to get wrong. It refuses rather than writing
+  something zip64 should have written. `crc32.js` is its own file because a PNG
+  chunk and a zip entry want the identical checksum.
+- **Making images counts as issuing the cards**, logging a run and offering the
+  same undo, for the reason the print dialog does: nothing tells the page what
+  happened next, and the costly mistake is a player who has a card still sitting
+  on the list.
+- **Changing the list, or what a card says, clears the gallery.** A picture is
+  of a particular card, and a stale one is worse than none because every one of
+  them is a file somebody might save under the name printed beneath it. The
+  undo is deliberately *not* cleared by the Champion box, but the pictures are.
+- **Copy can simply be refused**, quietly, by a browser that will not write an
+  image to the clipboard. The button says so and points at Save and at the
+  picture's own right-click menu rather than appearing to do nothing.
+- **None of it prints.** The gallery lives inside the page's `no-print` wrapper:
+  a picture of a card is for sending, and printing both would waste a sheet of
+  card stock on something nobody asked for.
 
 ---
 
@@ -1287,6 +1376,9 @@ admin/printables.html  handouts for players, built from the database
 admin/sheet-trainer-card.js  the Trainer Card Program information sheet
 admin/sheet-chaos-cup.js     the Chaos Cup rules sheet and its catalogue
 admin/trainer-card-art.js  drawing one Trainer Card, shared by the Creator and the sheet
+admin/trainer-card-image.js  one card as a PNG, by rasterising the card above rather than redrawing it
+admin/zip-store.js  a zip of stored entries, so a batch of cards is one download
+admin/crc32.js      the one checksum a PNG chunk and a zip entry both want
 admin/print-guidelines.js  how to print, shared by the Creator and the handouts
 data/source/*.csv   spreadsheet exports used to seed reference tables
 event-registration.js  the register and cancel forms, shared by both pages

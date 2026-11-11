@@ -100,10 +100,18 @@ function badgeDot(badge, index, place) {
 const STAR_POINTS = '50.00,0.00 61.23,34.55 97.55,34.55 68.17,55.90 79.39,90.45 '
   + '50.00,69.10 20.61,90.45 31.83,55.90 2.45,34.55 38.77,34.55';
 
+// The namespace is not decoration. A card is serialised into an SVG
+// foreignObject to make the PNG, and foreignObject content is XHTML: an <svg>
+// with no xmlns of its own inherits the XHTML namespace from the div above it,
+// becomes an unknown HTML element, and draws nothing. In an HTML page the
+// parser supplies the namespace and the attribute changes nothing, so this is
+// free everywhere except where it is the difference between a star and a blank
+// corner. It cost one silent, Champions-only defect to find.
 export function championStar() {
   return el('div', {
     className: 'tcard-star',
-    html: '<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">'
+    html: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" '
+        + 'aria-hidden="true" focusable="false">'
         + `<polygon points="${STAR_POINTS}" fill="#d1a213"/></svg>`
   });
 }
