@@ -16,6 +16,11 @@ import { status, playerPicker } from './attendance-core.js';
 // trainer-card-art.js for why the measurements are what they are.
 import { card, shortRank, badgeArtHref } from './trainer-card-art.js';
 import { printGuidelines } from './print-guidelines.js';
+// The same card as a picture. It rasterises the DOM this screen already builds
+// rather than drawing a second one -- see trainer-card-image.js.
+import { cardImage, cardFileName, cardPixels, CARD_DPI }
+  from './trainer-card-image.js';
+import { zipStore } from './zip-store.js';
 
 const gate = document.querySelector('#gate');
 const app = document.querySelector('#app');
@@ -150,6 +155,7 @@ function chosenRow(row) {
     // Chosen by a person, so the box above stops deciding for this row.
     row.rank_set_by_hand = true;
     renderPromote();
+    forgetImages();
   });
 
   const drop = el('button', {
@@ -180,6 +186,14 @@ let activeButton = null;
 let freshButton = null;
 let promoteBox = null;
 let promoteNote = null;
+let imagesButton = null;
+let imagesHost = null;
+
+// The pictures from the last press of Make the images, with the object URL each
+// one is being shown through. They are revoked when they go, because a few
+// dozen megabytes of card held by a URL nothing points at is a leak that lasts
+// as long as the tab does.
+let made = [];
 
 // The print run from the last press of Create the cards, so it can be undone
 // without guessing which rows it was. Cleared once it has been undone, and
@@ -218,8 +232,14 @@ function renderChosen() {
   );
 
   goButton.disabled = rows.length === 0;
+  if (imagesButton) imagesButton.disabled = rows.length === 0;
   if (!rows.length) status(goNote, '');
   renderPromote();
+  // A picture is of a particular card. Change the list, or change what a card
+  // says, and the gallery is a set of pictures of something else -- which is
+  // worse than an empty gallery, because every one of them is a file somebody
+  // might save for the player whose name is under it.
+  forgetImages();
 }
 
 function drawChosen() {
@@ -312,6 +332,183 @@ async function createCards() {
     goButton.disabled = false;
     status(goNote, `The cards could not be built: ${err.message || 'unknown error'}.`,
       'error');
+  }
+}
+
+// --- The same cards as pictures ----------------------------------------------
+//
+// A professor wanted to hand a card over without a printer in the room: paste
+// one into a message, or take the lot away as a folder. The pictures are the
+// printed card exactly -- same artwork, same measurements, same badges -- at
+// 300dpi with the physical size written into the file, so one dropped into a
+// document arrives card sized rather than eleven inches wide.
+//
+// Making them counts as issuing them, like opening the print dialog, and for
+// the same reason: nothing tells this page what happened next, and the costly
+// mistake is the one where a player who has a card is still on the list.
+
+function forgetImages() {
+  for (const item of made) URL.revokeObjectURL(item.url);
+  made = [];
+  if (imagesHost) imagesHost.replaceChildren();
+}
+
+function imageFigure(item) {
+  const note = el('p', { className: 'form-status', role: 'status' });
+
+  const copy = el('button', { type: 'button', className: 'button button-quiet',
+    text: 'Copy' });
+  copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': item.blob })
+      ]);
+      status(note, 'Copied. Paste it wherever it is going.', 'good');
+    } catch {
+      // Writing an image to the clipboard is the one thing here a browser may
+      // simply refuse, and it refuses quietly. Say so and point at the two
+      // ways that always work rather than leaving a button that did nothing.
+      status(note, 'This browser would not copy a picture. Use Save, or copy '
+        + 'the picture itself from its right-click menu.', 'error');
+    }
+  });
+
+  const save = el('a', { className: 'button button-quiet', href: item.url,
+    download: item.name, text: 'Save' });
+
+  const { width, height } = cardPixels();
+  return el('figure', { className: 'card-image' }, [
+    // No alt: the caption underneath names the player, and a screen reader
+    // reading it twice is the same noise a badge tile was given a blank alt to
+    // avoid.
+    el('img', { src: item.url, width, height, alt: '', decoding: 'async' }),
+    el('figcaption', {}, [
+      el('span', { className: 'player-label', text: fullName(item.row) }),
+      el('span', { className: 'count', text: item.row.player_id })
+    ]),
+    el('p', { className: 'button-row' }, [copy, save]),
+    note
+  ]);
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = el('a', { href: url, download: filename });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  // Long enough for the browser to have taken the bytes, which it does
+  // synchronously on the click in every browser this runs in; revoking
+  // immediately is the one way to hand over an empty file.
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+async function downloadZip(button) {
+  button.disabled = true;
+  try {
+    const entries = await Promise.all(made.map(async (item) => ({
+      name: item.name,
+      data: new Uint8Array(await item.blob.arrayBuffer())
+    })));
+    downloadBlob(zipStore(entries), `loco-trainer-cards-${CARD_SEASON}.zip`);
+  } catch (err) {
+    console.error(err);
+    status(goNote, `The zip could not be built: ${err.message || 'unknown error'}. `
+      + 'The pictures can still be saved one at a time.', 'error');
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function drawImages() {
+  if (!made.length) {
+    imagesHost.replaceChildren();
+    return;
+  }
+
+  const zip = el('button', { type: 'button', className: 'button',
+    text: `Download all ${made.length} as a zip` });
+  zip.addEventListener('click', () => downloadZip(zip));
+
+  imagesHost.replaceChildren(
+    el('h3', { text: `${made.length} picture${made.length === 1 ? '' : 's'}` }),
+    el('p', { className: 'field-help',
+      text: `Each one is the printed card exactly, at ${CARD_DPI} dots per inch `
+          + 'with the card’s real size written into the file, so dropping '
+          + 'one into a document gives a card rather than a poster.' }),
+    el('p', { className: 'section-note',
+      text: 'A card carries a full name and a birth year, and a picture is far '
+          + 'easier to forward than a piece of card. Send one to the player it '
+          + 'belongs to.' }),
+    el('p', { className: 'button-row' }, [zip]),
+    el('div', { className: 'card-images' }, made.map(imageFigure))
+  );
+}
+
+async function makeImages() {
+  const ids = [...chosen.keys()];
+  if (!ids.length) return;
+
+  imagesButton.disabled = true;
+  goButton.disabled = true;
+  status(goNote, 'Getting the cards ready.');
+
+  try {
+    const { data, error } = await supabase.rpc('trainer_card_batch', {
+      p_badge_season: BADGE_SEASON,
+      p_player_ids: ids
+    });
+    if (error) throw error;
+
+    const rows = (data || []).map((row) => ({
+      ...row,
+      rank_name: cardRank(chosen.get(row.player_id)) || row.rank_name
+    }));
+
+    forgetImages();
+    const items = [];
+    for (const row of rows) {
+      // Drawn one at a time rather than all at once: each one rasterises a
+      // card carrying the background artwork, and forty of those in flight
+      // together is a lot of memory for no gain on a single-threaded encode.
+      status(goNote, `Drawing card ${items.length + 1} of ${rows.length}.`);
+      const blob = await cardImage(row, {
+        isChampion: championRanks.has(row.rank_name)
+      });
+      items.push({
+        row, blob,
+        url: URL.createObjectURL(blob),
+        name: cardFileName(row, CARD_SEASON)
+      });
+    }
+    made = items;
+    drawImages();
+
+    const { data: batch, error: logError } = await supabase
+      .rpc('record_trainer_card_prints', {
+        p_card_season: CARD_SEASON,
+        p_player_ids: ids
+      });
+    if (logError) {
+      console.warn('The pictures were not recorded:', logError.message);
+    } else {
+      lastBatch = batch;
+      undoButton.disabled = false;
+      undoWrap.hidden = false;
+    }
+
+    imagesButton.disabled = false;
+    goButton.disabled = false;
+    status(goNote, `${items.length} picture${items.length === 1 ? '' : 's'} `
+      + 'below, and those players now count as holding a card. If they are not '
+      + 'going out after all, say so below.', 'good');
+    await refreshRoster();
+  } catch (err) {
+    console.error(err);
+    imagesButton.disabled = false;
+    goButton.disabled = false;
+    status(goNote, 'The pictures could not be made: '
+      + `${err.message || 'unknown error'}.`, 'error');
   }
 }
 
@@ -717,6 +914,12 @@ function draw() {
     text: 'Create the cards' });
   goButton.addEventListener('click', createCards);
 
+  imagesButton = el('button', { type: 'button', className: 'button button-quiet',
+    text: 'Make the images' });
+  imagesButton.addEventListener('click', makeImages);
+
+  imagesHost = el('div', { className: 'card-image-wrap' });
+
   // Hidden until there is a run to undo. It appears under the status line the
   // moment cards are made and goes again as soon as the list changes, so it
   // only ever refers to the run the professor is looking at.
@@ -769,13 +972,19 @@ function draw() {
       el('h2', { text: 'The list' }),
       chosenHost,
       promoteField,
-      el('p', { className: 'button-row' }, [goButton, clear]),
+      el('p', { className: 'button-row' }, [goButton, imagesButton, clear]),
       el('p', { className: 'field-help',
-        text: 'A card is counted as printed the moment the dialog opens, because '
-            + 'nothing tells this page whether you went through with it. If it '
-            + 'did not print, say so below and everyone goes back on the list.' }),
+        text: 'Create the cards prints a sheet of eight. Make the images gives '
+            + 'the same cards as pictures to copy, paste or take away as a zip '
+            + '— for handing one over without a printer in the room.' }),
+      el('p', { className: 'field-help',
+        text: 'Either way a card counts as issued the moment you press the '
+            + 'button, because nothing tells this page what happened next. If '
+            + 'it did not go out, say so below and everyone goes back on the '
+            + 'list.' }),
       goNote,
-      undoWrap
+      undoWrap,
+      imagesHost
     ]),
 
     el('section', { className: 'panel' }, [

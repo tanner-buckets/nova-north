@@ -3146,6 +3146,55 @@ h1.event-name + .event-when {
 .tcard-name.is-long { font-size: 7.4pt; }
 .tcard-name.is-very-long { font-size: 6.2pt; }
 
+/* --- The same cards as pictures ----------------------------------------------
+   The gallery under the list, from Make the images. It sits inside the page's
+   no-print wrapper, so none of it reaches the paper -- a picture of a card is
+   for sending, and a page that printed both would waste a sheet of card stock
+   on something nobody asked to print. */
+.card-image-wrap:not(:empty) {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.card-images {
+  display: grid;
+  /* A card is 336px at its true size, so a column a little under that fits two
+     across a laptop and lets the picture fill a phone rather than shrinking
+     into a thumbnail nobody can check a badge on. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.card-image {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.card-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.card-image figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.card-image .button-row { margin: 0; }
+
+/* The per-picture status line only ever says something after a press of Copy,
+   and an empty one in every cell would push the grid apart for nothing. */
+.card-image .form-status:empty { display: none; }
+
 /* On screen the sheet is a preview, so it gets an edge to show where the paper
    is. None of this survives into print. */
 @media screen {
