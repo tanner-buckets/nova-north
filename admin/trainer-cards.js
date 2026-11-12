@@ -579,10 +579,128 @@ function countsNote() {
 // moves both. They were drawn once at startup, so they went stale the moment
 // anybody pressed Create the cards and stayed stale through an undo.
 function refreshCounts() {
+  renderResetCount();
   if (!activeButton) return;
   const { active, fresh } = countsNote();
   activeButton.textContent = `Everyone active (${active.length})`;
   freshButton.textContent = `No ${CARD_SEASON} card yet (${fresh.length})`;
+}
+
+// --- Starting a season over --------------------------------------------------
+//
+// Every card ever printed, put back on the list. It has been done twice as a
+// migration -- 20261022120000 when the programme started over, and
+// 20261031120000 when the artwork was redrawn and the print size was corrected
+// -- and both times the instruction was the same: everybody needs a card
+// again. A new season is the third time, and a deploy is the wrong tool for a
+// decision a professor should be able to make at the desk.
+//
+// It is the one action on this screen with no undo. `void_trainer_card_batch`
+// names a run; this has no run to name, so what puts a card back is printing
+// it again. That is why it asks for the word rather than a click: a dialog is
+// dismissed by the same reflex that opened it, and the typing is the pause.
+let resetNote = null;
+let resetCount = null;
+
+// What pressing it would actually cost, said before it is pressed rather than
+// after. The figure is the whole of what the button does.
+function renderResetCount() {
+  if (!resetCount) return;
+  const held = roster.filter((r) => r.has_card).length;
+  resetCount.textContent = held
+    ? `${held} player${held === 1 ? '' : 's'} count as holding a ${CARD_SEASON}`
+      + ' card right now.'
+    : `Nobody counts as holding a ${CARD_SEASON} card, so this would change `
+      + 'nothing.';
+}
+
+async function resetEveryCard(input, button) {
+  button.disabled = true;
+  status(resetNote, 'Putting every card back on the list.');
+
+  try {
+    const { data, error } = await supabase.rpc('void_all_trainer_card_prints', {
+      p_reason: 'Reset from the Trainer Card Creator so every '
+        + `${CARD_SEASON} card is reissued.`
+    });
+    if (error) throw error;
+
+    const n = Number(data) || 0;
+    await refreshRoster();
+    // Every run is voided now, the one the undo names included, so that offer
+    // would do nothing and would have to explain why.
+    forgetBatch();
+
+    status(resetNote, n
+      ? `${n} card${n === 1 ? '' : 's'} put back. Everybody is on the `
+        + `“No ${CARD_SEASON} card yet” button again.`
+      : 'Nothing to put back: no card counted as held.', 'good');
+  } catch (err) {
+    console.error(err);
+    status(resetNote, 'Nothing was reset: '
+      + `${err.message || 'unknown error'}. Every card still counts as held.`,
+      'error');
+  } finally {
+    // The word is typed again either way. A button left armed after a reset is
+    // a second reset one stray click away.
+    input.value = '';
+    button.disabled = true;
+  }
+}
+
+function resetPanel() {
+  resetNote = el('p', { className: 'form-status', role: 'status' });
+  resetCount = el('p', { className: 'field-help' });
+  // Filled here as well as from refreshCounts(). The roster is read before the
+  // screen is drawn, so the first refresh happens while this element does not
+  // exist yet and the line would otherwise sit empty until something else
+  // moved -- on a panel whose whole job is to say what the button would cost.
+  renderResetCount();
+
+  const input = el('input', { type: 'text', id: 'reset-confirm', size: '14',
+    autocomplete: 'off', spellcheck: 'false' });
+  const button = el('button', { type: 'submit', className: 'button button-danger',
+    text: 'Reset every card' });
+  button.disabled = true;
+
+  const armed = () => input.value.trim().toLowerCase() === 'confirm';
+  input.addEventListener('input', () => { button.disabled = !armed(); });
+
+  const form = el('form', { className: 'card-reset', novalidate: '' }, [
+    el('p', { className: 'field-help',
+      text: 'This marks every Trainer Card ever printed as no longer held, so '
+          + `everybody appears on the “No ${CARD_SEASON} card yet” `
+          + 'button again. It is for the start of a season, or after the card '
+          + 'artwork changes — the whole league is reissued.' }),
+    resetCount,
+    el('p', { className: 'field-help',
+      text: 'Nothing is deleted. Every print is kept and marked as reset, so '
+          + 'what was printed and when is still on the record. There is no '
+          + 'single undo for this: putting one card back means printing it '
+          + 'again.' }),
+    el('p', { className: 'field' }, [
+      el('label', { for: 'reset-confirm',
+        text: 'Type confirm to turn the button on' }),
+      input
+    ]),
+    el('p', { className: 'button-row' }, [button]),
+    resetNote
+  ]);
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (armed()) resetEveryCard(input, button);
+  });
+
+  // Folded away. It belongs at the top, where somebody starting a season will
+  // look for it, but it is used twice a year and a destructive button should
+  // not be the first thing on a screen opened every week to print four cards.
+  return el('section', { className: 'panel' }, [
+    el('details', { className: 'disclosure' }, [
+      el('summary', { text: 'Start a season: reset who has a card' }),
+      el('div', { className: 'disclosure-body' }, [form])
+    ])
+  ]);
 }
 
 // The threshold is the only thing on this screen that changes what those two
@@ -853,9 +971,17 @@ function draw() {
     text: `No ${CARD_SEASON} card yet (${fresh.length})` });
   freshButton.addEventListener('click', () => addMany(countsNote().fresh));
 
-  const clear = el('button', { type: 'button', className: 'link-button',
-    text: 'Start the list again' });
-  clear.addEventListener('click', () => { chosen.clear(); drawChosen(); });
+  // Two of these, one beside the buttons that fill the list and one beside the
+  // button that prints it. A professor who has just pressed "Everyone active"
+  // and seen forty names wants to start over from where they are standing, not
+  // from the bottom of the next panel. One handler, two buttons, because an
+  // element cannot be in two places.
+  const clearButton = () => {
+    const button = el('button', { type: 'button', className: 'link-button',
+      text: 'Start the list again' });
+    button.addEventListener('click', () => { chosen.clear(); drawChosen(); });
+    return button;
+  };
 
   promoteBox = el('input', { type: 'checkbox', id: 'promote-aces' });
   promoteBox.addEventListener('change', () => {
@@ -948,6 +1074,8 @@ function draw() {
   calHide.addEventListener('click', hideCalibration);
 
   app.replaceChildren(
+    resetPanel(),
+
     el('section', { className: 'panel' }, [
       el('h2', { text: 'Who gets a card' }),
       el('p', { className: 'field-help',
@@ -961,7 +1089,8 @@ function draw() {
             + 'means anybody who has been in at all and four means somebody who '
             + 'is actually around. A day is a day however many events were '
             + 'played on it.' }),
-      el('p', { className: 'button-row' }, [activeButton, freshButton]),
+      el('p', { className: 'button-row' },
+        [activeButton, freshButton, clearButton()]),
       el('p', { className: 'field-help',
         text: 'Both buttons follow the threshold. Adding somebody by name below '
             + 'ignores it, because that is a decision rather than a filter.' }),
@@ -972,7 +1101,8 @@ function draw() {
       el('h2', { text: 'The list' }),
       chosenHost,
       promoteField,
-      el('p', { className: 'button-row' }, [goButton, imagesButton, clear]),
+      el('p', { className: 'button-row' },
+        [goButton, imagesButton, clearButton()]),
       el('p', { className: 'field-help',
         text: 'Create the cards prints a sheet of eight. Make the images gives '
             + 'the same cards as pictures to copy, paste or take away as a zip '

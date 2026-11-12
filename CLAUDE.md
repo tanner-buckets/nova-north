@@ -279,6 +279,44 @@ is applied to the production database.** There is no confirmation step.
 - **Defaults are overridable.** Point values are defaults a professor can change
   at entry time.
 
+### Merging a duplicate player
+
+The same human entered twice. It has happened twice — Zane D in
+`20261022170000`, Abbie Coppage in `20261112120000` — and both are migrations
+rather than a screen, because it is rare, irreversible and worth reading before
+it runs.
+
+- **Merge, never delete.** A Sunday's attendance or a prize point filed under
+  the wrong id belongs to that person and should move. A plain delete either
+  fails on a foreign key or quietly takes the history with it.
+- **Both ids are named in the file**, never searched for. An id is exact, and a
+  migration that went looking for "the other Abbie" would be guessing at a real
+  child's records. A name check is the seatbelt: if the id turns out to be
+  somebody else, stop before touching their records.
+- **EVERY TABLE THAT REFERENCES `players` HAS TO MOVE**, or the final delete
+  fails on the one that was forgotten. The Zane merge missed
+  `loyalty_carryover`, `loyalty_results` and `elite_four_wins`, and survived
+  only because that duplicate happened to have no rows in any of them. The
+  current list is in `20261112120000`; when a new table takes a `player_id`, it
+  belongs in the next merge.
+- **Where a move would collide, the duplicate's copy is dropped**, because the
+  keeper already has that fact and the constraint says so: one attendance row
+  per day, one badge once, Champion once a season, one Elite 4 battle per
+  season, one loyalty result per release, one live registration per event, one
+  pending visibility request.
+- **`staff.player_id` is UNIQUE**, so a roster link cannot simply move. If both
+  ids are on the roster the duplicate's row is unlinked and kept, loudly,
+  because two roster rows for one person is a second duplicate only a person
+  can settle.
+- **Nulls are filled, nothing is overwritten.** A birth year or a contact
+  recorded on only one of the two rows is still a fact about the person, and
+  deleting the duplicate would throw it away. A professor who corrected a field
+  outranks whichever row happened to survive.
+- **The guards notice rather than raise**, so a bad id cannot fail a deploy that
+  other migrations are riding on. The cost is that an unread notice makes a
+  no-op look like a success, so **verify on the players screen afterwards**:
+  one of them, with the attendance and points intact.
+
 ---
 
 ## Domain rules
@@ -1295,6 +1333,45 @@ makes the file.
   for a run still on screen.
 - **Off at load, every time.** It is a decision about one afternoon, like Nearly
   there on the loyalty sheet, and nothing about it is stored.
+
+#### Starting a season over
+
+**Start a season: reset who has a card** is a disclosure at the top of the
+screen: it voids every print so the whole league appears on the "no card yet"
+button again.
+
+- **It was a migration twice** — `20261022120000` when the programme started
+  over, `20261031120000` when the artwork was redrawn — and both times the
+  instruction was the same. A deploy is the wrong tool for a decision a
+  professor should be able to make at the desk.
+- **`void_all_trainer_card_prints()` is `SECURITY DEFINER`**, like
+  `void_trainer_card_batch()` and for the same reason: an `UPDATE` grant on the
+  table would let any signed-in professor write any column of any row from a
+  browser. Rows are voided, never removed.
+- **`voided_by` is set here**, unlike in the two migrations. There it stayed
+  null because a deploy was doing it and naming somebody would claim a decision
+  they did not make; here a professor pressed a button.
+- **It asks for the word, not a click.** This is the one action on the screen
+  with no undo — `void_trainer_card_batch` names a run and this has no run to
+  name, so putting a card back means printing it again. A confirm dialog is
+  dismissed by the same reflex that opened it; typing is the pause.
+- **It says what it would cost before it is pressed**, as a live count of who
+  holds a card. That line is filled in `resetPanel()` as well as from
+  `refreshCounts()`, because the roster is read before the screen is drawn and
+  the first refresh happens while the element does not exist yet.
+- **Folded away.** It belongs at the top, where somebody starting a season
+  looks for it, but it is used twice a year and a destructive button should not
+  be the first thing on a screen opened weekly to print four cards.
+- **It withdraws the undo.** Every run is voided afterwards, the one the undo
+  names included, so that offer would do nothing and would have to explain why.
+
+#### Two ways to start the list again
+
+The same link sits beside the buttons that fill the list and beside the button
+that prints it. A professor who has just pressed "Everyone active" and seen
+forty names wants to start over from where they are standing, not from the
+bottom of the next panel. One handler, two buttons, because an element cannot
+be in two places.
 
 #### The cards as pictures
 
