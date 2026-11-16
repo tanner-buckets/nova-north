@@ -199,9 +199,12 @@ someone through the function. A direct insert would let a caller write their own
 - **`request_drop()` returns the same result whether or not anything matched**,
   so it cannot be used to discover which Player IDs are registered.
 - **`check_registration()` is how a player confirms a place**, from a "Check my
-  registration" dropdown on the event card. Player ID and first name, the same
-  proof as a drop, and the same answer for every kind of no-match. It reads the
-  registration itself, so no player record is needed.
+  registration" dropdown on the event card. Player ID and the first name on the
+  registration, and the same answer for every kind of no-match. It reads the
+  registration itself, so no player record is needed. It was written to take the
+  same proof a drop takes; that proof has since moved to last name and birth
+  year, and this is the one public form still on the old pair — see **Proving
+  who you are**.
 - **`public_event_counts` emits integers only** — capacity, confirmed, waitlist,
   per event and division. No names, no IDs, at any consent level.
 
@@ -245,7 +248,7 @@ Built so far:
 | `index.html` | Home | nothing — static copy, plus two outside links |
 | `schedule.html` | Schedule | `events`, `public_event_counts`, `register_for_event()`, `check_registration()`, `request_drop()` |
 | `event.html` | no — reached by link | `events`, `public_event_counts`, `register_for_event()`, `check_registration()`, `request_drop()` |
-| `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers`, `active_badge_seasons()` |
+| `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers`, `active_badge_seasons()`, `rental_deck_shelf()`, `rental_deck_bounties`, the `deck-lists` bucket |
 | `prize-items.html` | no | `prize_items`, the `prize-art` bucket |
 | `players.html` | Players | `get_player_summary()`, `public_players` |
 | `gallery.html` | Gallery | `approved_gallery()`, `submit_gallery_photo()`, the `gallery` bucket |
@@ -349,10 +352,10 @@ Two renditions are made in the browser, 1600px and 480px, both JPEG:
   The check is on `naturalWidth * naturalHeight`, after `decode()` and before
   any canvas exists.
 
-**A submission is not anonymous**: Player ID and first name, the same proof a
-drop request asks for, and **one refusal covers both** a wrong ID and a wrong
-name -- telling them apart would make the form a way to test which Player IDs
-exist. There is a cap of twenty submissions per player per day.
+**A submission is not anonymous**: Player ID, last name and birth year, the same
+proof every other player form asks for, and **one refusal covers all three** --
+telling a wrong ID from a wrong name apart would make the form a way to test
+which Player IDs exist. There is a cap of twenty submissions per player per day.
 
 **The files are uploaded before the row is written.** Either order strands
 something when the other half fails, and this is the half that fails harmlessly:
@@ -921,8 +924,16 @@ can be a check rather than a trigger, which `at time zone` would have forced.
 
 **The large figure is when to arrive, not when play starts.** A card shows
 `registration_opens_at`, falling back to `starts_at` where there is no desk
-time, and the line underneath reads "Registration opens at 2:00 PM and the event
+time, and the line underneath reads "Check-in opens at 2:00 PM and the event
 begins at 2:30 PM."
+
+The day-of word is **check-in**, and registration means pre-registration. The
+line used to say "Registration opens at 11:00 AM" on a card whose register form
+had been open since the event was created: two things called registration on one
+card, opening at different times, one of them a desk in a shop and the other a
+button an inch away. Nothing about pre-registration is reworded — the register
+and cancel forms, the closing rule and `register_for_event()` all still say
+registration, because that is what they are.
 
 Leading with the start time was accurate and still wrong in practice: the big
 number is the one people take away, so a card headed 2:30 sent players to a
@@ -1145,10 +1156,16 @@ Each switch is three-state, and untouched means leave it alone. A form sending
 false for everything nobody ticked would read as a request to be hidden from
 somebody who only wanted to add a TCG Live name.
 
-Player ID and first name together are the proof, with **one refusal covering
-both** — telling a wrong ID from a wrong name apart would make the form a way to
-test which Player IDs exist. There is one pending request per player: a second
-submission updates the first rather than queueing behind it.
+Player ID, last name and birth year together are the proof, with **one refusal
+covering all three** — telling a wrong ID from a wrong name apart would make the
+form a way to test which Player IDs exist. There is one pending request per
+player: a second submission updates the first rather than queueing behind it.
+
+It was Player ID and **first name** until this release, which was not a proof at
+all: "Maya R." is published for every listed player and the player list prints
+it beside the Player ID, so both halves were already on screen. A last name and
+a birth year are never public at any consent level. They are asked for and never
+shown — nothing returns a birth year, and only the year is ever typed.
 
 **Contact can now be public, by request.** That reverses a rule, and the shape
 is what keeps it safe: `show_contact` defaults false for everybody and never
@@ -1157,6 +1174,54 @@ is logged, public means the flag **and** `id_visible()`, and
 `expire_stale_consent()` clears it with the rest — a handle cannot outlive the
 consent that published it. A **TCG Live name is not a contact**: it is a game
 handle, public wherever the player already is, with no flag of its own.
+
+### Choosing which product you want
+
+The second panel under a looked-up card. Reaching Crystal is the right to **buy**
+a Booster Box at $161.64, which is a lot of money to a family, and somebody who
+turned up eleven Sundays may want the Elite Trainer Box or the Bundle instead.
+Until now the sheet the store works from said one thing per tier, so that
+conversation happened at the till with a queue behind it, or did not happen.
+
+`loyalty_tier_choices` holds one row per release per player, written by
+`choose_loyalty_product()` behind the same proof as every other player form.
+
+- **A product, not a tier name.** Crystal, Gold and Silver are how the thresholds
+  are written down; what somebody is choosing between is a Booster Box, an Elite
+  Trainer Box and a Booster Bundle. Each option leads with the product and its
+  price, with the tier and its Sundays as the quiet line underneath — there to
+  answer "can I take that one yet". What is sent is the tier's **id**, because
+  the row is what identifies a product and `product` is free text a professor
+  retypes on the releases screen.
+- **A ceiling, never a claim.** It grants nothing: what a player may buy is still
+  the tier their Sundays earned. So nothing checks the weeks when a choice is
+  recorded, and a choice made in week two still reads correctly in week eleven.
+- **Per release**, like the tiers themselves. Products and prices change between
+  sets, so a new release starts everybody blank.
+- **It takes effect immediately**, unlike a visibility request. That one is a
+  professor's decision because it publishes something about a child and needs
+  consent recorded against it. This records a preference about a purchase, on a
+  card that is already public, and a player at home should not need approval to
+  answer a question about their own money.
+- **It is public**, on the player's own card under the loyalty figure: *Taking
+  the Booster Bundle ($26.94)*, or *Asked for the Booster Box ($161.64) — 11
+  Sundays needed* where their Sundays have not reached it yet. It was weighed the
+  other way first, on the grounds that the commonest reason to take the smaller
+  product is that it costs less. What settles it is that a card is only reachable
+  through `get_player_summary()`, which returns nothing at all for a player whose
+  ID visibility is not in force — so the cards this appears on belong to people
+  who asked to be listed, which in this league is the adults. A child's card is
+  not public.
+- **No second read.** `get_player_summary()` is the only thing a player card
+  reads and it carries the choice with everything else. That is also why the
+  form **opens on what is already recorded** rather than on nothing: the page
+  knows, so an untouched Save is a no-op instead of an ambiguous one, and
+  saving redraws the card in place rather than reloading the lookup.
+- `reached` is worked out in the database, not on the card: the page would need
+  the tier's threshold and the threshold is not otherwise on the card.
+- The options come from `loyalty_tiers`, which is public and is the same list the
+  programs page prints, through the shared `openRelease()` — so the two pages
+  cannot disagree about which release is open or what it offers.
 
 ### Visibility consent
 
@@ -1439,6 +1504,23 @@ second answer that could disagree with the player's own card. It is a handful of
 calls for a sheet printed once a release, and only for players with attendance in
 the window at all. If the league outgrows that, the fix is a view, not a copy of
 the rule.
+
+**The sheet is grouped by the product being handed over**, so a player who asked
+for a different one is listed under *that* product rather than under the tier
+they earned. A till works down a group and hands out the thing in the heading; a
+row sitting in the Crystal list that is secretly a Booster Bundle is the mistake
+this is built to prevent. They carry a line under their name in italics —
+"Earned Crystal, asked for this instead" — because a Crystal player standing in
+the Silver list needs one. It is a line in the name cell rather than a column of
+its own, since most rows do not have one and a column of empty cells on paper
+read at a till is a column somebody checks and then ignores.
+
+**Only where their Sundays reach that product's tier.** A choice is a ceiling,
+not a claim: somebody on nine Sundays who asked for a Booster Box stays in the
+tier they earned, unmarked, and the choice waits until they get there. The
+status line under the build button says how many are listed under something
+other than what they earned, because that is the number the store needs a
+different box ready for.
 
 Players below every threshold are listed under "Not yet at a tier" rather than
 dropped, so the store is told who is close and not only who has arrived. The

@@ -64,6 +64,55 @@ export function leagueDayKey(startsAt) {
   return DAY_KEY_FORMAT.format(new Date(startsAt));
 }
 
+// A list price, to the cent. Always two decimals: these are shop prices, and
+// $49.9 is not a price anybody has ever seen written down.
+//
+// Null is not zero. A tier whose price nobody has recorded gets nothing printed,
+// rather than a free Booster Box.
+const USD_FORMAT = new Intl.NumberFormat('en-US', {
+  style: 'currency', currency: 'USD',
+  minimumFractionDigits: 2, maximumFractionDigits: 2
+});
+
+export function formatMsrp(amount) {
+  const n = Number(amount);
+  if (amount === null || amount === undefined || amount === '' || !Number.isFinite(n)) {
+    return null;
+  }
+  return USD_FORMAT.format(n);
+}
+
+// The release whose window contains today, with its tiers, cheapest first.
+//
+// One copy, because three screens now ask the same question -- the programs
+// page draws the tier table, the players page offers the choice of product, and
+// active_release() in the database decides what a write lands on. The SQL one
+// is authoritative; this is the same rule for the two pages that read, so they
+// cannot drift apart from each other.
+//
+// Null for no open window, and null for one already finalized: a release that
+// has been snapshotted into loyalty_results is a record, and a record takes no
+// more Sundays and no more preferences.
+export async function openRelease() {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: releases, error } = await supabase
+    .from('releases').select('*')
+    .lte('starts_on', today).gte('ends_on', today)
+    .order('starts_on', { ascending: false }).limit(1);
+  if (error) throw error;
+
+  const release = releases && releases[0];
+  if (!release || release.finalized_at) return null;
+
+  const { data: tiers, error: tierError } = await supabase
+    .from('loyalty_tiers').select('*')
+    .eq('release_id', release.id).order('weeks_required');
+  if (tierError) throw tierError;
+
+  return { release, tiers: tiers || [] };
+}
+
 // --- Divisions ---------------------------------------------------------------
 
 // Age divisions are always shown youngest first: Junior, Senior, Master. That is
@@ -252,6 +301,15 @@ export function badgeArtUrl(badge, prefix = '') {
 export function prizeArtUrl(item) {
   return item.image_path
     ? `${SUPABASE_URL}/storage/v1/object/public/prize-art/${item.image_path}`
+    : null;
+}
+
+// A picture of a rental deck's list, or null when the list is given some other
+// way -- which is most of them. Same arrangement as prize art: a public bucket,
+// the row holding the path, and the URL built here rather than stored.
+export function deckListImageUrl(deck) {
+  return deck.deck_list_image_path
+    ? `${SUPABASE_URL}/storage/v1/object/public/deck-lists/${deck.deck_list_image_path}`
     : null;
 }
 

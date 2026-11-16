@@ -8,15 +8,36 @@
 // button. No modal, no separate edit page. These are short records a professor
 // corrects between rounds, and a dialog for a four-field row is a dialog in the
 // way.
-import { supabase, el, problem, readableOn } from '../supabase-client.js';
+import { supabase, el, problem, readableOn, deckListImageUrl } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import { status } from './attendance-core.js';
+import {
+  deckListImageField, uploadDeckListImage, removeDeckListImage
+} from './deck-list-image.js';
 
 const gate = document.querySelector('#gate');
 const app = document.querySelector('#app');
 
 const FORMATS = [['standard', 'Standard'], ['glc', 'GLC']];
 const STATUSES = [['current', 'Current'], ['needs_updating', 'Needs updating']];
+
+// How the list is given. One at a time, because a deck list is one thing and a
+// deck holding a link and a pasted copy is a deck holding two lists that will
+// disagree the first time one of them is corrected. The database refuses the
+// pair as well; this is what makes sure nobody meets that refusal.
+const LIST_WAYS = [
+  ['none', 'No list yet'],
+  ['link', 'A link to another site'],
+  ['text', 'The list, pasted in'],
+  ['image', 'A picture of the list']
+];
+
+function listWayOf(deck) {
+  if (deck.deck_list_url) return 'link';
+  if (deck.deck_list_text) return 'text';
+  if (deck.deck_list_image_path) return 'image';
+  return 'none';
+}
 
 let tags = [];       // the vocabulary
 let decks = [];      // rows, with their tag ids
@@ -43,9 +64,48 @@ function deckRow(deck, reload) {
   const name = el('input', { value: deck.name || '' });
   const format = pick(FORMATS, deck.format || 'standard');
   const statusSel = pick(STATUSES, deck.status || 'current');
+  const notes = el('input', { value: deck.notes || '' });
+
+  // The three ways, built whichever one is in force, so switching between them
+  // does not throw away what was typed before the professor changed their mind.
+  // Only the chosen one is saved, and the other two are cleared on the row.
+  const way = pick(LIST_WAYS, listWayOf(deck));
   const url = el('input', { type: 'url', value: deck.deck_list_url || '',
     placeholder: 'https://' });
-  const notes = el('input', { value: deck.notes || '' });
+  const listText = el('textarea', { rows: '12',
+    placeholder: 'Paste the list exactly as it comes out of the game.' });
+  listText.value = deck.deck_list_text || '';
+  const art = deckListImageField(deck, { currentUrl: deckListImageUrl(deck) });
+
+  // Plain wrappers with no display rule of their own, so hidden actually
+  // hides them: a .field is a paragraph and a stylesheet could give it one.
+  const ways = {
+    none: el('div', {}, [
+      el('p', { className: 'field-help',
+        text: 'The deck goes on the shelf with no list against it. Worth '
+            + 'choosing deliberately rather than leaving a box half filled.' })
+    ]),
+    link: el('div', {}, [
+      field('Deck list link', url),
+      el('p', { className: 'field-help',
+        text: 'Opens the other site in a new tab. Best where the list already '
+            + 'lives somewhere that keeps it up to date.' })
+    ]),
+    text: el('div', {}, [
+      field('The deck list', listText),
+      el('p', { className: 'field-help',
+        text: 'Opens on the page itself, with a button that copies it. Line '
+            + 'breaks are kept, so paste it as the game exports it — that is '
+            + 'the form a player can paste straight back in.' })
+    ]),
+    image: el('div', {}, art.nodes)
+  };
+
+  function showWay() {
+    for (const key of Object.keys(ways)) ways[key].hidden = key !== way.value;
+  }
+  way.addEventListener('change', showWay);
+  showWay();
 
   // Checkboxes rather than a multi-select: a professor should be able to see
   // every tag a deck could wear without opening anything.
@@ -65,29 +125,78 @@ function deckRow(deck, reload) {
 
   save.addEventListener('click', async () => {
     if (!name.value.trim()) { status(note, 'A deck needs a name.', 'error'); return; }
-    save.disabled = true;
-    status(note, 'Saving.');
 
     const row = {
       name: name.value.trim(),
       format: format.value,
       status: statusSel.value,
-      deck_list_url: url.value.trim() || null,
+      deck_list_url: null,
+      deck_list_text: null,
       notes: notes.value.trim() || null
     };
 
+    // The picture the row already has, unless this save moves it or takes it
+    // away. Worked out before anything is written, so the row and the bucket
+    // cannot end up disagreeing about which one is the list.
+    const picked = art.chosen();
+    let uploaded = null;
+    let imagePath = deck.deck_list_image_path || null;
+
+    if (way.value === 'link') {
+      if (!url.value.trim()) {
+        status(note, 'Put the address in, or set the list to “No list yet”.', 'error');
+        return;
+      }
+      row.deck_list_url = url.value.trim();
+      imagePath = null;
+    } else if (way.value === 'text') {
+      if (!listText.value.trim()) {
+        status(note, 'Paste the list in, or set it to “No list yet”.', 'error');
+        return;
+      }
+      row.deck_list_text = listText.value.trim();
+      imagePath = null;
+    } else if (way.value === 'image') {
+      if (art.cleared()) imagePath = null;
+      if (!picked && !imagePath) {
+        status(note, 'Choose a picture of the list, or set it to “No list yet”.', 'error');
+        return;
+      }
+    } else {
+      imagePath = null;
+    }
+
+    save.disabled = true;
+    status(note, 'Saving.');
+
     try {
+      // The picture goes up before the row is written, so a failure here
+      // leaves the deck pointing at the list it already had rather than at a
+      // path with nothing behind it.
+      if (way.value === 'image' && picked) {
+        uploaded = await uploadDeckListImage(picked.blob);
+        imagePath = uploaded;
+      }
+      row.deck_list_image_path = imagePath;
+
       let id = deck.id;
       if (isNew) {
         const { data, error } = await supabase.from('rental_decks')
           .insert(row).select('id').single();
-        if (error) throw error;
+        // Nothing points at it, so it is litter rather than history.
+        if (error) { await removeDeckListImage(uploaded); throw error; }
         id = data.id;
       } else {
         const { error } = await supabase.from('rental_decks')
           .update(row).eq('id', id);
-        if (error) throw error;
+        if (error) { await removeDeckListImage(uploaded); throw error; }
       }
+
+      // Only once the row has stopped pointing at it.
+      if (deck.deck_list_image_path && deck.deck_list_image_path !== imagePath) {
+        await removeDeckListImage(deck.deck_list_image_path);
+      }
+      art.release();
 
       // Tags are replaced rather than diffed. The set is a handful of rows and
       // working out which two changed costs more than rewriting all of them.
@@ -134,9 +243,11 @@ function deckRow(deck, reload) {
       field('Name', name),
       field('Format', format),
       field('Status', statusSel),
-      field('Deck list link', url),
+      field('How the list is given', way),
       el('p', { className: 'field-help',
-        text: 'Shown as “See the deck list”. Leave it blank and no link appears.' }),
+        text: 'All three read as “See the deck list” on the programs page. One '
+            + 'at a time: changing this replaces whatever was there before.' }),
+      ways.none, ways.link, ways.text, ways.image,
       field('Note, optional', notes),
       el('p', { className: 'field' }, [el('span', { className: 'field-label-ish',
         text: 'Tags' })]),

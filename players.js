@@ -1,4 +1,5 @@
-import { supabase, el, problem, playerLinks, badgeTile } from './supabase-client.js';
+import { supabase, el, problem, playerLinks, badgeTile, formatMsrp, openRelease }
+  from './supabase-client.js';
 import { currentProfessor } from './auth.js';
 
 const form = document.querySelector('#lookup-form');
@@ -22,12 +23,36 @@ const NOT_FOUND =
   + 'on visibility — it is off by default, and always off for players under 18 '
   + 'unless a parent has agreed.';
 
+// `extra` is one line or several. Loyalty carries two — the tier reached, and
+// the product asked for — as separate lines rather than one joined by a
+// separator, because the first is a count and the second is a decision.
 function stat(label, value, extra) {
+  const lines = [].concat(extra || []).filter(Boolean);
+
   return el('div', { className: 'stat' }, [
     el('span', { className: 'stat-label', text: label }),
     el('span', { className: 'stat-value', text: value }),
-    extra ? el('span', { className: 'stat-extra', text: extra }) : null
+    ...lines.map((line) => el('span', { className: 'stat-extra', text: line }))
   ]);
+}
+
+// What they asked for, under the tier they reached.
+//
+// A choice above what their Sundays reach is still shown — it is what they
+// asked for and it is true — but it says what it needs, because the store's
+// sheet leaves them in the tier they earned until they get there. `reached` is
+// decided by get_player_summary(), which has the threshold; the card does not
+// otherwise carry one and should not start re-deriving the rule.
+function chosenLine(summary) {
+  const choice = summary.loyalty_choice;
+  if (!choice) return null;
+
+  const price = formatMsrp(choice.msrp);
+  const named = choice.product + (price ? ` (${price})` : '');
+
+  return choice.reached
+    ? `Taking the ${named}`
+    : `Asked for the ${named} — ${choice.weeks_required} Sundays needed`;
 }
 
 function championStars(seasons) {
@@ -129,9 +154,10 @@ export function summaryCard(summary) {
   const loyalty = summary.release_name
     ? stat('Loyalty', `${summary.loyalty_weeks ?? 0} Sunday`
         + ((summary.loyalty_weeks === 1) ? '' : 's'),
-        summary.tier_earned
+        [summary.tier_earned
           ? `${summary.tier_earned} tier reached, ${summary.release_name}`
-          : `No tier yet, ${summary.release_name}`)
+          : `No tier yet, ${summary.release_name}`,
+         chosenLine(summary)])
     : stat('Loyalty', 'Not counting', 'No release window is open');
 
   return el('section', { className: 'card summary', 'aria-label': 'Player summary' }, [
@@ -222,16 +248,64 @@ const WANT = [
    'Anybody on the site could see it. Leave this off to give it to the professors only.']
 ];
 
+// One refusal for a wrong Player ID, a wrong last name and a wrong birth year
+// alike. Telling them apart would make these forms a way to test which Player
+// IDs exist, and then to guess details against the ones that do.
+const NOT_MATCHED =
+  'That Player ID, last name and birth year do not go together. Check all three '
+  + 'and try again, or ask a professor at league.';
+
+// The proof a player gives before anything about them is changed or read back.
+//
+// IT USED TO BE A FIRST NAME, and a first name is not a secret here.
+// display_label() publishes "Maya R." for every listed player, and the list on
+// this very page is a column of exactly those with the Player ID beside each
+// one — so for anybody listed, both halves of the old proof were already on
+// screen.
+//
+// A last name and a birth year are in the never-public list at the top of
+// CLAUDE.md. No page renders either, and get_player_summary() does not return
+// them, which is exactly what makes them worth asking for. They are asked for
+// and never shown: nothing here reads one back, and the year is all that is
+// ever typed, because a full date of birth is not stored anywhere on this site.
+function proofFields(uid, playerId) {
+  const last = el('input', { id: `pf-last-${uid}`, autocomplete: 'family-name',
+    required: 'required' });
+  const year = el('input', { id: `pf-year-${uid}`, type: 'number',
+    inputmode: 'numeric', autocomplete: 'off', required: 'required',
+    min: '1900', max: String(new Date().getFullYear()), placeholder: 'e.g. 2014' });
+
+  return {
+    // An empty box goes as null rather than as 0. One is a question nobody
+    // answered and the other is one answered wrongly, and Number('') is 0.
+    read: () => ({
+      p_player_id: playerId,
+      p_last_name: last.value.trim(),
+      p_birth_year: year.value.trim() === '' ? null : Number(year.value)
+    }),
+    nodes: [
+      el('p', { className: 'field' }, [
+        el('label', { for: last.id, text: 'Your last name' }), last
+      ]),
+      el('p', { className: 'field' }, [
+        el('label', { for: year.id, text: 'The year you were born' }), year
+      ]),
+      el('p', { className: 'field-help',
+        text: 'So we know this is you. Both have to match what we have for '
+            + `${playerId}, and neither is ever shown on this site.` })
+    ]
+  };
+}
+
 const REFUSALS = {
-  not_matched: 'That Player ID and first name do not go together. Check both and '
-    + 'try again, or ask a professor at league.',
+  not_matched: NOT_MATCHED,
   nothing_asked: 'Nothing was filled in, so there is nothing to send. Tick what '
     + 'you would like changed, or add a TCG Live name.'
 };
 
 function requestPanel(summary) {
   const uid = Math.random().toString(36).slice(2, 8);
-  const first = el('input', { id: `rq-first-${uid}`, autocomplete: 'given-name' });
+  const proof = proofFields(uid, summary.player_id);
   const contact = el('input', { id: `rq-dis-${uid}`, autocomplete: 'off',
     placeholder: 'your.name' });
   const ptcg = el('input', { id: `rq-tcg-${uid}`, autocomplete: 'off',
@@ -272,12 +346,7 @@ function requestPanel(summary) {
   const go = el('button', { type: 'submit', className: 'button', text: 'Send the request' });
 
   const form = el('form', { className: 'request-form' }, [
-    el('p', { className: 'field' }, [
-      el('label', { for: first.id, text: 'Your first name' }), first
-    ]),
-    el('p', { className: 'field-help',
-      text: 'So we know this is you. It has to match what we have for '
-          + `${summary.player_id}.` }),
+    ...proof.nodes,
 
     ...wants.map((w) => w.node),
 
@@ -306,8 +375,7 @@ function requestPanel(summary) {
 
     try {
       const { data, error } = await supabase.rpc('request_visibility', {
-        p_player_id: summary.player_id,
-        p_first_name: first.value.trim(),
+        ...proof.read(),
         p_want_player_id: wants[0].read(),
         p_want_name: wants[1].read(),
         p_want_contact: wants[2].read(),
@@ -351,6 +419,248 @@ function requestPanel(summary) {
   ]);
 }
 
+// --- Choosing which product you want -----------------------------------------
+//
+// A tier earns the right to BUY at MSRP, and now that the price is on the
+// programs page the next question answers itself: somebody who turned up eleven
+// Sundays may not want to spend $161.64 on a Booster Box. This is where they
+// say which product they would rather have instead.
+//
+// IT ASKS FOR A PRODUCT, NOT A TIER NAME. Crystal, Gold and Silver are how the
+// thresholds are written down; what a player is actually choosing between is a
+// Booster Box, an Elite Trainer Box and a Booster Bundle. So each option leads
+// with the product and its price, and the tier and its Sundays are the quiet
+// line underneath — there to answer "can I take that one yet", not to be the
+// thing being picked. What goes to the database is the tier's id, because the
+// row is what identifies a product and a product name is free text a professor
+// can retype on the releases screen.
+//
+// A CEILING, NEVER A CLAIM. Choosing the Elite Trainer Box does not award Gold.
+// What a player may buy is still whatever their Sundays earned, and the store's
+// sheet moves them into the product they chose only where their Sundays reach
+// that product's tier. So a choice made in week two still reads correctly in
+// week eleven, and one above what has been reached simply waits.
+//
+// IT SAVES STRAIGHT AWAY, unlike the visibility request above it. That one is a
+// professor's decision because it publishes something about a child and needs
+// consent recorded against it. This records a preference about a purchase, on a
+// card that is already public, and a player at home should not need somebody's
+// approval to answer a question about their own money.
+//
+// The options come from loyalty_tiers, which is public and is the same list the
+// programs page prints. What they chose comes back on the card itself, through
+// get_player_summary() — there is deliberately no second read to keep in step
+// with it, which is why the form opens on what is already recorded rather than
+// on nothing.
+
+const CHOICE_REFUSALS = {
+  not_matched: NOT_MATCHED,
+  no_release: 'No release is taking choices at the moment. Ask a professor '
+    + 'which one is being counted next.',
+  unknown_product: 'That is not one of this release’s products. Reload the page '
+    + 'and try again.'
+};
+
+const CHOICE_DAY = new Intl.DateTimeFormat('en-US', {
+  month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC'
+});
+const asDay = (d) => CHOICE_DAY.format(new Date(`${d}T12:00:00Z`));
+
+// What was just recorded, in a sentence. The card above says the same thing in
+// its own words; this one says it where the player is looking, immediately.
+function choiceLine(data) {
+  const choice = data.choice;
+  const until = data.ends_on
+    ? ` You can change this until ${asDay(data.ends_on)}.` : '';
+
+  if (!choice) {
+    return `Saved. Nothing is recorded for ${data.release_name}, so you will be `
+      + `offered the best product your Sundays reach.${until}`;
+  }
+
+  const price = formatMsrp(choice.msrp);
+  const named = choice.product + (price ? ` (${price})` : '');
+
+  return choice.reached
+    ? `Saved. For ${data.release_name} you are taking the ${named}.${until}`
+    : `Saved. For ${data.release_name} you have asked for the ${named}, which `
+      + `needs ${choice.weeks_required} Sundays. Until you reach that you are `
+      + `offered the best product you have.${until}`;
+}
+
+function tierPanel(summary, onSaved) {
+  const uid = Math.random().toString(36).slice(2, 8);
+  const proof = proofFields(uid, summary.player_id);
+
+  const options = el('div', { className: 'tier-choices' }, [
+    el('p', { className: 'notice notice-quiet',
+      text: 'Loading this release’s products.' })
+  ]);
+  const status = el('p', { className: 'form-status', role: 'status' });
+  const save = el('button', { type: 'submit', className: 'button',
+    text: 'Save my choice' });
+
+  // Set once the options are drawn. Until then there is nothing to pick and the
+  // button is disabled, so it cannot be called before it exists.
+  let pick = () => undefined;
+
+  function unavailable(text) {
+    options.replaceChildren(el('p', { className: 'notice notice-quiet', text }));
+    save.disabled = true;
+  }
+
+  function drawOptions(tiers) {
+    const group = `tier-${uid}`;
+
+    // The form opens on what is recorded, which it can do because the card has
+    // already been told. Nothing was ticked here at first, back when the choice
+    // was unreadable without a second call — and a form that opens on nothing
+    // makes Save ambiguous, because "leave it alone" and "clear it" look the
+    // same. Opening on the current answer makes an untouched Save a no-op.
+    const current = summary.loyalty_choice ? summary.loyalty_choice.tier_id : '';
+
+    const rows = tiers.map((t) => {
+      const price = formatMsrp(t.msrp);
+      const input = el('input', { type: 'radio', name: group, value: t.id,
+        id: `tier-${t.id}-${uid}` });
+      input.checked = t.id === current;
+
+      return { value: t.id, input, node: el('p', { className: 'field-inline' }, [
+        input,
+        el('label', { for: input.id }, [
+          el('span', { className: 'tier-product', text: t.product }),
+          price ? el('span', { text: ` — ${price}` }) : null,
+          el('span', { className: 'tier-note',
+            text: `${t.tier_name}, ${t.weeks_required} Sundays` })
+        ])
+      ]) };
+    });
+
+    // No preference is a real answer and has to be sayable, or stepping back up
+    // to "give me the best I earn" would mean asking a professor to delete a
+    // row. It is what a player with no choice recorded is already on.
+    const none = el('input', { type: 'radio', name: group, value: '',
+      id: `tier-none-${uid}` });
+    none.checked = !current;
+
+    rows.push({ value: '', input: none,
+      node: el('p', { className: 'field-inline' }, [
+        none,
+        el('label', { for: none.id }, [
+          el('span', { className: 'tier-product',
+            text: 'Whatever I earn' }),
+          el('span', { className: 'tier-note',
+            text: 'No preference — the best product my Sundays reach' })
+        ])
+      ]) });
+
+    pick = () => {
+      const hit = rows.find((r) => r.input.checked);
+      return hit ? hit.value : undefined;
+    };
+
+    options.replaceChildren(
+      el('p', { className: 'field-help',
+        text: 'Pick the one you would like. You can always take less than you '
+            + 'earn, never more — a product above what you have reached waits '
+            + 'until you reach it.' }),
+      ...rows.map((r) => r.node));
+  }
+
+  const form = el('form', { className: 'request-form choice-form' }, [
+    ...proof.nodes,
+    options,
+    el('p', {}, [save]),
+    status
+  ]);
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const tier = pick();
+    if (tier === undefined) return;
+    if (!form.reportValidity()) return;
+
+    save.disabled = true;
+    status.className = 'form-status';
+    status.textContent = 'Saving.';
+
+    try {
+      const { data, error } = await supabase.rpc('choose_loyalty_product', {
+        ...proof.read(),
+        p_tier_id: tier || null
+      });
+      if (error) throw error;
+
+      save.disabled = false;
+
+      if (!data || !data.ok) {
+        status.className = 'form-status is-error';
+        status.textContent = CHOICE_REFUSALS[data && data.code]
+          || 'That could not be saved. Try again, or ask a professor at league.';
+        return;
+      }
+
+      status.className = 'form-status is-good';
+      status.textContent = choiceLine(data);
+
+      // The card above is now out of date, and it is the thing that carries
+      // this from here on. Redrawing it rather than reloading keeps the panel
+      // open and the fields filled, which matters to somebody who has just
+      // typed their last name and may want to change their mind again.
+      if (onSaved) onSaved(data.choice || null);
+    } catch (err) {
+      console.error(err);
+      save.disabled = false;
+      status.className = 'form-status is-error';
+      status.textContent = 'That could not be saved just now. Try again, or ask '
+        + 'a professor at league.';
+    }
+  });
+
+  const panel = el('details', { className: 'disclosure choice-panel' }, [
+    el('summary', { text: 'Choose which product you want this release' }),
+    el('div', { className: 'disclosure-body' }, [
+      el('p', { className: 'field-help',
+        text: 'Reaching a tier is the right to buy that product at its list '
+            + 'price, not a prize. If the one you have earned costs more than '
+            + 'you want to spend, say so here and the store will have the '
+            + 'smaller one ready for you instead. It shows on your card above '
+            + 'and on the list the store works from.' }),
+      form
+    ])
+  ]);
+
+  // Read when it is opened rather than on every lookup. Most people looking a
+  // Player ID up are reading the card, and two requests each for a panel nobody
+  // unfolded is two requests wasted.
+  let loaded = false;
+  panel.addEventListener('toggle', async () => {
+    if (!panel.open || loaded) return;
+    loaded = true;
+
+    try {
+      const open = await openRelease();
+      if (!open) {
+        unavailable(CHOICE_REFUSALS.no_release);
+        return;
+      }
+      if (!open.tiers.length) {
+        unavailable(`No products have been set for ${open.release.name} yet. `
+          + 'Ask a professor.');
+        return;
+      }
+      drawOptions(open.tiers);
+    } catch (err) {
+      console.error(err);
+      options.replaceChildren(problem('This release’s products'));
+      save.disabled = true;
+    }
+  });
+
+  return panel;
+}
+
 async function lookUp(playerId) {
   const id = String(playerId || '').trim();
   if (!id) return;
@@ -369,7 +679,19 @@ async function lookUp(playerId) {
       result.replaceChildren(el('p', { className: 'notice notice-problem', text: NOT_FOUND }));
       return;
     }
-    result.replaceChildren(summaryCard(data), requestPanel(data));
+    // The card carries the chosen product, so saving one in the panel below
+    // leaves it stale. It is redrawn in place rather than by looking the player
+    // up again, which would fold the panel away and empty the fields somebody
+    // may be about to use a second time.
+    let card = summaryCard(data);
+    const panel = tierPanel(data, (choice) => {
+      data.loyalty_choice = choice;
+      const fresh = summaryCard(data);
+      card.replaceWith(fresh);
+      card = fresh;
+    });
+
+    result.replaceChildren(card, panel, requestPanel(data));
     result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch (err) {
     console.error(err);

@@ -27,6 +27,27 @@ let tiers = [];
 
 const TIER_NAMES = ['Crystal', 'Gold', 'Silver'];
 
+// What each level has earned every release so far, and that product's list
+// price. Filled into a tier that does not exist yet, so entering a release is
+// typing three numbers of Sundays rather than retyping the same three products
+// and three prices every time.
+//
+// They are a starting point, not a rule. Both fields are ordinary inputs and a
+// release that hands over something else is typed over the top, the same
+// bargain the event type presets make on the events screen.
+//
+// THE PRICES ARE DELTA REIGN'S, carried forward by decision. They are the last
+// figures confirmed against a distributor list: a Booster Box is 36 packs at
+// $4.49, a Booster Bundle is 6 at the same, an Elite Trainer Box is $49.99. A
+// set announced at a different price is edited on screen, and these three
+// numbers move with it -- which is the reason the price is a column and not a
+// figure written into the page.
+const TIER_DEFAULTS = {
+  Crystal: { product: 'Booster Box', msrp: '161.64' },
+  Gold: { product: 'Elite Trainer Box', msrp: '49.99' },
+  Silver: { product: 'Booster Bundle', msrp: '26.94' }
+};
+
 const DAY = new Intl.DateTimeFormat('en-US', {
   month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York'
 });
@@ -540,23 +561,40 @@ function tierRows(release) {
 
   const fields = TIER_NAMES.map((tierName) => {
     const existing = mine.find((t) => t.tier_name === tierName);
+    const usual = TIER_DEFAULTS[tierName];
     const weeks = el('input', { type: 'number', step: '1', min: '0',
       value: existing ? existing.weeks_required : '' });
-    const product = el('input', { value: existing ? existing.product : '' });
-    inputs.set(tierName, { weeks, product, existing });
+    // A tier that already exists shows what was saved. A tier that does not
+    // starts on the usual product and price; the Sundays stay empty, because
+    // those are the one thing that genuinely moves release to release and the
+    // one thing a guess here could get quietly wrong.
+    const product = el('input', { value: existing ? existing.product : usual.product });
+    const msrp = el('input', { type: 'number', step: '0.01', min: '0',
+      value: existing ? (existing.msrp ?? '') : usual.msrp });
+    inputs.set(tierName, { weeks, product, msrp, existing });
     return el('div', { className: 'tier-row' }, [
       el('h5', { text: tierName }),
       field('Sundays needed', weeks),
-      field('What it earns', product)
+      field('What it earns', product),
+      field('Its price, for the player to pay', msrp)
     ]);
   });
 
   const go = el('button', { type: 'submit', className: 'button button-quiet', text: 'Save tiers' });
 
   const form = el('form', {}, [
+    // The Sundays alone decide whether a tier exists. It used to take clearing
+    // the product as well, which stopped working the moment the product arrived
+    // prefilled: a professor dropping Crystal would have had to delete a word
+    // they never typed, and leaving it would have put the tier back.
     el('p', { className: 'field-help',
-      text: 'Leave both blank to drop a tier from this release. Not every release '
-          + 'has all three, and the thresholds move release to release.' }),
+      text: 'Leave the Sundays blank to drop a tier from this release. Not every '
+          + 'release has all three, and the thresholds move release to release.' }),
+    el('p', { className: 'field-help',
+      text: 'A new tier starts on the product that level usually earns and that '
+          + 'product’s list price. Change either where this release is '
+          + 'different. Leave the price empty and the programs page shows the '
+          + 'product with no price rather than a free one.' }),
     ...fields,
     el('p', {}, [go]),
     note
@@ -573,19 +611,31 @@ function tierRows(release) {
       let order = 0;
 
       for (const tierName of TIER_NAMES) {
-        const { weeks, product, existing } = inputs.get(tierName);
-        const blank = weeks.value.trim() === '' && !product.value.trim();
+        const { weeks, product, msrp, existing } = inputs.get(tierName);
 
-        if (blank) {
+        if (weeks.value.trim() === '') {
           if (existing) drop.push(existing.id);
           continue;
         }
         const n = Number(weeks.value);
         if (!Number.isInteger(n) || n < 0) {
-          throw new Error(`${tierName} needs a whole number of Sundays.`);
+          // No full stop: status() adds one, and these have been printing ".." on
+          // screen since the form was written.
+          throw new Error(`${tierName} needs a whole number of Sundays`);
         }
         if (!product.value.trim()) {
-          throw new Error(`${tierName} needs to say what it earns.`);
+          throw new Error(`${tierName} needs to say what it earns`);
+        }
+        // Empty is null rather than zero: no price recorded and a free product
+        // are different things, and the programs page prints only the first.
+        const price = msrp.value.trim();
+        let amount = null;
+        if (price !== '') {
+          const p = Number(price);
+          if (!Number.isFinite(p) || p < 0) {
+            throw new Error(`${tierName} needs a price of zero or more, or nothing at all`);
+          }
+          amount = Math.round(p * 100) / 100;
         }
         keep.push({
           ...(existing ? { id: existing.id } : {}),
@@ -593,6 +643,7 @@ function tierRows(release) {
           tier_name: tierName,
           weeks_required: n,
           product: product.value.trim(),
+          msrp: amount,
           sort_order: order++
         });
       }

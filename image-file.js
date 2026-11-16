@@ -41,6 +41,13 @@ export const FULL = { edge: 1600, quality: 0.82 };
 export const THUMB = { edge: 480, quality: 0.72 };
 export const TILE = { edge: 800, quality: 0.8 };
 
+// A photograph of a page of writing -- a deck list on paper, so far. Text is
+// the one subject where downscaling destroys the content rather than softening
+// it: 800px of booster box is still a booster box, and 800px of a sixty-card
+// list is a grey smear. A longer edge and a higher quality, because a picture
+// of a list is only worth storing if it can be read.
+export const DOCUMENT = { edge: 2000, quality: 0.88 };
+
 // The longest edge goes to `edge`, and nothing is ever enlarged: a small
 // picture stays small rather than being blown up into a soft one.
 function fit(width, height, edge) {

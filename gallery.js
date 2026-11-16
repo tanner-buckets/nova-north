@@ -192,9 +192,9 @@ viewer.addEventListener('click', (e) => {
 // --- Sending one in ----------------------------------------------------------
 
 const REFUSALS = {
-  not_matched: 'We could not match that Player ID and first name. Both have to '
-    + 'be the ones on the player’s own account — check them with a professor if '
-    + 'you are not sure.',
+  not_matched: 'We could not match that Player ID, last name and birth year. '
+    + 'All three have to be the ones on the player’s own account — check them '
+    + 'with a professor if you are not sure.',
   too_many: 'That is a lot of photos from one person today. Try again tomorrow, '
     + 'or hand the rest to a professor at league.',
   already_submitted: 'That photo looks like it has already been sent. '
@@ -209,8 +209,15 @@ function submissionForm() {
     autocomplete: 'off', placeholder: 'Optional. A few words about the day.' });
   const playerId = el('input', { id: 'submit-player-id', inputmode: 'numeric',
     autocomplete: 'off', required: 'required', placeholder: 'e.g. 1234567' });
-  const firstName = el('input', { id: 'submit-first-name', type: 'text',
-    autocomplete: 'given-name', required: 'required' });
+  // Last name and birth year, not a first name. A first name is published as
+  // "Maya R." for every listed player, so it proved nothing against a Player ID
+  // that is published beside it; neither of these is public at any consent
+  // level. Both are checked in the database and neither comes back.
+  const lastName = el('input', { id: 'submit-last-name', type: 'text',
+    autocomplete: 'family-name', required: 'required' });
+  const birthYear = el('input', { id: 'submit-birth-year', type: 'number',
+    inputmode: 'numeric', autocomplete: 'off', required: 'required',
+    min: '1900', max: String(new Date().getFullYear()), placeholder: 'e.g. 2014' });
 
   const note = el('p', { className: 'form-status', role: 'status' });
   const preview = el('div', { className: 'submit-preview' });
@@ -258,11 +265,14 @@ function submissionForm() {
       el('label', { for: playerId.id, text: 'Your Player ID' }), playerId
     ]),
     el('p', { className: 'field' }, [
-      el('label', { for: firstName.id, text: 'Your first name' }), firstName
+      el('label', { for: lastName.id, text: 'Your last name' }), lastName
+    ]),
+    el('p', { className: 'field' }, [
+      el('label', { for: birthYear.id, text: 'The year you were born' }), birthYear
     ]),
     el('p', { className: 'field-help',
-      text: 'So a professor knows who sent it, and who to ask about it. Neither '
-          + 'is ever shown on this page.' }),
+      text: 'So a professor knows who sent it, and who to ask about it. None of '
+          + 'the three is ever shown on this page.' }),
     el('p', {}, [go]),
     note
   ]);
@@ -290,7 +300,8 @@ function submissionForm() {
 
       const { data, error } = await supabase.rpc('submit_gallery_photo', {
         p_player_id: playerId.value,
-        p_first_name: firstName.value,
+        p_last_name: lastName.value,
+        p_birth_year: birthYear.value.trim() === '' ? null : Number(birthYear.value),
         p_storage_path: paths.full,
         p_thumb_path: paths.thumb,
         p_width: ready.width,

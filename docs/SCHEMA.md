@@ -144,13 +144,63 @@ Public read. Professor write. One set of rows per release.
 | `id` | uuid PK | |
 | `release_id` | uuid FK | |
 | `tier_name` | text | `Crystal`, `Gold`, or `Silver`. Check constraint. |
-| `product` | text | What the tier earns this release |
+| `product` | text | What the tier earns the right to buy this release |
+| `msrp` | numeric(10,2) | The product's list price. Nullable; null is not zero |
 | `weeks_required` | int | |
 | `sort_order` | int | Crystal highest |
 
 Tier names are stable across releases. Product, thresholds, and tier count vary —
 a release may have two tiers instead of three. Unique on
 (`release_id`, `tier_name`).
+
+`msrp` is what the player pays, not what they are given. A null means nobody has
+recorded a price, and every surface prints the product with no price rather than
+a free one; zero is a real value and means free. The admin form fills a new tier
+with the product that level usually earns and that product's list price, which
+are defaults a professor types over, not rules.
+
+Unique on (`id`, `release_id`) as well, which exists only so
+`loyalty_tier_choices` can point at a tier and its release together.
+
+### `loyalty_tier_choices`
+Professor read, and public read **through `get_player_summary()` only**. No
+write grant at all: the only way a row appears is `choose_loyalty_product()`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `release_id` | uuid | Half of the composite FK below |
+| `player_id` | text FK | |
+| `tier_id` | uuid | The tier whose **product** they want. FK (`tier_id`, `release_id`) → `loyalty_tiers`, on delete cascade |
+| `chosen_at` | timestamptz | |
+
+Which product a player wants for one release. Unique on (`release_id`,
+`player_id`): one answer per release, and a new release starts everybody blank.
+
+**A product, not a tier name.** Crystal, Gold and Silver are how the thresholds
+are written down; what a player is choosing between is a Booster Box, an Elite
+Trainer Box and a Booster Bundle. The write takes the tier's **id**, because the
+row is what identifies a product — `product` is free text a professor retypes on
+the releases screen.
+
+**A choice is a ceiling, never a claim.** It grants nothing: what a player may
+buy is still the tier they reached, so nothing checks the weeks when one is
+recorded. The printed loyalty sheet moves them into the chosen product's group
+**only where their Sundays reach that product's tier**, with a line under the
+name saying which tier they actually earned; otherwise they stay where they
+earned and the choice waits.
+
+**Public, through `get_player_summary()`**, under the loyalty figure on their
+card. The decision was weighed the other way first. What settles it is that the
+summary returns null outright for a player whose ID visibility is not in force,
+so the cards this can appear on belong to people who asked to be listed — the
+adults, in this league. A child's card is not public.
+
+The composite foreign key is what makes a tier from another release impossible,
+rather than a check in the function. `on delete cascade` is deliberate: a tier a
+professor removes from a release takes any preference for it with it, because a
+choice of a product nobody can reach is not history worth keeping. The record of
+a finished release is `loyalty_results`, which this does not touch.
 
 ### `loyalty_results`
 Professor read/write. No public access. Historical record for a completed release.
@@ -322,10 +372,14 @@ is the browse and lookup list.
 `SECURITY DEFINER`, granted to anon.
 
 **`get_player_summary(p_player_id text)`**
-Returns display label, point balance, loyalty weeks this release, tier earned, and
-transaction history — **only if `id_visible` is true**. Returns nothing for an
-unknown ID and nothing for a player without ID visibility. Never returns last
-name, birth year, contact, division, or notes.
+Returns display label, point balance, loyalty weeks this release, tier earned,
+the product they asked for (`loyalty_choice`, with `reached`), and transaction
+history — **only if `id_visible` is true**. Returns nothing for an unknown ID and
+nothing for a player without ID visibility. Never returns last name, birth year,
+contact, division, or notes.
+
+It is the only thing a player card reads. A field the card needs belongs here,
+not in a second call the page would have to keep in step with this one.
 
 **`get_event_results(p_event_id uuid)`**
 Returns the complete ordered result set using `display_label`, so non-consented
@@ -338,15 +392,67 @@ for that division, assigns confirmed or waitlist status, returns which was given
 and the waitlist position. Doing this in a function rather than a direct insert
 prevents a caller writing their own status.
 
-**`request_drop(p_player_id text, p_first_name text, p_event_id uuid)`**
-Requires both Player ID and matching first name. Sets status to `drop_requested`.
-Does not remove the registration.
+**`request_drop(p_player_id text, p_last_name text, p_birth_year int, p_event_id uuid)`**
+Requires Player ID, last name and birth year, matched against the **registration
+row** rather than the player row — a drop is about one booking, and the person
+asking is proving they made it. Sets status to `drop_requested`. Does not remove
+the registration. Answers identically whether or not anything matched.
+
+**`request_visibility(p_player_id text, p_last_name text, p_birth_year int, ...)`**
+Writes a `visibility_requests` row and changes nothing else. A professor decides.
+
+**`submit_gallery_photo(p_player_id text, p_last_name text, p_birth_year int, ...)`**
+The only public way to create a gallery row. Always lands on `pending`.
+
+**`choose_loyalty_product(p_player_id text, p_last_name text, p_birth_year int, p_tier_id uuid)`**
+Records which product they want for the open release, or clears it when
+`p_tier_id` is null. A ceiling, never a grant. Refuses `no_release` when no
+window is open or the release is finalized, and `unknown_product` for a tier
+that is not on it. Takes effect immediately, unlike `request_visibility()`: it
+records a preference about a purchase on a card that is already public, so there
+is no consent to record and nothing for a professor to decide.
+
+**There is no matching read.** `get_player_summary()` is the only thing a player
+card reads and it returns `loyalty_choice` with the rest — a second call the
+page had to keep in step with it is what that rule exists to prevent. It is also
+why the form opens on what is already recorded rather than on nothing.
+
+### Proving who you are
+
+The four public functions a player fills in by hand — `request_drop()`,
+`request_visibility()`, `submit_gallery_photo()` and
+`choose_loyalty_product()` — share one check, `player_identity_matches()`:
+Player ID, **last name and birth year**. It guards the write; nothing is read
+back through it.
+
+It used to be Player ID and **first name**, which was not a proof. A first name
+is published as "Maya R." for every listed player, and the player list prints it
+beside the Player ID — so both halves were already on screen. A last name and a
+birth year are in the never-public list and no page renders either.
+
+- **One refusal covers all three fields.** Telling a wrong ID from a wrong name
+  apart would make these forms a way to test which Player IDs exist.
+- **Birth year is asked for, never shown.** Nothing returns it, nothing writes
+  it, and only the year is ever typed.
+- **A player whose `birth_year` is null falls back to the last name alone.**
+  Some rows predate the registration form, and the alternative is somebody who
+  can never prove who they are and is told only that nothing matched. It fixes
+  itself when a professor records the year.
+- **`player_identity_matches()` itself is not callable from a browser.** Execute
+  is revoked from `anon` and `authenticated`: a boolean answering "is this the
+  right birth year" is a guessing oracle with no rate limit on it. The callers
+  are `SECURITY DEFINER` and run as the owner.
 
 **`check_registration(p_player_id text, p_first_name text, p_event_id uuid)`**
-Read only. Same proof as `request_drop()`. Returns `found`, the status, and on the
-waiting list the current place in the queue (not the stored position, which keeps
-gaps). Every kind of no-match returns the same `found: false`. Never returns
-division.
+Read only. Player ID and the first name on the registration. Returns `found`, the
+status, and on the waiting list the current place in the queue (not the stored
+position, which keeps gaps). Every kind of no-match returns the same
+`found: false`. Never returns division.
+
+It was written to take the same proof `request_drop()` takes, and that proof has
+since moved to last name and birth year. **This is the one public form still on
+Player ID and first name**, which are both on screen for any listed player.
+Moving it is a migration plus a field on the form.
 
 ---
 

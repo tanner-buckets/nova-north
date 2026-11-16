@@ -271,9 +271,20 @@ export function cancelForm(event) {
       el('label', { for: `cancel-id-${event.id}`, text: 'Player ID' }),
       el('input', { id: `cancel-id-${event.id}`, name: 'player_id', required: 'required', inputmode: 'numeric' })
     ]),
+    // Last name and birth year, not a first name. These are checked against the
+    // REGISTRATION rather than the player row -- a drop is about one booking,
+    // and the person asking is proving they are the one who made it. Both were
+    // typed into the register form above and neither is public anywhere.
     el('p', { className: 'field' }, [
-      el('label', { for: `cancel-name-${event.id}`, text: 'First name' }),
-      el('input', { id: `cancel-name-${event.id}`, name: 'first_name', required: 'required' })
+      el('label', { for: `cancel-name-${event.id}`, text: 'Last name' }),
+      el('input', { id: `cancel-name-${event.id}`, name: 'last_name',
+        autocomplete: 'family-name', required: 'required' })
+    ]),
+    el('p', { className: 'field' }, [
+      el('label', { for: `cancel-year-${event.id}`, text: 'Birth year' }),
+      el('input', { id: `cancel-year-${event.id}`, name: 'birth_year',
+        type: 'number', inputmode: 'numeric', required: 'required',
+        min: '1900', max: String(new Date().getFullYear()), placeholder: 'e.g. 2014' })
     ]),
     el('p', {}, [el('button', { type: 'submit', className: 'button button-quiet', text: 'Request cancellation' })]),
     status
@@ -289,7 +300,9 @@ export function cancelForm(event) {
     const data = Object.fromEntries(new FormData(form).entries());
     const { error } = await supabase.rpc('request_drop', {
       p_player_id: data.player_id,
-      p_first_name: data.first_name,
+      p_last_name: data.last_name,
+      p_birth_year: String(data.birth_year).trim() === ''
+        ? null : Number(data.birth_year),
       p_event_id: event.id
     });
 

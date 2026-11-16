@@ -18,7 +18,7 @@ Every page carries the strapline "A Play! Pokémon league at Continental Cards,
 Ashburn" under the name, so a visitor landing on any page knows what and where
 this is.
 
-Registration opens Sundays at 2:00 PM and play begins at 2:30 PM, at
+Check-in opens Sundays at 2:00 PM and play begins at 2:30 PM, at
 Continental Cards Tournament Location, 21140 Ashburn Crossing Dr #110, Ashburn,
 VA 20147. **2:00 is the time the site leads with**, everywhere a single time is
 shown: it is the one a player needs to act on.
@@ -181,6 +181,40 @@ way to tell from the file who is in it. A person decides, every time.
   and nothing else — the stripping is a consequence of resizing rather than a
   step that can be forgotten.
 
+### Proving who you are
+
+Four public forms let a player change something about themselves: the visibility
+request (which also carries a TCG Live name), the gallery submission, the drop
+request, and the loyalty product choice. All four ask for the same proof —
+**Player ID, last name and birth year** — checked by
+`player_identity_matches()`. The proof guards the **write**; nothing is read
+back through it.
+
+**It used to be Player ID and first name, and that was not a proof.**
+`display_label()` publishes "Maya R." for every listed player, and the player
+list prints it with the Player ID beside it: for anybody listed, both halves
+were already on screen. A last name and a birth year are in the never-public
+list at the top of this file, no page renders either, and `get_player_summary()`
+does not return them. That is what makes them worth asking for.
+
+- **One refusal covers every field.** Telling a wrong ID from a wrong name apart
+  would make these forms a way to test which Player IDs exist and then guess
+  details against the ones that do.
+- **Birth year is asked for, never shown.** Nothing returns it, nothing writes
+  it, and only the year is ever typed — the rule against storing a full date of
+  birth is untouched. The registration form already asks a player for their own.
+- **A player whose birth year is null falls back to the last name alone.** Some
+  rows predate the registration form. The alternative is somebody who can never
+  prove who they are and is told only that nothing matched, and a last name is
+  still never public, so this is a weaker proof rather than none. It fixes
+  itself the moment a professor records the year.
+- **`player_identity_matches()` is not callable from a browser.** Execute is
+  revoked from `anon` and `authenticated`: a boolean answering "is this the
+  right birth year" is a guessing oracle with nothing rate-limiting it. The four
+  callers are `SECURITY DEFINER` and run as the owner.
+- **The drop request is the one matched against the registration row** rather
+  than the player row, because it is proving who made a booking.
+
 ### Implementation rules
 
 - **Row Level Security is row-level, not column-level.** Hiding a column requires
@@ -214,10 +248,8 @@ top of `admin/consent.html` and decides, and the decision goes through
 - **Untouched means "leave it alone".** Each switch is three-state. A form that
   sent false for everything nobody ticked would read as a request to be hidden
   from somebody who only wanted to add a TCG Live name.
-- **Player ID and first name together**, the same proof a drop request and a
-  gallery submission ask for, with **one refusal covering both** — telling a
-  wrong ID from a wrong name apart would make this a way to test which Player
-  IDs exist.
+- **Player ID, last name and birth year**, the same proof every other player
+  form asks for. See **Proving who you are** above.
 - **One pending request per player.** A second submission updates the first, so
   correcting a typo does not leave a professor two rows to reconcile.
 - **The review row says whether the player is under 18**, because guardian
@@ -326,6 +358,87 @@ it runs.
 - Loyalty resets each **release**. A release has a date window and its own tiers.
   Tier names are Crystal, Gold, and Silver; the product each earns, the
   thresholds, and the number of tiers vary per release.
+- **A tier earns the right to buy at MSRP, and the price is on the page.**
+  `loyalty_tiers.msrp` is the product's list price, shown under the product on
+  the programs page and beside it on the printed loyalty sheet. The page had
+  always carried "at MSRP" in a column heading and never a figure, which does
+  not answer the question somebody weighing eleven Sundays is asking, and sent
+  whoever is on the till looking a price up with a player standing there.
+  - **Null is not zero, anywhere.** No price recorded and a free product are
+    different facts. A null prints nothing; a zero would print as free. Both
+    surfaces test for it, which is the whole reason the column is nullable with
+    no default rather than defaulting to 0.
+  - **numeric, not a float.** 161.64 is 36 packs at 4.49 and binary floating
+    point does not hold it.
+  - **The admin form fills a new tier with the usual product and its price.**
+    Crystal is a Booster Box at $161.64, Gold an Elite Trainer Box at $49.99,
+    Silver a Booster Bundle at $26.94 — the standard Mega Evolution prices, and
+    what every release has used so far. They are defaults a professor types
+    over, like the event type presets, not rules. An existing tier always shows
+    what was saved and never reaches for one.
+  - **Only the Sundays decide whether a tier exists.** It used to take clearing
+    the Sundays *and* the product, which stopped working the moment the product
+    arrived prefilled: dropping a tier would have meant deleting a word nobody
+    typed, and leaving it would have put the tier back.
+  - **A price in the data is not a price announced by the publisher, and the
+    defaults are last verified rather than current.** Delta Reign's prices are
+    the ones confirmed against a distributor list. Flowing Fists does not
+    release until 5 February 2027 and its prices are not published, so it
+    carries Delta Reign's, by decision rather than assumption, and so do the
+    defaults for every release after it. When a set is announced at a different
+    price, correct the rows on the releases screen and move `TIER_DEFAULTS` on
+    in the same breath. Never write a price into page code.
+- **A player can say which PRODUCT they want, and it is a ceiling.** Reaching
+  Crystal is the right to buy a Booster Box at $161.64, which is a lot of money
+  to a family, and somebody who turned up eleven Sundays may want the Elite
+  Trainer Box or the Bundle instead. `loyalty_tier_choices` is one row per
+  (release, player), written only by `choose_loyalty_product()`, from the panel
+  on `players.html`, behind the usual proof.
+  - **A product, not a tier name.** Crystal, Gold and Silver are how the
+    thresholds are written down; what somebody is deciding between is a Booster
+    Box, an Elite Trainer Box and a Booster Bundle. The form leads with the
+    product and its price and puts the tier and its Sundays in a quiet second
+    line, there to answer "can I take that one yet". What is sent is the tier's
+    **id**, because the row is what identifies a product — a product name is
+    free text a professor can retype on the releases screen.
+  - **It never grants anything.** Asking for a Booster Box on nine Sundays is
+    still nine Sundays. That is why nothing checks the weeks when a choice is
+    recorded: a choice made in week two has to still be right in week eleven.
+  - **Per release, like the tiers themselves.** Products and prices change
+    between sets, so a preference about a Booster Box says nothing about the
+    next one. A new release starts everybody blank.
+  - **It takes effect immediately**, unlike a visibility request. That one is a
+    professor's decision because it publishes something about a child and needs
+    consent recorded against it; this records a preference about a purchase, on
+    a card that is already public, and a player at home should not need approval
+    to answer a question about their own money.
+  - **It is public, under the loyalty figure on their own card.** It was weighed
+    the other way first, on the grounds that the commonest reason to take the
+    smaller product is that it costs less. What settles it is that a card is
+    only reachable through `get_player_summary()`, which returns nothing at all
+    for a player whose ID visibility is not in force — so the cards this can
+    appear on belong to people who asked to be listed, which in this league is
+    the adults. A child's card is not public, so there is nothing on it to
+    protect.
+  - **There is no second read.** `get_player_summary()` is the only thing a
+    player card reads, and it carries the choice the way it carries the tier.
+    That is also why the form **opens on what is already recorded** rather than
+    on nothing: the page knows, and an untouched Save is then a no-op rather
+    than an ambiguous one.
+  - **`reached` is decided in the database, not on the card.** The page would
+    need the tier's threshold to work it out, and the threshold is not otherwise
+    on the card.
+  - **On the printed sheet the player MOVES into the product they chose**, with
+    a line under their name saying which tier they actually earned. The sheet is
+    grouped by the product being handed over, and a till works down a group and
+    hands out the thing in the heading — a row sitting in the Crystal list that
+    is secretly a Booster Bundle is the mistake this is built to prevent.
+  - **Only where their Sundays reach that product's tier.** Otherwise they stay
+    where they earned, unmarked, and the choice waits. The sheet is what the
+    store hands out against, and a wish is not a place in a list.
+  - **The earned tier rides under the name, not in a column of its own.** Most
+    rows do not have one, and a column of empty cells on paper read at a till is
+    a column somebody has to check and then ignore.
 - Prize points **never reset**.
 - Attendance can come from a TDF upload or manual professor entry. Both grant
   prize points and a loyalty week. Manual entry has a date field defaulting to
@@ -336,17 +449,27 @@ it runs.
 - When a drop is confirmed, promote the top waitlist entry **skipping anyone who
   already holds a confirmed spot in that linked group**. Show the professor an
   on-screen confirmation naming who was promoted.
-- Drop requests require Player ID **and** matching name, and do not take effect
-  until a professor confirms.
+- Drop requests require Player ID, last name **and** birth year, and do not take
+  effect until a professor confirms. They are matched against the **registration
+  row**, not the player row: a drop is about one booking, and the person asking
+  is proving they are the one who made it.
 - **A player checks a registration on the event card, not the player page.**
   "Check my registration" sits between Register and Cancel and calls
-  `check_registration()` with Player ID and first name -- the drop proof -- and
-  every kind of no-match gets the same answer. Showing registrations on a public
+  `check_registration()` with Player ID and the first name on the registration,
+  and every kind of no-match gets the same answer. Showing registrations on a public
   player card was considered and refused: who registered is never public, and
   the lookup only finds a player who is public, which a first-timer or a child is
   not. The check reads the registration row, so it needs no player record. It
   stays after registration closes, because the morning of the event is when
   "am I in?" is asked.
+  - **It is the one public form still on the first-name proof, and that is
+    unfinished work rather than a decision.** It was written to take "the same
+    proof `request_drop()` takes", and that proof has since moved to last name
+    and birth year — see **Proving who you are** under the privacy rules.
+    Player ID and first name are both on screen for any listed player, so as it
+    stands somebody can ask whether a named player is registered for an event,
+    and a pre-registration list is never public. Moving it is a migration and a
+    field on the form; nothing else depends on the pair.
 - **The waiting list place a player is told is their place now**, counted from
   the live queue, not the stored `waitlist_position`, which keeps its gaps after
   promotions. It is a place in the queue and not a promise of the next spot:
@@ -442,13 +565,22 @@ it runs.
   no desk time. The card used to lead with the start time and put the desk time
   in small print underneath: accurate, and still read as "turn up at half past",
   because the big number is the one people take away. That is the failure this
-  is built around — a player arriving at 2:30 has missed registration.
-- **The line underneath carries both times in one sentence**, "Registration
-  opens at 2:00 PM and the event begins at 2:30 PM." Neither time appears
-  without the other, so neither can be read alone and acted on wrongly. It was
-  briefly worded as "sign-in" to avoid colliding with the register form on the
-  same card; naming both times is what actually resolves that, and the sentence
-  is now the same on the schedule, the event page and the home page.
+  is built around — a player arriving at 2:30 has missed check-in.
+- **The line underneath carries both times in one sentence**, "Check-in opens
+  at 2:00 PM and the event begins at 2:30 PM." Neither time appears without the
+  other, so neither can be read alone and acted on wrongly. The sentence is the
+  same on the schedule, the event page and the home page.
+- **The day-of word is check-in, and registration means pre-registration.**
+  The line said "Registration opens at 11:00 AM" on a card whose register form
+  was already open and had been since the event was created — two things called
+  registration on one card, opening at different times, one of them a desk in a
+  shop and the other a button an inch away. Check-in names the desk and leaves
+  registration meaning one thing. It was briefly "sign-in" for the same reason
+  and in only some places, which left three words for one fact; the admin
+  field's label and the Trainer Card handout's footer now say check-in too.
+  **Nothing about pre-registration is reworded**: the register and cancel
+  forms, the closing rule and `register_for_event()` all still say registration,
+  because that is what they are.
 - **This is display only.** `starts_at` is still when play starts and still what
   every rule keys on, and the admin form still asks for the two times exactly as
   it did. Nothing about the data changed when the wording did.
@@ -654,6 +786,49 @@ personal data in a catalogue of what is on a shelf.
   a gold Regional winner is two pills that look the same and mean different
   kinds of thing. Silver also stays clear of the warm pale grey Needs updating
   wears, so the two statuses read apart at a glance.
+- **A deck list is a link, the list itself, or a picture of it**, and the shelf
+  reads the same for all three: *See the deck list*. A link goes out to the
+  site holding it; the other two open in a disclosure on the page, because the
+  list is already there and a second page to read it is a tap for nothing. The
+  shelf only ever had the link, which works for a deck somebody put on
+  Limitless and for no other kind: a deck built out of what was in the box has
+  no URL, and its list is a sheet of paper in the deck box or a block of text
+  in a message. Both of those are a deck list, and "no list recorded" was all
+  the page could say about them.
+  - **Exactly one way at a time**, the same rule as status and for the same
+    reason: a row holding a link and a pasted copy holds two lists, and they
+    disagree the first time one of them is corrected. A check constraint
+    refuses the pair, and the professor screen picks the way and clears the
+    other two — so the constraint is a backstop nobody meets.
+  - **Pasted text is the better of the two new ways, and the screen says so.**
+    Text can be read aloud, searched, and copied into the game; a picture can
+    do none of those, and its `alt` can only say that it is a photograph of a
+    list. A picture is for a list that exists only on paper.
+  - **The copy button is the point of holding it as text.** The format the game
+    exports is the format it imports, and selecting forty lines on a phone to
+    get at it is what would send somebody back to a photograph. A browser can
+    refuse the clipboard, so the button says so and points at selecting it by
+    hand rather than appearing to do nothing.
+  - **A picture is stored at 2000px, not the prize wall's 800.** Text is the
+    one subject where downscaling destroys the content rather than softening
+    it: 800px of booster box is still a booster box, and 800px of a sixty-card
+    list is a grey smear. `DOCUMENT` in `image-file.js`, and the professor's
+    preview is large enough to check the writing survived — if it cannot be
+    read there, it cannot be read on the shelf.
+  - **The `deck-lists` bucket is public**, like `prize-art` and unlike
+    `gallery`: a deck list is a list of cards, there is nobody in it, and the
+    page that shows it is open to everybody. Only a professor writes to it.
+    The picture still goes through `image-file.js`, which is what strips the
+    camera and GPS details — a list photographed at a kitchen table carries the
+    coordinates of the kitchen.
+  - **The picture is uploaded before the row is written**, and the old object
+    is deleted only once the row has stopped pointing at it — the same bargain
+    the prize wall makes, and it covers moving a deck from a picture to a link
+    as well as replacing one.
+  - **`admin/deck-list-image.js` is deliberately not `prize-art.js`.** The
+    shared thing is the guard, and that is `image-file.js`. What differs is
+    everything a copy would have had to fork anyway: the bucket, the rendition,
+    and a preview sized for reading rather than for recognising.
 - **Status is not a tag.** `rental_decks.status` is a column with a check,
   because exactly one of *current* and *needs updating* is true at a time and a
   deck wearing both would tell a player two different things. Everything else is
@@ -838,10 +1013,9 @@ privacy rules are above, under **Photographs**; these are the mechanics.
   clears a 50MP phone at full resolution and still refuses an 8000 by 8000
   square. Test a change to it against a real phone photograph, not against
   arithmetic.
-- **A submission is not anonymous.** Player ID and first name together, the same
-  proof a drop request asks for, and **one refusal covers both** a wrong ID and
-  a wrong name — telling them apart would make the form a way to test which
-  Player IDs exist.
+- **A submission is not anonymous.** Player ID, last name and birth year, the
+  same proof every other player form asks for — see **Proving who you are**
+  under the privacy rules.
 - **The files are uploaded before the row is written.** Either order strands
   something when the other half fails, and this is the half that fails
   harmlessly: two objects nothing points at, in a bucket nothing lists. The
@@ -1446,6 +1620,7 @@ gallery.html        approved photographs, and the form that sends one in
 charter.html        the mission and values, professor-only until the draft lands
 chaos-cup.html      what a Chaos Cup is, and example rules
 rentals.js          the rental shelf and bounty list on the programs page
+admin/deck-list-image.js  a photographed deck list: picking, resizing, storing
 home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
 admin/staff.html    the staffing roster, availability and event staffing

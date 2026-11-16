@@ -278,7 +278,7 @@ main {
   font-size: 1.15rem;
 }
 
-/* Missing the sign-in time means missing the day, so it gets its own marked line. */
+/* Missing the check-in time means missing the day, so it gets its own marked line. */
 .meets-deadline {
   font-weight: 600;
   border-left: 4px solid var(--amber);
@@ -771,6 +771,16 @@ h3 {
   font-size: 0.9rem;
   color: var(--muted);
   margin-top: 1rem;
+}
+
+/* The list price, on its own line under the product. Beside it on a narrow
+   screen the price is what wraps, and a price orphaned on the next line reads
+   as belonging to the row below. */
+.tier-msrp {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .release-window {
@@ -1735,6 +1745,18 @@ a.player-button:hover .player-label {
 .sheet-table .sheet-tick {
   width: 3rem;
 }
+/* What a player asked for instead of their tier's own product, under their name
+   on the loyalty sheet. Full ink and italic rather than a grey: this is read at
+   a till, often off a cheap printer, and a recessive grey is the first thing to
+   come out faint. It only ever appears on the rows that have one, so it is a
+   line in a cell rather than a column of mostly nothing. */
+.sheet-instead {
+  display: block;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--ink);
+}
+
 .sheet-table tbody .sheet-tick::before {
   content: "";
   display: inline-block;
@@ -3464,6 +3486,48 @@ h1.event-name + .event-when {
   gap: 0.35rem;
 }
 
+/* --- Choosing which product you want -------------------------------------------- */
+.choice-panel { margin-top: 1rem; }
+
+/* One box around the products, so the radios read as one question rather than
+   as loose controls between two text fields. The same shape .want uses. */
+.tier-choices {
+  margin: 0 0 0.9rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.tier-choices .field-help { margin: 0 0 0.6rem; }
+
+/* Every option is two lines -- the product and its price, then the tier and its
+   Sundays underneath -- so the radio aligns to the top of the label rather than
+   to the middle of both.
+
+   display:flex has to be said here. .field-inline on its own only sets the
+   direction: it is written for a `.field .field-inline` pair, and these are not
+   fields. Without it the label stays inline and .tier-note, which is a block,
+   breaks out to the left of the radio instead of sitting under the product. */
+.tier-choices .field-inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+}
+.tier-choices .field-inline:last-child { margin-bottom: 0; }
+.tier-choices .field-inline input { margin-top: 0.15rem; }
+.tier-choices label { flex: 1; }
+
+/* The product leads, because the product is what is being chosen. */
+.tier-product { font-weight: 700; }
+
+.tier-note {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
 /* --- The professor's review queue ---------------------------------------------- */
 .request-review h3 {
   display: flex;
@@ -3637,9 +3701,74 @@ h1.event-name + .event-when {
 
 .rental-deck p + p { margin-top: 0.3rem; }
 
+/* A deck list given as text or as a picture opens on the page rather than at
+   another site. Folded away, because a sixty-card list is forty lines and a
+   shelf of six decks would otherwise be a page of lists with the decks lost
+   somewhere in between. */
+.deck-list { margin-top: 0.4rem; }
+.deck-list > summary {
+  cursor: pointer;
+  color: var(--gold);
+  font-size: 0.95rem;
+}
+.deck-list-body { margin-top: 0.5rem; }
+
+/* pre-wrap rather than pre: the lines are short, but a phone is narrower than
+   some of them and a list that scrolls sideways is a list nobody reads. The
+   height cap is what keeps the shelf a shelf once one is open. */
+.deck-list-text {
+  margin: 0;
+  max-height: 22rem;
+  overflow: auto;
+  padding: 0.6rem 0.7rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.deck-list-actions {
+  margin: 0.4rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.deck-list-copied {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* Shown at whatever width the card gives it, and linked to itself so a phone
+   can open it full size and pinch it. A list photographed at arm's length is
+   readable on paper and not in a column this wide. */
+.deck-list-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
 /* --- The professor's rental screen --------------------------------------------- */
 .rental-edit .field { margin-bottom: 0.4rem; }
 .rental-edit .field-help { margin: 0 0 0.7rem; }
+
+/* Bigger than the prize wall's preview, because the question here is not "is
+   that the right box" but "can this be read", and a thumbnail cannot answer
+   it. */
+.deck-list-preview { margin: 0 0 0.6rem; }
+.deck-list-preview-img {
+  display: block;
+  width: 100%;
+  max-width: 26rem;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
 
 .field-label-ish {
   display: block;
