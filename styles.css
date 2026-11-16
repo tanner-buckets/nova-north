@@ -772,6 +772,16 @@ h3 {
   margin-top: 1rem;
 }
 
+/* The list price, on its own line under the product. Beside it on a narrow
+   screen the price is what wraps, and a price orphaned on the next line reads
+   as belonging to the row below. */
+.tier-msrp {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .release-window {
   margin-bottom: 0.5rem;
 }
@@ -1734,6 +1744,18 @@ a.player-button:hover .player-label {
 .sheet-table .sheet-tick {
   width: 3rem;
 }
+/* What a player asked for instead of their tier's own product, under their name
+   on the loyalty sheet. Full ink and italic rather than a grey: this is read at
+   a till, often off a cheap printer, and a recessive grey is the first thing to
+   come out faint. It only ever appears on the rows that have one, so it is a
+   line in a cell rather than a column of mostly nothing. */
+.sheet-instead {
+  display: block;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--ink);
+}
+
 .sheet-table tbody .sheet-tick::before {
   content: "";
   display: inline-block;
@@ -3461,6 +3483,48 @@ h1.event-name + .event-when {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+}
+
+/* --- Choosing which product you want -------------------------------------------- */
+.choice-panel { margin-top: 1rem; }
+
+/* One box around the products, so the radios read as one question rather than
+   as loose controls between two text fields. The same shape .want uses. */
+.tier-choices {
+  margin: 0 0 0.9rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.tier-choices .field-help { margin: 0 0 0.6rem; }
+
+/* Every option is two lines -- the product and its price, then the tier and its
+   Sundays underneath -- so the radio aligns to the top of the label rather than
+   to the middle of both.
+
+   display:flex has to be said here. .field-inline on its own only sets the
+   direction: it is written for a `.field .field-inline` pair, and these are not
+   fields. Without it the label stays inline and .tier-note, which is a block,
+   breaks out to the left of the radio instead of sitting under the product. */
+.tier-choices .field-inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+}
+.tier-choices .field-inline:last-child { margin-bottom: 0; }
+.tier-choices .field-inline input { margin-top: 0.15rem; }
+.tier-choices label { flex: 1; }
+
+/* The product leads, because the product is what is being chosen. */
+.tier-product { font-weight: 700; }
+
+.tier-note {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--muted);
 }
 
 /* --- The professor's review queue ---------------------------------------------- */

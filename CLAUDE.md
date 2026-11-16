@@ -181,6 +181,40 @@ way to tell from the file who is in it. A person decides, every time.
   and nothing else — the stripping is a consequence of resizing rather than a
   step that can be forgotten.
 
+### Proving who you are
+
+Four public forms let a player change something about themselves: the visibility
+request (which also carries a TCG Live name), the gallery submission, the drop
+request, and the loyalty product choice. All four ask for the same proof —
+**Player ID, last name and birth year** — checked by
+`player_identity_matches()`. The proof guards the **write**; nothing is read
+back through it.
+
+**It used to be Player ID and first name, and that was not a proof.**
+`display_label()` publishes "Maya R." for every listed player, and the player
+list prints it with the Player ID beside it: for anybody listed, both halves
+were already on screen. A last name and a birth year are in the never-public
+list at the top of this file, no page renders either, and `get_player_summary()`
+does not return them. That is what makes them worth asking for.
+
+- **One refusal covers every field.** Telling a wrong ID from a wrong name apart
+  would make these forms a way to test which Player IDs exist and then guess
+  details against the ones that do.
+- **Birth year is asked for, never shown.** Nothing returns it, nothing writes
+  it, and only the year is ever typed — the rule against storing a full date of
+  birth is untouched. The registration form already asks a player for their own.
+- **A player whose birth year is null falls back to the last name alone.** Some
+  rows predate the registration form. The alternative is somebody who can never
+  prove who they are and is told only that nothing matched, and a last name is
+  still never public, so this is a weaker proof rather than none. It fixes
+  itself the moment a professor records the year.
+- **`player_identity_matches()` is not callable from a browser.** Execute is
+  revoked from `anon` and `authenticated`: a boolean answering "is this the
+  right birth year" is a guessing oracle with nothing rate-limiting it. The four
+  callers are `SECURITY DEFINER` and run as the owner.
+- **The drop request is the one matched against the registration row** rather
+  than the player row, because it is proving who made a booking.
+
 ### Implementation rules
 
 - **Row Level Security is row-level, not column-level.** Hiding a column requires
@@ -214,10 +248,8 @@ top of `admin/consent.html` and decides, and the decision goes through
 - **Untouched means "leave it alone".** Each switch is three-state. A form that
   sent false for everything nobody ticked would read as a request to be hidden
   from somebody who only wanted to add a TCG Live name.
-- **Player ID and first name together**, the same proof a drop request and a
-  gallery submission ask for, with **one refusal covering both** — telling a
-  wrong ID from a wrong name apart would make this a way to test which Player
-  IDs exist.
+- **Player ID, last name and birth year**, the same proof every other player
+  form asks for. See **Proving who you are** above.
 - **One pending request per player.** A second submission updates the first, so
   correcting a typo does not leave a professor two rows to reconcile.
 - **The review row says whether the player is under 18**, because guardian
@@ -326,6 +358,87 @@ it runs.
 - Loyalty resets each **release**. A release has a date window and its own tiers.
   Tier names are Crystal, Gold, and Silver; the product each earns, the
   thresholds, and the number of tiers vary per release.
+- **A tier earns the right to buy at MSRP, and the price is on the page.**
+  `loyalty_tiers.msrp` is the product's list price, shown under the product on
+  the programs page and beside it on the printed loyalty sheet. The page had
+  always carried "at MSRP" in a column heading and never a figure, which does
+  not answer the question somebody weighing eleven Sundays is asking, and sent
+  whoever is on the till looking a price up with a player standing there.
+  - **Null is not zero, anywhere.** No price recorded and a free product are
+    different facts. A null prints nothing; a zero would print as free. Both
+    surfaces test for it, which is the whole reason the column is nullable with
+    no default rather than defaulting to 0.
+  - **numeric, not a float.** 161.64 is 36 packs at 4.49 and binary floating
+    point does not hold it.
+  - **The admin form fills a new tier with the usual product and its price.**
+    Crystal is a Booster Box at $161.64, Gold an Elite Trainer Box at $49.99,
+    Silver a Booster Bundle at $26.94 — the standard Mega Evolution prices, and
+    what every release has used so far. They are defaults a professor types
+    over, like the event type presets, not rules. An existing tier always shows
+    what was saved and never reaches for one.
+  - **Only the Sundays decide whether a tier exists.** It used to take clearing
+    the Sundays *and* the product, which stopped working the moment the product
+    arrived prefilled: dropping a tier would have meant deleting a word nobody
+    typed, and leaving it would have put the tier back.
+  - **A price in the data is not a price announced by the publisher, and the
+    defaults are last verified rather than current.** Delta Reign's prices are
+    the ones confirmed against a distributor list. Flowing Fists does not
+    release until 5 February 2027 and its prices are not published, so it
+    carries Delta Reign's, by decision rather than assumption, and so do the
+    defaults for every release after it. When a set is announced at a different
+    price, correct the rows on the releases screen and move `TIER_DEFAULTS` on
+    in the same breath. Never write a price into page code.
+- **A player can say which PRODUCT they want, and it is a ceiling.** Reaching
+  Crystal is the right to buy a Booster Box at $161.64, which is a lot of money
+  to a family, and somebody who turned up eleven Sundays may want the Elite
+  Trainer Box or the Bundle instead. `loyalty_tier_choices` is one row per
+  (release, player), written only by `choose_loyalty_product()`, from the panel
+  on `players.html`, behind the usual proof.
+  - **A product, not a tier name.** Crystal, Gold and Silver are how the
+    thresholds are written down; what somebody is deciding between is a Booster
+    Box, an Elite Trainer Box and a Booster Bundle. The form leads with the
+    product and its price and puts the tier and its Sundays in a quiet second
+    line, there to answer "can I take that one yet". What is sent is the tier's
+    **id**, because the row is what identifies a product — a product name is
+    free text a professor can retype on the releases screen.
+  - **It never grants anything.** Asking for a Booster Box on nine Sundays is
+    still nine Sundays. That is why nothing checks the weeks when a choice is
+    recorded: a choice made in week two has to still be right in week eleven.
+  - **Per release, like the tiers themselves.** Products and prices change
+    between sets, so a preference about a Booster Box says nothing about the
+    next one. A new release starts everybody blank.
+  - **It takes effect immediately**, unlike a visibility request. That one is a
+    professor's decision because it publishes something about a child and needs
+    consent recorded against it; this records a preference about a purchase, on
+    a card that is already public, and a player at home should not need approval
+    to answer a question about their own money.
+  - **It is public, under the loyalty figure on their own card.** It was weighed
+    the other way first, on the grounds that the commonest reason to take the
+    smaller product is that it costs less. What settles it is that a card is
+    only reachable through `get_player_summary()`, which returns nothing at all
+    for a player whose ID visibility is not in force — so the cards this can
+    appear on belong to people who asked to be listed, which in this league is
+    the adults. A child's card is not public, so there is nothing on it to
+    protect.
+  - **There is no second read.** `get_player_summary()` is the only thing a
+    player card reads, and it carries the choice the way it carries the tier.
+    That is also why the form **opens on what is already recorded** rather than
+    on nothing: the page knows, and an untouched Save is then a no-op rather
+    than an ambiguous one.
+  - **`reached` is decided in the database, not on the card.** The page would
+    need the tier's threshold to work it out, and the threshold is not otherwise
+    on the card.
+  - **On the printed sheet the player MOVES into the product they chose**, with
+    a line under their name saying which tier they actually earned. The sheet is
+    grouped by the product being handed over, and a till works down a group and
+    hands out the thing in the heading — a row sitting in the Crystal list that
+    is secretly a Booster Bundle is the mistake this is built to prevent.
+  - **Only where their Sundays reach that product's tier.** Otherwise they stay
+    where they earned, unmarked, and the choice waits. The sheet is what the
+    store hands out against, and a wish is not a place in a list.
+  - **The earned tier rides under the name, not in a column of its own.** Most
+    rows do not have one, and a column of empty cells on paper read at a till is
+    a column somebody has to check and then ignore.
 - Prize points **never reset**.
 - Attendance can come from a TDF upload or manual professor entry. Both grant
   prize points and a loyalty week. Manual entry has a date field defaulting to
@@ -336,8 +449,10 @@ it runs.
 - When a drop is confirmed, promote the top waitlist entry **skipping anyone who
   already holds a confirmed spot in that linked group**. Show the professor an
   on-screen confirmation naming who was promoted.
-- Drop requests require Player ID **and** matching name, and do not take effect
-  until a professor confirms.
+- Drop requests require Player ID, last name **and** birth year, and do not take
+  effect until a professor confirms. They are matched against the **registration
+  row**, not the player row: a drop is about one booking, and the person asking
+  is proving they are the one who made it.
 - **Registration closes when the event starts.** Enforced in
   `register_for_event()`, not in page code: the anon key can call the function
   directly, so a check on the schedule is not a check.
@@ -825,10 +940,9 @@ privacy rules are above, under **Photographs**; these are the mechanics.
   clears a 50MP phone at full resolution and still refuses an 8000 by 8000
   square. Test a change to it against a real phone photograph, not against
   arithmetic.
-- **A submission is not anonymous.** Player ID and first name together, the same
-  proof a drop request asks for, and **one refusal covers both** a wrong ID and
-  a wrong name — telling them apart would make the form a way to test which
-  Player IDs exist.
+- **A submission is not anonymous.** Player ID, last name and birth year, the
+  same proof every other player form asks for — see **Proving who you are**
+  under the privacy rules.
 - **The files are uploaded before the row is written.** Either order strands
   something when the other half fails, and this is the half that fails
   harmlessly: two objects nothing points at, in a bucket nothing lists. The

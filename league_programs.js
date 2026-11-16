@@ -1,4 +1,5 @@
-import { supabase, el, problem, badgeTile } from './supabase-client.js';
+import { supabase, el, problem, badgeTile, formatMsrp, openRelease }
+  from './supabase-client.js';
 import { currentProfessor } from './auth.js';
 
 function fill(selector, build) {
@@ -160,25 +161,18 @@ fill('#earning-actions', async () => {
 // --- Loyalty -----------------------------------------------------------------
 
 fill('#loyalty-tiers', async () => {
-  const today = new Date().toISOString().slice(0, 10);
+  // The same read the players page makes before offering a choice of product,
+  // so the two pages cannot disagree about which release is open.
+  const open = await openRelease();
 
-  const { data: releases, error: releaseError } = await supabase
-    .from('releases').select('*')
-    .lte('starts_on', today).gte('ends_on', today)
-    .order('starts_on', { ascending: false }).limit(1);
-  if (releaseError) throw releaseError;
-
-  if (!releases.length) {
+  if (!open) {
     return el('p', {
       className: 'notice notice-quiet',
       text: 'No attendance window is open right now. Ask a professor which release is being counted next.'
     });
   }
 
-  const release = releases[0];
-  const { data: tiers, error: tierError } = await supabase
-    .from('loyalty_tiers').select('*').eq('release_id', release.id).order('weeks_required');
-  if (tierError) throw tierError;
+  const { release, tiers } = open;
 
   const window = new Intl.DateTimeFormat('en-US', {
     month: 'long', day: 'numeric', timeZone: 'UTC'
@@ -193,11 +187,17 @@ fill('#loyalty-tiers', async () => {
     ]),
     tiers.length
       ? table(['Sundays attended', 'You may buy, at MSRP'],
+          // The price rides with the product rather than taking a third column:
+          // this table is read on a phone in a shop, and a tier with no price
+          // recorded would leave an empty cell that reads as free.
           tiers.slice().reverse().map((t) => el('tr', {}, [
             el('th', { scope: 'row', className: 'count', text: t.weeks_required }),
             el('td', {}, [
               el('span', { className: 'tier-name', text: t.tier_name }),
-              el('span', { text: ' — ' + t.product })
+              el('span', { text: ' — ' + t.product }),
+              formatMsrp(t.msrp)
+                ? el('span', { className: 'tier-msrp', text: formatMsrp(t.msrp) })
+                : null
             ])
           ])))
       : el('p', { className: 'notice notice-quiet',

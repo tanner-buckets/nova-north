@@ -2,14 +2,19 @@
 // desk.
 //
 // Both show full names. That is a disclosure to the venue and to the person
-// running the desk, not publication -- these pages are professor-only, nothing
-// here is ever rendered on a public page, and a printed sheet is handed to a
-// person rather than left on the internet. The screen says so, because somebody
-// holding a sheet of children's names should know what they are holding.
+// running the desk, not publication -- these pages are professor-only, no name
+// on either sheet is ever rendered on a public page, and a printed sheet is
+// handed to a person rather than left on the internet. The screen says so,
+// because somebody holding a sheet of children's names should know what they
+// are holding.
+//
+// The one thing on the loyalty sheet that IS public is which product a player
+// asked for, and only on the card of a player who asked to be listed. It is on
+// here because the person at the till is the one handing it over.
 //
 // The output is a print stylesheet, not a generated file. No PDF library.
 import {
-  supabase, el, problem, formatEventDay, formatEventTime,
+  supabase, el, problem, formatEventDay, formatEventTime, formatMsrp,
   DIVISION_ORDER, DIVISION_LABEL
 } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
@@ -73,6 +78,15 @@ async function loyaltyRows(release) {
     .from('players').select('player_id, first_name, last_name').in('player_id', ids);
   if (pErr) throw pErr;
 
+  // Who asked for a smaller product than their Sundays earn. One read for the
+  // whole sheet, unlike the weeks above: there is at most one row per player per
+  // release and no rule to re-derive, so there is nothing to ask per player.
+  const { data: choices, error: cErr } = await supabase
+    .from('loyalty_tier_choices')
+    .select('player_id, tier_id').eq('release_id', release.id);
+  if (cErr) throw cErr;
+  const chosen = new Map((choices || []).map((c) => [c.player_id, c.tier_id]));
+
   const weeks = await Promise.all(ids.map(async (id) => {
     const { data } = await supabase.rpc('loyalty_weeks',
       { p_player_id: id, p_release_id: release.id });
@@ -80,7 +94,11 @@ async function loyaltyRows(release) {
   }));
   const byId = new Map(weeks);
 
-  return (players || []).map((p) => ({ ...p, weeks: byId.get(p.player_id) || 0 }));
+  return (players || []).map((p) => ({
+    ...p,
+    weeks: byId.get(p.player_id) || 0,
+    chosen_tier_id: chosen.get(p.player_id) || null
+  }));
 }
 
 // How close to the bottom tier counts as nearly there. Three Sundays is about a
@@ -94,18 +112,42 @@ const NEARLY_WITHIN = 3;
 // bottom one. Pure, so the panel can say what it is about to print without a
 // second copy of the rule that could disagree with this one.
 function placeRows(tiers, rows) {
-  // Highest threshold first, so a player lands in the best tier they reached and
-  // appears once.
+  // Highest threshold first, so the first one a player's Sundays reach is the
+  // best they earned.
   const ordered = [...tiers].sort((a, b) => b.weeks_required - a.weeks_required);
-  const placed = new Set();
+  const byTierId = new Map(tiers.map((t) => [t.id, t]));
 
-  const groups = ordered.map((tier) => {
-    const members = rows
-      .filter((r) => !placed.has(r.player_id) && r.weeks >= tier.weeks_required)
-      .sort(byFirstName);
-    members.forEach((m) => placed.add(m.player_id));
-    return { tier, members };
+  // Where each player lands, and what they earned to get there.
+  //
+  // THE SHEET IS GROUPED BY THE PRODUCT BEING HANDED OVER, so somebody who
+  // asked for a smaller one stands in that product's list rather than in the
+  // one they earned with a note beside it. A till works down a group and hands
+  // out the thing in the heading; a row in the Crystal list that is secretly a
+  // Booster Bundle is the mistake this is here to prevent.
+  //
+  // A CHOICE ONLY COUNTS WHERE THE SUNDAYS REACH IT. Asking for a Booster Box
+  // on nine Sundays is a wish rather than a place in the Crystal list, so they
+  // stay where they earned until they get there.
+  const landed = new Map();
+
+  rows.forEach((r) => {
+    const earned = ordered.find((t) => r.weeks >= t.weeks_required) || null;
+    if (!earned) return;
+
+    const chosen = r.chosen_tier_id ? byTierId.get(r.chosen_tier_id) : null;
+    const taking = chosen && r.weeks >= chosen.weeks_required ? chosen : earned;
+    landed.set(r.player_id, { earned, taking });
   });
+
+  const groups = ordered.map((tier) => ({
+    tier,
+    members: rows
+      .filter((r) => (landed.get(r.player_id) || {}).taking === tier)
+      // The tier they earned rides along: a Crystal player standing in the
+      // Silver list needs a line saying why.
+      .map((r) => ({ ...r, earned: landed.get(r.player_id).earned }))
+      .sort(byFirstName)
+  }));
 
   const bottom = ordered[ordered.length - 1] || null;
 
@@ -115,7 +157,7 @@ function placeRows(tiers, rows) {
   // weeks is how one of those gets this far.
   const nearly = bottom
     ? rows
-        .filter((r) => !placed.has(r.player_id) && r.weeks > 0
+        .filter((r) => !landed.has(r.player_id) && r.weeks > 0
           && r.weeks >= bottom.weeks_required - NEARLY_WITHIN)
         .sort((a, b) => b.weeks - a.weeks || byFirstName(a, b))
     : [];
@@ -167,8 +209,12 @@ export function loyaltySheet(release, tiers, rows, { nearly: showNearly = false 
     ]),
 
     ...groups.map(({ tier, members }) => el('section', { className: 'sheet-group' }, [
+      // The price is on the sheet because the sheet is what the register works
+      // from. A line that names the product and not what to charge for it sends
+      // whoever is on the till looking it up with a player standing there.
       el('h3', { text: `${tier.tier_name} — ${tier.weeks_required} Sundays `
-        + `— ${tier.product}` }),
+        + `— ${tier.product}`
+        + (formatMsrp(tier.msrp) ? ` at ${formatMsrp(tier.msrp)}` : '') }),
       members.length
         ? el('table', { className: 'sheet-table' }, [
             el('thead', {}, [el('tr', {}, [
@@ -177,8 +223,20 @@ export function loyaltySheet(release, tiers, rows, { nearly: showNearly = false 
               el('th', { text: 'Sundays' }),
               el('th', { className: 'sheet-tick', text: 'Given' })
             ])]),
+            // The tier they actually earned, where it is not the one they are
+            // standing in. It rides under the name rather than taking a column
+            // of its own: most rows do not have one, and a column of empty
+            // cells on a sheet read at a till is a column somebody has to check
+            // and then ignore -- the same reason the prize wall only grows a
+            // picture column once something has a picture.
             el('tbody', {}, members.map((m) => el('tr', {}, [
-              el('td', { text: `${m.first_name} ${m.last_name}`.trim() }),
+              el('td', {}, [
+                el('span', { text: `${m.first_name} ${m.last_name}`.trim() }),
+                m.earned !== tier
+                  ? el('span', { className: 'sheet-instead',
+                      text: `Earned ${m.earned.tier_name}, asked for this instead` })
+                  : null
+              ]),
               el('td', { className: 'count', text: m.player_id }),
               el('td', { className: 'count', text: m.weeks }),
               el('td', { className: 'sheet-tick', text: '' })
@@ -339,8 +397,19 @@ async function loyaltyPanel(releases) {
       const earned = placed.groups.reduce((n, g) => n + g.members.length, 0);
       const also = nearly.checked
         ? `, and ${placed.nearly.length} nearly there` : '';
+
+      // Worth saying before the paper comes out: this is the number the store
+      // needs a different box ready for, and it is the one thing on the sheet
+      // that is easy to walk past in a list of names.
+      const swapped = placed.groups.reduce((n, g) =>
+        n + g.members.filter((m) => m.earned !== g.tier).length, 0);
+      const instead = swapped
+        ? ` ${swapped === 1 ? 'One of them is' : `${swapped} of them are`} listed `
+          + 'under a product other than the one they earned.' : '';
+
       status(note,
-        `${earned} player${earned === 1 ? '' : 's'} on the sheet${also}.`, 'good');
+        `${earned} player${earned === 1 ? '' : 's'} on the sheet${also}.${instead}`,
+        'good');
     } catch (err) {
       console.error(err);
       go.disabled = false;
