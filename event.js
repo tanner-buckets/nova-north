@@ -91,7 +91,7 @@ function detail(event, counts, { onChange, heading, tag = 'div' }) {
     // one of the two times would send them at the wrong one.
     event.registration_opens_at
       ? el('p', { className: 'event-opens' }, [
-          el('span', { text: 'Registration opens at ' }),
+          el('span', { text: 'Check-in opens at ' }),
           el('time', { datetime: event.registration_opens_at,
                        text: formatEventTime(event.registration_opens_at) }),
           el('span', { text: ' and the event begins at ' }),

@@ -18,7 +18,7 @@ Every page carries the strapline "A Play! Pokémon league at Continental Cards,
 Ashburn" under the name, so a visitor landing on any page knows what and where
 this is.
 
-Registration opens Sundays at 2:00 PM and play begins at 2:30 PM, at
+Check-in opens Sundays at 2:00 PM and play begins at 2:30 PM, at
 Continental Cards Tournament Location, 21140 Ashburn Crossing Dr #110, Ashburn,
 VA 20147. **2:00 is the time the site leads with**, everywhere a single time is
 shown: it is the one a player needs to act on.
@@ -544,13 +544,22 @@ it runs.
   no desk time. The card used to lead with the start time and put the desk time
   in small print underneath: accurate, and still read as "turn up at half past",
   because the big number is the one people take away. That is the failure this
-  is built around — a player arriving at 2:30 has missed registration.
-- **The line underneath carries both times in one sentence**, "Registration
-  opens at 2:00 PM and the event begins at 2:30 PM." Neither time appears
-  without the other, so neither can be read alone and acted on wrongly. It was
-  briefly worded as "sign-in" to avoid colliding with the register form on the
-  same card; naming both times is what actually resolves that, and the sentence
-  is now the same on the schedule, the event page and the home page.
+  is built around — a player arriving at 2:30 has missed check-in.
+- **The line underneath carries both times in one sentence**, "Check-in opens
+  at 2:00 PM and the event begins at 2:30 PM." Neither time appears without the
+  other, so neither can be read alone and acted on wrongly. The sentence is the
+  same on the schedule, the event page and the home page.
+- **The day-of word is check-in, and registration means pre-registration.**
+  The line said "Registration opens at 11:00 AM" on a card whose register form
+  was already open and had been since the event was created — two things called
+  registration on one card, opening at different times, one of them a desk in a
+  shop and the other a button an inch away. Check-in names the desk and leaves
+  registration meaning one thing. It was briefly "sign-in" for the same reason
+  and in only some places, which left three words for one fact; the admin
+  field's label and the Trainer Card handout's footer now say check-in too.
+  **Nothing about pre-registration is reworded**: the register and cancel
+  forms, the closing rule and `register_for_event()` all still say registration,
+  because that is what they are.
 - **This is display only.** `starts_at` is still when play starts and still what
   every rule keys on, and the admin form still asks for the two times exactly as
   it did. Nothing about the data changed when the wording did.

@@ -917,8 +917,16 @@ can be a check rather than a trigger, which `at time zone` would have forced.
 
 **The large figure is when to arrive, not when play starts.** A card shows
 `registration_opens_at`, falling back to `starts_at` where there is no desk
-time, and the line underneath reads "Registration opens at 2:00 PM and the event
+time, and the line underneath reads "Check-in opens at 2:00 PM and the event
 begins at 2:30 PM."
+
+The day-of word is **check-in**, and registration means pre-registration. The
+line used to say "Registration opens at 11:00 AM" on a card whose register form
+had been open since the event was created: two things called registration on one
+card, opening at different times, one of them a desk in a shop and the other a
+button an inch away. Nothing about pre-registration is reworded — the register
+and cancel forms, the closing rule and `register_for_event()` all still say
+registration, because that is what they are.
 
 Leading with the start time was accurate and still wrong in practice: the big
 number is the one people take away, so a card headed 2:30 sent players to a

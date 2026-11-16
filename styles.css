@@ -278,7 +278,7 @@ main {
   font-size: 1.15rem;
 }
 
-/* Missing the sign-in time means missing the day, so it gets its own marked line. */
+/* Missing the check-in time means missing the day, so it gets its own marked line. */
 .meets-deadline {
   font-weight: 600;
   border-left: 4px solid var(--amber);

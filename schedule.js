@@ -37,10 +37,15 @@ const spots = new Map();
 // and still read as "turn up at half past" -- the big number is the one people
 // take away. The large figure is now when to arrive and this line is what each
 // time actually is, so neither can be read on its own and get it wrong.
+//
+// The word is check-in, not registration. Registration on this site is the
+// pre-registration form on the same card, which opens as soon as the event
+// exists -- so a card saying registration opens at 11:00 contradicted the
+// button next to it.
 function opensLine(event) {
   if (!event.registration_opens_at) return null;
   return el('p', { className: 'event-opens' }, [
-    el('span', { text: 'Registration opens at ' }),
+    el('span', { text: 'Check-in opens at ' }),
     el('time', { datetime: event.registration_opens_at,
                  text: formatEventTime(event.registration_opens_at) }),
     el('span', { text: ' and the event begins at ' }),

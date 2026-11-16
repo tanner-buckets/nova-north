@@ -212,7 +212,7 @@ function drawSheet(sheet) {
       el('footer', { className: 'info-foot' }, [
         el('p', { text: 'Ask any professor to get started. '
           + 'LoCo League meets Sundays at Continental Cards, Ashburn — '
-          + 'sign-in opens at 2:00 PM and play begins at 2:30 PM.' })
+          + 'check-in opens at 2:00 PM and play begins at 2:30 PM.' })
       ])
     ])
   );
