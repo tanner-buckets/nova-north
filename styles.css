@@ -564,6 +564,7 @@ main {
 .disclosure summary:hover { color: var(--teal-lift); }
 
 .register-form,
+.check-form,
 .cancel-form {
   margin-top: 0.5rem;
 }

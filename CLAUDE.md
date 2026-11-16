@@ -453,6 +453,27 @@ it runs.
   effect until a professor confirms. They are matched against the **registration
   row**, not the player row: a drop is about one booking, and the person asking
   is proving they are the one who made it.
+- **A player checks a registration on the event card, not the player page.**
+  "Check my registration" sits between Register and Cancel and calls
+  `check_registration()` with Player ID and the first name on the registration,
+  and every kind of no-match gets the same answer. Showing registrations on a public
+  player card was considered and refused: who registered is never public, and
+  the lookup only finds a player who is public, which a first-timer or a child is
+  not. The check reads the registration row, so it needs no player record. It
+  stays after registration closes, because the morning of the event is when
+  "am I in?" is asked.
+  - **It is the one public form still on the first-name proof, and that is
+    unfinished work rather than a decision.** It was written to take "the same
+    proof `request_drop()` takes", and that proof has since moved to last name
+    and birth year — see **Proving who you are** under the privacy rules.
+    Player ID and first name are both on screen for any listed player, so as it
+    stands somebody can ask whether a named player is registered for an event,
+    and a pre-registration list is never public. Moving it is a migration and a
+    field on the form; nothing else depends on the pair.
+- **The waiting list place a player is told is their place now**, counted from
+  the live queue, not the stored `waitlist_position`, which keeps its gaps after
+  promotions. It is a place in the queue and not a promise of the next spot:
+  promotion skips anyone whose division is still full, and the wording says so.
 - **Registration closes when the event starts.** Enforced in
   `register_for_event()`, not in page code: the anon key can call the function
   directly, so a check on the schedule is not a check.

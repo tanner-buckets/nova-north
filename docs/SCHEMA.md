@@ -443,6 +443,17 @@ birth year are in the never-public list and no page renders either.
   right birth year" is a guessing oracle with no rate limit on it. The callers
   are `SECURITY DEFINER` and run as the owner.
 
+**`check_registration(p_player_id text, p_first_name text, p_event_id uuid)`**
+Read only. Player ID and the first name on the registration. Returns `found`, the
+status, and on the waiting list the current place in the queue (not the stored
+position, which keeps gaps). Every kind of no-match returns the same
+`found: false`. Never returns division.
+
+It was written to take the same proof `request_drop()` takes, and that proof has
+since moved to last name and birth year. **This is the one public form still on
+Player ID and first name**, which are both on screen for any listed player.
+Moving it is a migration plus a field on the form.
+
 ---
 
 ## Professor-only functions
