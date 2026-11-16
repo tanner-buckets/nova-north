@@ -765,6 +765,49 @@ personal data in a catalogue of what is on a shelf.
   a gold Regional winner is two pills that look the same and mean different
   kinds of thing. Silver also stays clear of the warm pale grey Needs updating
   wears, so the two statuses read apart at a glance.
+- **A deck list is a link, the list itself, or a picture of it**, and the shelf
+  reads the same for all three: *See the deck list*. A link goes out to the
+  site holding it; the other two open in a disclosure on the page, because the
+  list is already there and a second page to read it is a tap for nothing. The
+  shelf only ever had the link, which works for a deck somebody put on
+  Limitless and for no other kind: a deck built out of what was in the box has
+  no URL, and its list is a sheet of paper in the deck box or a block of text
+  in a message. Both of those are a deck list, and "no list recorded" was all
+  the page could say about them.
+  - **Exactly one way at a time**, the same rule as status and for the same
+    reason: a row holding a link and a pasted copy holds two lists, and they
+    disagree the first time one of them is corrected. A check constraint
+    refuses the pair, and the professor screen picks the way and clears the
+    other two — so the constraint is a backstop nobody meets.
+  - **Pasted text is the better of the two new ways, and the screen says so.**
+    Text can be read aloud, searched, and copied into the game; a picture can
+    do none of those, and its `alt` can only say that it is a photograph of a
+    list. A picture is for a list that exists only on paper.
+  - **The copy button is the point of holding it as text.** The format the game
+    exports is the format it imports, and selecting forty lines on a phone to
+    get at it is what would send somebody back to a photograph. A browser can
+    refuse the clipboard, so the button says so and points at selecting it by
+    hand rather than appearing to do nothing.
+  - **A picture is stored at 2000px, not the prize wall's 800.** Text is the
+    one subject where downscaling destroys the content rather than softening
+    it: 800px of booster box is still a booster box, and 800px of a sixty-card
+    list is a grey smear. `DOCUMENT` in `image-file.js`, and the professor's
+    preview is large enough to check the writing survived — if it cannot be
+    read there, it cannot be read on the shelf.
+  - **The `deck-lists` bucket is public**, like `prize-art` and unlike
+    `gallery`: a deck list is a list of cards, there is nobody in it, and the
+    page that shows it is open to everybody. Only a professor writes to it.
+    The picture still goes through `image-file.js`, which is what strips the
+    camera and GPS details — a list photographed at a kitchen table carries the
+    coordinates of the kitchen.
+  - **The picture is uploaded before the row is written**, and the old object
+    is deleted only once the row has stopped pointing at it — the same bargain
+    the prize wall makes, and it covers moving a deck from a picture to a link
+    as well as replacing one.
+  - **`admin/deck-list-image.js` is deliberately not `prize-art.js`.** The
+    shared thing is the guard, and that is `image-file.js`. What differs is
+    everything a copy would have had to fork anyway: the bucket, the rendition,
+    and a preview sized for reading rather than for recognising.
 - **Status is not a tag.** `rental_decks.status` is a column with a check,
   because exactly one of *current* and *needs updating* is true at a time and a
   deck wearing both would tell a player two different things. Everything else is
@@ -1556,6 +1599,7 @@ gallery.html        approved photographs, and the form that sends one in
 charter.html        the mission and values, professor-only until the draft lands
 chaos-cup.html      what a Chaos Cup is, and example rules
 rentals.js          the rental shelf and bounty list on the programs page
+admin/deck-list-image.js  a photographed deck list: picking, resizing, storing
 home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
 admin/staff.html    the staffing roster, availability and event staffing

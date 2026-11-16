@@ -3700,9 +3700,74 @@ h1.event-name + .event-when {
 
 .rental-deck p + p { margin-top: 0.3rem; }
 
+/* A deck list given as text or as a picture opens on the page rather than at
+   another site. Folded away, because a sixty-card list is forty lines and a
+   shelf of six decks would otherwise be a page of lists with the decks lost
+   somewhere in between. */
+.deck-list { margin-top: 0.4rem; }
+.deck-list > summary {
+  cursor: pointer;
+  color: var(--gold);
+  font-size: 0.95rem;
+}
+.deck-list-body { margin-top: 0.5rem; }
+
+/* pre-wrap rather than pre: the lines are short, but a phone is narrower than
+   some of them and a list that scrolls sideways is a list nobody reads. The
+   height cap is what keeps the shelf a shelf once one is open. */
+.deck-list-text {
+  margin: 0;
+  max-height: 22rem;
+  overflow: auto;
+  padding: 0.6rem 0.7rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.deck-list-actions {
+  margin: 0.4rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.deck-list-copied {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* Shown at whatever width the card gives it, and linked to itself so a phone
+   can open it full size and pinch it. A list photographed at arm's length is
+   readable on paper and not in a column this wide. */
+.deck-list-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
 /* --- The professor's rental screen --------------------------------------------- */
 .rental-edit .field { margin-bottom: 0.4rem; }
 .rental-edit .field-help { margin: 0 0 0.7rem; }
+
+/* Bigger than the prize wall's preview, because the question here is not "is
+   that the right box" but "can this be read", and a thumbnail cannot answer
+   it. */
+.deck-list-preview { margin: 0 0 0.6rem; }
+.deck-list-preview-img {
+  display: block;
+  width: 100%;
+  max-width: 26rem;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
 
 .field-label-ish {
   display: block;

@@ -241,7 +241,7 @@ Built so far:
 | `index.html` | Home | nothing — static copy, plus two outside links |
 | `schedule.html` | Schedule | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
 | `event.html` | no — reached by link | `events`, `public_event_counts`, `register_for_event()`, `request_drop()` |
-| `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers`, `active_badge_seasons()` |
+| `league_programs.html` | League programs | `trainer_card_ranks`, `badges`, `earning_actions`, `releases`, `loyalty_tiers`, `active_badge_seasons()`, `rental_deck_shelf()`, `rental_deck_bounties`, the `deck-lists` bucket |
 | `prize-items.html` | no | `prize_items`, the `prize-art` bucket |
 | `players.html` | Players | `get_player_summary()`, `public_players` |
 | `gallery.html` | Gallery | `approved_gallery()`, `submit_gallery_photo()`, the `gallery` bucket |

@@ -304,6 +304,15 @@ export function prizeArtUrl(item) {
     : null;
 }
 
+// A picture of a rental deck's list, or null when the list is given some other
+// way -- which is most of them. Same arrangement as prize art: a public bucket,
+// the row holding the path, and the URL built here rather than stored.
+export function deckListImageUrl(deck) {
+  return deck.deck_list_image_path
+    ? `${SUPABASE_URL}/storage/v1/object/public/deck-lists/${deck.deck_list_image_path}`
+    : null;
+}
+
 // One tile, used by the public player card and by the Trainer Card screen, so a
 // badge looks the same wherever it is shown.
 //
