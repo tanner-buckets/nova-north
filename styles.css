@@ -4856,3 +4856,76 @@ h1.event-name + .event-when {
   /* Advice about printing is not part of what is being printed. */
   .print-guide-block { display: none !important; }
 }
+
+/* --- Prize packs ----------------------------------------------------------------- */
+/* The boxes on the two attendance screens: one per series still in play, with
+   what is left beside each. A row rather than a plain field, because the
+   number being typed only means something next to the count it draws down. */
+.pack-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.6rem;
+  margin: 0.4rem 0 0.2rem;
+}
+
+.pack-row {
+  padding: 0.6rem 0.75rem;
+  background: var(--paper);
+  border-radius: 8px;
+  border-left: 3px solid var(--gold-line);
+  min-width: 0;
+}
+
+.pack-row .field { margin: 0; }
+.pack-row .field-help { margin: 0.25rem 0 0; }
+.pack-left .count { font-weight: 700; }
+
+/* The running total under the boxes, which is what makes a mistyped figure
+   visible: it is read against how many people were in the room. */
+.pack-tally {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* One line per series on the stock chart. The stroke is set per series in page
+   code, because the colour belongs to the series rather than to the class. */
+.pack-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* A legend key for a line is a stroke, not a filled block, so it mirrors the
+   mark it stands for. The colour arrives as `color` and the border takes it,
+   so one class serves every series. */
+.chart-key-series {
+  height: 0;
+  border-top: 3px solid currentColor;
+  border-radius: 0;
+}
+
+/* A field toggled with the `hidden` property stays laid out without this: the
+   class above sets display:flex, which beats the browser's own [hidden] rule,
+   so the "series number" box on the prize packs screen never went away. */
+.field[hidden] { display: none; }
+
+/* Nothing recorded for that series on that day. It is still a button -- that
+   is how a missed day gets filled in -- but a dash with an underline through
+   it reads as an equals sign, so the affordance arrives on hover and focus,
+   the same way the attendance note column's Add does. */
+.pack-add {
+  color: var(--muted);
+  text-decoration: none;
+}
+.data-table tr:hover .pack-add,
+.pack-add:hover,
+.pack-add:focus-visible {
+  color: var(--gold);
+  text-decoration: underline;
+}
+
+/* A delivery marked in a narrow numeric column. "+600 in" is three characters
+   and a word, and wrapping it leaves "in" alone on a second line. */
+.pack-in { white-space: nowrap; }

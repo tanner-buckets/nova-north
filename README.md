@@ -38,6 +38,20 @@ applied migrations in `supabase_migrations.schema_migrations`, and a manual run
 does not update that table — so the next push would try to create the same objects
 again and fail. Let the integration apply it.
 
+**A transaction proves it parses; it does not prove it is right.** The prize
+pack migration was checked a second way: run it against a throwaway Postgres
+outside the browser, insert a few weeks of fixture rows, and assert what the
+read functions return. That is what caught the things a syntax check cannot —
+whether the running total lands where it should, whether the rate skips the
+weeks a series did not go out, whether a column that must not be writable from
+a browser really is not. Any in-process Postgres does; PGlite needs no Docker.
+
+Only four things have to be stubbed, because they come from Supabase rather
+than from this schema: the `anon` and `authenticated` roles, `auth.users`,
+`auth.uid()`, and `is_professor()`. **Nothing is added to this repository** —
+the harness lives in a scratch directory outside it, and it is a check worth
+running for any migration carrying a function somebody will read numbers off.
+
 ---
 
 ## Build phases
@@ -616,6 +630,62 @@ promoted to true afterwards, one direction only — a day's play is not undone b
 later upload that happens not to list them. That promotion is why the migration
 grants `UPDATE (played)`: `UPDATE` on `attendance` is granted per column and
 `played` was not in the list.
+
+### Prize packs
+
+Packs arrive from Pokémon a few hundred at a time and go out at the desk,
+roughly one a player. This was a spreadsheet with a block of columns per series
+— how many went out each week, how many were left, and a figure typed in beside
+the week a box arrived — and it stopped being kept up, which is what happens to
+a second place to write something down.
+
+So the counting happens where the day is already being recorded. **Both
+attendance screens carry a box**, beside the other-attendee count and for the
+same reason: a Sunday with no tournament file still hands out packs.
+
+**Several series are in play at once**, which is the thing the feature is shaped
+around. A new series arrives before the old one runs out and both go out on the
+same afternoon, so there is one box per series rather than one number. The day's
+headcount is printed above them rather than filled into any of them — with two
+live there is no way to split one number between them that is not a guess — and
+a running total underneath reads the boxes against the room, which is what makes
+a mistyped figure visible. With exactly one series live the box prefills with
+the headcount and follows the list as judges are ticked, until somebody types
+over it.
+
+**One row per series per calendar day, replaced rather than added to**, the same
+bargain `other_attendees` makes: two files from one Sunday are one afternoon of
+packs, and re-uploading a file to fix something must not double the count. The
+box says what is already recorded for that day, so a professor is correcting a
+number they can see. An empty box leaves it alone; a typed zero is a professor
+saying none of that series went out.
+
+`admin/prize-packs.html` reads it back: what is left of each series and how many
+more Sundays that lasts at the rate it has lately been going out, a **line per
+series** of the level over time — the view the spreadsheet's own chart kept,
+where the slope is how fast a series goes out and a step up is a delivery
+arriving — and the week by week table underneath, where a number can be
+corrected in place. Deliveries are added there too, for an existing series or a
+new one. **Remaining is never stored**: it is received minus handed out, worked
+out by `prize_pack_stock()` every time it is asked for.
+
+The rate behind "about seven more Sundays" counts only the days a series
+actually went out on. A series that has been superseded hands out nothing for
+weeks, and counting those would have it reading as lasting forever on the day it
+runs out.
+
+The spreadsheet's history was deliberately **not** imported. It is out of date,
+and a stock figure that is nearly right is worse than no figure, because
+somebody would order against it. The migration creates series 8 and 9 holding
+nothing, so the first thing recorded is a professor counting the shelf; series
+5, 6 and 7 are spent and are not created at all. A series retires rather than
+being deleted, and a delivery typed wrongly is voided through
+`void_prize_pack_receipt()` rather than an `UPDATE` grant on the table — the
+same reason `void_trainer_card_batch()` is a function.
+
+All three tables are professor-only. There is nothing about a player in a count
+of what is in the cupboard, but there is nothing for a player in it either, and
+a public figure would read as a promise about what is still available.
 
 ### TDF upload
 

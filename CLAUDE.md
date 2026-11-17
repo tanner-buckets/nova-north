@@ -675,6 +675,72 @@ it runs.
   hand or a judge is ticked. Rebuilding the fields with it silently reverted
   them: tick "this was a premier event", add one person, and premier was off
   again and everybody earned a point less, with nothing on screen saying so.
+  **The manual attendance screen had the same fault and it was worse there**: it
+  built the date box along with everything else, so adding a second person put
+  the day back to today. Anything describing the day rather than the list is
+  built once.
+
+---
+
+## Prize packs
+
+Packs come from Pokémon a few hundred at a time and go out at the desk, roughly
+one a player. `admin/prize-packs.html` is where the stock is read back and where
+a delivery is added; the counting happens on the two attendance screens.
+
+- **Counted where the day is already being recorded.** This was a spreadsheet
+  with a block of columns per series, and it stopped being kept — which is what
+  happens to a second place to write something down, because the packs go out at
+  the desk and the sheet is somewhere else. The box is on the TDF upload **and**
+  on record-attendance-by-hand: a Sunday with no tournament file still hands out
+  packs, and leaving it off that screen would show those weeks as nothing going
+  out while the shelf really emptied.
+- **Several series are in play at once**, which is the thing the whole feature is
+  shaped around. A new series arrives before the old one runs out and both go out
+  on the same afternoon, so there is a box per series rather than one number.
+- **The headcount is printed above the boxes, not filled into them.** With two
+  series live there is no way to split one number between them that is not a
+  guess. With exactly one live it prefills, and follows the list as judges are
+  ticked and people are added — until somebody types over it, after which their
+  number stands. A running total underneath reads the boxes against the room,
+  which is what makes a mistyped figure visible.
+- **One row per series per day, replaced rather than added to.** Two files from
+  one Sunday are one afternoon of packs, and re-uploading a file to fix something
+  must not double the count. The same rule `other_attendees` follows, and the box
+  says what is already recorded for that day so a professor is correcting a
+  number they can see rather than overwriting one they cannot.
+- **An empty box means leave whatever is recorded; zero means none went out.**
+  Same distinction as the other-attendee count, and the check constraint allows
+  zero for it.
+- **Remaining is never stored.** It is received minus handed out, worked out by
+  `prize_pack_stock()` every time it is asked for — the rule the point ledger
+  already follows. A running total in a column is one that can disagree with the
+  rows under it.
+- **The spreadsheet's history was not imported.** It is out of date, and a stock
+  figure that is nearly right is worse than no figure, because somebody would
+  order against it. `20261117130000` creates series 8 and 9 holding nothing, so
+  the first thing recorded is a professor counting what is on the shelf. Series
+  5, 6 and 7 are spent and are not created at all.
+- **"About N more Sundays" counts only the days a series actually went out on.**
+  A series that has been superseded hands out nothing for weeks, and counting
+  those would have it reading as lasting forever on the day it runs out.
+- **A series is a table, retired and never deleted**, for the reason the rental
+  deck tags are: a new series arrives every few months and adding one should not
+  be a migration. Retiring takes it off both attendance screens and keeps every
+  week it was going out.
+- **A delivery is voided, never deleted**, through `void_prize_pack_receipt()`
+  rather than an UPDATE grant on the table — the same reason
+  `void_trainer_card_batch()` is a function. A handout needs no void: it is
+  replaced by day, so a correction is typing the right number.
+- **Professor-only.** There is nothing about a player in a count of what is in
+  the cupboard, but there is nothing for a player in it either, and a public
+  figure would read as a promise about what is still available.
+- **A failed pack write does not fail the recording, and unlike the
+  other-attendee count it is reported.** The attendance and the points are the
+  part that matters, so a pack count that will not save is not worth losing an
+  upload over — but a stock figure quietly drifting away from the shelf is
+  exactly what this exists to prevent, so the receipt says so and points at this
+  screen.
 
 ---
 
@@ -1662,6 +1728,8 @@ admin/deck-list-image.js  a photographed deck list: picking, resizing, storing
 home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
 admin/staff.html    the staffing roster, availability and event staffing
+admin/prize-packs.html  prize pack stock per series, week by week, and deliveries
+admin/attendance-core.js  the shared write, and the boxes both recording screens carry
 admin/printables.html  handouts for players, built from the database
 admin/sheet-trainer-card.js  the Trainer Card Program information sheet
 admin/sheet-chaos-cup.js     the Chaos Cup rules sheet and its catalogue
@@ -1897,10 +1965,28 @@ should still read as one rather than quietly losing its mark.
 
 ### Charts
 
-One chart exists: the stacked column on the attendance history page. Inline SVG
-built in page code — there is no charting library, because there is no build step
-and no dependency budget, and a stacked column is a handful of rectangles.
+Two charts exist: the stacked column on the attendance history page, and the
+line per series on the prize packs page. Both are inline SVG built in page code
+— there is no charting library, because there is no build step and no dependency
+budget, and neither of these is more than a handful of shapes. The rules below
+are the attendance chart's unless they say otherwise; everything about colour,
+gridlines, legends, labelling and the scrolling wrapper applies to both.
 
+- **The form follows the question.** Attendance is part-to-whole on a given
+  week, so it stacks. Prize packs are a level over time — how much is left,
+  falling as packs go out and stepping up when a delivery arrives — so they are
+  lines. A column chart of what remains would say the weeks are the thing being
+  compared, and they are not.
+- **A pack line starts at its series' first delivery**, not at the left edge. A
+  series that was not on the shelf yet is absent rather than drawn along zero,
+  which would read as having run out. Where a week passes with none of a series
+  going out, its count is carried forward: the level has not changed.
+- **The pack series take distinguishable hues rather than an ordinal ramp.**
+  Series numbers do run in order, but the lines cross and overlap, so telling
+  them apart is what matters — the newest takes the site's gold and the one
+  before it the slate from the imported attendance weeks. Each line is labelled
+  at its own endpoint, and two that end nearly level have their labels pushed
+  apart just enough to be read; the lines themselves are untouched.
 - **Stacked, because the question is part-to-whole.** The height of a column is
   everybody who was there; inside it the divisions stack darkest first with
   Others on top.
@@ -2045,6 +2131,20 @@ unannounced.
 - No emoji in the UI.
 - Semantic HTML. Keyboard focus visible. Alt text on images.
 - Comment the non-obvious. Do not comment the obvious.
+- **`replaceChildren` prints a null as the word "null"; `el()` drops it.** A
+  list of nodes where some withhold themselves has to be filtered before it is
+  spread into `replaceChildren`. This has bitten three times — the tools menu's
+  waiting line, the attendance history cards, and the upload receipt, which was
+  printing "nullnull" on an ordinary upload where nobody had been skipped and
+  nobody repeated. `outcomeNodes()` now filters before returning, which is the
+  right place: at the source, not at each call site.
+- **A `hidden` property does nothing to an element whose class sets `display`.**
+  `.field` is `display: flex`, which beats the browser's own `[hidden]` rule, so
+  a field toggled with `.hidden = true` stays on screen. `.field[hidden]` in
+  `styles.css` is what makes it work.
+- **An underline through a dash reads as an equals sign.** A `link-button`
+  whose whole text is "—" needs its underline held back until hover and focus;
+  `.pack-add` is the one that does it.
 
 ---
 

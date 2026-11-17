@@ -17,7 +17,7 @@ import { currentProfessor } from '../auth.js';
 import {
   ATTEND_LABEL, CASUAL_LABEL, PREMIER_LABEL,
   loadActions, status, playerPicker, recordAttendance, outcomeNodes,
-  describeFailure, alreadyPaidFor, otherAttendeesField
+  describeFailure, alreadyPaidFor, otherAttendeesField, prizePackField
 } from './attendance-core.js';
 
 const gate = document.querySelector('#gate');
@@ -32,6 +32,7 @@ let alreadyPaid = new Set();   // already have the play point for this tournamen
 let judges = [];        // professors with a player record of their own
 let judgesError = false;
 let others = null;      // the other-attendee field, built once per file
+let packs = null;       // the prize pack boxes, likewise
 let earn = null;        // the fields on the record card, likewise
 
 // --- Parsing -----------------------------------------------------------------
@@ -314,7 +315,12 @@ function actionNamed(label) {
 // for "add them as players" and for the points themselves.
 function earnFields() {
   const dateInput = el('input', { type: 'date', id: 'attended-on', value: parsed.attendedOn });
-  dateInput.addEventListener('change', () => others.setDate(dateInput.value));
+  dateInput.addEventListener('change', () => {
+    others.setDate(dateInput.value);
+    // The packs are recorded against the day too, so a corrected date has to
+    // reach them or the boxes would describe one Sunday and write to another.
+    packs.setDate(dateInput.value);
+  });
 
   const premier = el('input', { type: 'checkbox', id: 'premier' });
 
@@ -496,6 +502,7 @@ function recordCard() {
       createMissing: createMissing.checked,
       payAnyway: payAnyway.checked,
       otherAttendees: others.value(),
+      prizePacks: packs.value(),
       resultNode: result,
       button: go
     });
@@ -528,6 +535,7 @@ function renderPicker() {
       // happens every time a judge is ticked -- does not wipe a number already
       // typed into it.
       others = otherAttendeesField(parsed.attendedOn);
+      packs = prizePackField(parsed.attendedOn, parsed.players.length);
       earn = earnFields();
       await refreshKnown();
 
@@ -559,15 +567,27 @@ function renderPicker() {
   ]);
 }
 
+// Packs go out to the people in the room, so the figure the boxes are measured
+// against is the list as it stands now -- after the judges are ticked and after
+// anybody remembered at the desk has been added.
+function packsCard() {
+  return el('section', { className: 'card' }, [
+    el('h2', { text: 'Prize packs handed out' }),
+    ...packs.nodes
+  ]);
+}
+
 function redraw() {
-  app.replaceChildren(rosterCard(), judgesCard(), othersCard(), recordCard());
+  packs.setCount(allAttendees().length);
+  app.replaceChildren(
+    rosterCard(), judgesCard(), othersCard(), packsCard(), recordCard());
 }
 
 // --- Writing -----------------------------------------------------------------
 
 async function commit({ attendedOn, attendActionId, playActionId, attendPoints,
                         playPoints, createMissing, payAnyway, otherAttendees,
-                        resultNode, button }) {
+                        prizePacks, resultNode, button }) {
   button.disabled = true;
   status(resultNode, 'Recording.');
 
@@ -587,6 +607,7 @@ async function commit({ attendedOn, attendActionId, playActionId, attendPoints,
       reason: playReason(),
       sourceRef: parsed.eventId,
       otherAttendees,
+      prizePacks,
       // Detection is worth having; refusing is not the professor's decision to
       // lose. Playing in two tournaments earns two lots of points, and only the
       // day itself is counted once.
