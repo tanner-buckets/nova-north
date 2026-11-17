@@ -3654,15 +3654,47 @@ h1.event-name + .event-when {
 }
 .bounty-reward li { margin-bottom: 0.25rem; }
 
-.rental-format { margin: 0 0 1.2rem; }
-.rental-format h4 {
-  margin: 0 0 0.5rem;
+/* Each deck format, and the bounty list, folds away behind its own disclosure.
+   The shelf is the longest thing on the programs page, and all of it used to
+   sit between a reader and everything below it.
+
+   Paper rather than card, because the panel behind is already card and the deck
+   rows inside are too -- white on white would leave the band with nothing but
+   its border to say it is a band. */
+.rental-group {
+  margin: 0 0 0.6rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.rental-group > summary {
+  cursor: pointer;
+  padding: 0.6rem 0.8rem;
+}
+.rental-group[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+/* Inline so it rides the disclosure marker's line rather than starting a block
+   underneath it. The marker is the native one; see the note in rentals.js. */
+.rental-group-name {
+  display: inline;
+  margin: 0;
   font-size: 0.82rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+/* What a collapsed section still has to answer. */
+.rental-group-count {
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
   color: var(--muted);
 }
+
+.rental-group-body { padding: 0.7rem 0.8rem 0.8rem; }
 
 .rental-list {
   margin: 0;

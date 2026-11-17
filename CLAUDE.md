@@ -285,6 +285,19 @@ is applied to the production database.** There is no confirmation step.
 - Review of migration SQL happens **before commit**, not before deploy.
 - Never edit a migration that has already been pushed. Write a new one.
 - Do not commit a migration as work in progress. If it is in `main`, it is live.
+- **Recreating a function whole means starting from its CURRENT definition**,
+  not from the migration that first created it. A `returns table` column list is
+  part of the signature, so changing one forces a drop and a create often enough
+  that this comes up regularly — and the migration that created the function is
+  the obvious one to copy the body from and is usually the wrong one.
+  `20261116160000` added the two deck list columns to `rental_deck_shelf()` by
+  starting from `20261022160000`, and silently undid `20261023120000` in the
+  process: tags went back to bare labels and every coloured pill on the programs
+  page fell back to grey. **Nothing failed**, which is why it shipped — a tag
+  with no colour is a legitimate state, so `readableOn(null)` returned null and
+  the page drew the quiet pill exactly as designed. `20261117120000` put it
+  back. Where a function has been redefined more than once, the newest migration
+  naming it is the only safe thing to start from; `grep` for the name first.
 
 ---
 
@@ -781,6 +794,31 @@ The section at the foot of `league_programs.html`, filled by `rentals.js`, and
 `admin/rentals.html` behind it. Four tables, all of them public: there is no
 personal data in a catalogue of what is on a shelf.
 
+- **Each format, and the bounty list, folds away behind a disclosure.** A deck
+  carries a status, its tags, a note and now its whole list, so three decks is
+  most of a phone screen and six is more — and all of it sat between a reader
+  and everything below it whether or not they had come to borrow a deck. The
+  section lands as three closed bars.
+  - **The count is part of the summary, not decoration on it.** Collapsing a
+    section hides what is inside, so the line that stays visible has to answer
+    the question somebody would have opened it to ask. Same rule as the tools
+    menu, which puts a waiting count on the section and not only on the card
+    within it. An empty format says *None yet* there rather than nothing.
+  - **Both formats still draw a disclosure each, even empty**, for the reason
+    they always both rendered: a missing Standard list and an empty one look
+    identical on a page and mean different things. The bounty list is one list
+    rather than a pair, so when it is empty it drops the disclosure and prints
+    the sentence — a fold exists to put length away, and one sentence has none.
+  - **The native marker is kept rather than drawn.** A summary is a list-item by
+    default and laying it out any other way — a flex row, say, to put the name
+    and the count at opposite ends — takes the triangle with it, so the heading
+    goes inline beside the marker instead. The format name stays a real `h4`
+    inside the summary, which the HTML spec allows and which keeps these
+    reachable by heading navigation now that they are no longer headings on the
+    page. A space is written between the name and the count: they are adjacent
+    inline boxes, and the margin that draws the gap is not in the text, so
+    without it this control's accessible name runs together as
+    "Standard decks3 decks".
 - **The Current chip is silver, not gold.** Once a professor could choose a
   tag's colour, gold stopped being available to the status: a gold Current beside
   a gold Regional winner is two pills that look the same and mean different
