@@ -1008,24 +1008,62 @@ Static HTML with no module and no database call, like the Resources page.
 
 ## The league charter
 
-`charter.html` carries the mission and the values, taken from the charter draft.
+`charter.html` carries the whole of the finalised charter: the mission, the
+seven values, what each one asks of us, and the sources behind them.
 
-- **It is not published yet.** The draft is unfinished, so the page renders for
-  a signed-in professor and everybody else gets a short note. The nav item wears
-  `nav-prof`, hidden until `mountProfessorBar()` puts `has-prof-bar` on the body
-  — the one signal every public page already shares. Like everything `auth.js`
-  governs this decides what to **show**: the file is fetchable and the text is
-  in it, which is fine, because the charter is unfinished rather than secret.
-  Publishing it is deleting the gate in `charter.js` and the class on the nav
-  item.
-- **Values are the words alone.** The draft has a one-line definition beside
-  each, still being worded. Half-written definitions on a page about how to
-  treat each other would be worse than the words by themselves. The card is
-  already the right shape to hold one underneath.
-- **Responsibilities are not here.** That section of the draft says TODO.
+- **It is not published yet.** The charter is finished but has not been put in
+  front of the league, so the page renders for a signed-in professor and
+  everybody else gets a short note. The nav item wears `nav-prof`, hidden until
+  `mountProfessorBar()` puts `has-prof-bar` on the body — the one signal every
+  public page already shares. Like everything `auth.js` governs this decides
+  what to **show**: the file is fetchable and the text is in it, which is fine,
+  because the charter is unannounced rather than secret. Publishing it is
+  deleting the gate in `charter.js` and the class on the nav item.
+- **Three layers, each pointing at the next.** A value says what we care about,
+  a responsibility says what that asks of somebody on a Sunday, and a source
+  says where the expectation comes from in the Play! Pokémon rules. Every link
+  on the page runs down that chain — value card to its responsibilities,
+  footnote marker to its source, source to the document at the foot of the
+  page — so a professor asked "says who?" gets from the words to the paragraph
+  without leaving the page until the last step.
+- **The sources hold no URLs.** `DOCUMENTS` lists each cited document once at
+  the foot of the page, and a document named inside a source is a link **down
+  to that entry**, never out to pokemon.com. Official documents move; this way
+  a link that moves moves in one place. It is also why a source is written as a
+  run of pieces rather than one string: "the Penalty Guidelines" and "Play!
+  Pokémon Penalty Guidelines" are the same document and should not have to be
+  spelled the same way to link.
+- **Footnote numbers are the charter's own**, written on each responsibility
+  and never worked out from position. The appendix is written against those
+  numbers, so nothing may be reordered without the markers moving with it.
+- **The numbers go both ways.** A marker links down to its source and the
+  source's number links back to the marker, because an appendix of twenty-one
+  lines is no use if reading one costs you your place.
+- **The value cards are flex, not grid, and that is the whole reason.** Seven
+  divides into no sensible number of columns, and `flex: 0 1 <share>` with
+  `justify-content: center` puts the odd card left over at the end of a row in
+  the middle of it. An auto-fit grid cannot: its tracks are `1fr`, so the last
+  card widens to fill the row alone.
+- **The link is the word, not the card.** An anchor wrapped round the card
+  would make the four-line definition part of the link's name, which is no use
+  to anybody reading with their ears. The word is a block, so the tap target is
+  still the full width of the card.
+- **Every class on this page is `charter-`**, because `.note-text` was already
+  the week note on the attendance history table and redefining it there would
+  have silently restyled that. The names collided once; do not reuse them.
+- **Quoting an official document in a source is not copying from one.** The
+  rule under **Intellectual property** is about passing official wording off as
+  the league's own. These are short attributed quotations in an appendix whose
+  entire job is to name where a rule comes from, written by the organiser, on a
+  page that is not public. The charter's own text — the mission, the values,
+  the responsibilities — is ours.
 - **The league is LoCo League in the mission statement**, as everywhere else.
-  The draft calls it by the venue's name, which is the room rather than the
+  The charter calls it by the venue's name, which is the room rather than the
   league.
+- **One citation has no entry at the foot**: source 16 names "Pokémon TCG Rules
+  & Formats (tempo guidelines)", which the charter's own referenced-documents
+  list does not carry. It stays plain text rather than being pointed at a
+  document somebody guessed at.
 
 ## What is on next
 
