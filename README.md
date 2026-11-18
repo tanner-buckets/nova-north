@@ -52,6 +52,108 @@ than from this schema: the `anon` and `authenticated` roles, `auth.users`,
 the harness lives in a scratch directory outside it, and it is a check worth
 running for any migration carrying a function somebody will read numbers off.
 
+### Backing up the database
+
+Take one before every merge to `main` that carries a migration. That is the
+moment the schema changes with no confirmation step, and the only moment a
+backup is worth more than it costs to take.
+
+**The backup file is the most sensitive thing this project produces.** It holds
+every player's full name and birth year in plain text, and most players are
+children. It never goes in this repository — this repository is public, and
+`.gitignore` deliberately does not blanket-ignore `*.sql` because migrations are
+`.sql` and tracked. Keep it outside, in `C:\Users\Tanner\Backups\nova-north\`.
+
+#### Once: get `pg_dump`
+
+It has to be at least the server's version. Supabase is on **Postgres 17.6**
+(`supabase/.temp/postgres-version` says which), so install 17 or newer.
+
+Do **not** reach for `supabase db dump`: it runs `pg_dump` inside a container
+and needs Docker Desktop, which is a lot of machinery for one command.
+
+*Either* download the binaries with no installer at all, from
+[EDB's binaries page](https://www.enterprisedb.com/download-postgresql-binaries) —
+take the **Windows x86-64** link under version 17 and unzip it to
+`C:\Tools\pgsql17`. Nothing is installed, no service runs, no admin rights are
+needed, and deleting the folder undoes it.
+
+*Or* `winget install PostgreSQL.PostgreSQL.17` and, at the wizard's **Select
+Components** step, untick *PostgreSQL Server*, *pgAdmin 4* and *Stack Builder*,
+leaving only **Command Line Tools**. Left ticked, the server installs as an
+auto-starting Windows service you will never use.
+
+#### Once: get the connection string
+
+Supabase dashboard → **Connect** → **Session pooler**, port **5432**. Note the
+host and the username; the username carries the project ref, like
+`postgres.abcdefgh`.
+
+**Not** the transaction pooler on 6543. `pg_dump` cannot run through a
+transaction pooler, and the failure is obscure rather than obvious.
+
+#### Each time
+
+```powershell
+$PG     = "C:\Tools\pgsql17\bin"
+$OUT    = "C:\Users\Tanner\Backups\nova-north"
+$HOSTNAME = "aws-0-<region>.pooler.supabase.com"   # from Connect
+$USERNAME = "postgres.<project-ref>"               # from Connect
+
+# Typed, never pasted into the command. An argument is visible in the process
+# list and lands in PowerShell history; what Read-Host takes is in neither, and
+# the variable dies with the window.
+$env:PGPASSWORD = Read-Host "Database password"
+
+$stamp = Get-Date -Format "yyyy-MM-dd-HHmm"
+& "$PG\pg_dump.exe" `
+  --host=$HOSTNAME --port=5432 --username=$USERNAME --dbname=postgres `
+  --format=custom --schema=public --no-owner --no-privileges `
+  --file="$OUT\$stamp.dump"
+
+Remove-Item Env:\PGPASSWORD
+```
+
+`--format=custom` is compressed and lets `pg_restore` pull back one table
+instead of all of them. `--no-owner --no-privileges` means it restores into a
+project whose roles are not identical to this one's, which is the situation you
+are in on the day you actually need it.
+
+#### Check it, every time
+
+A dump that failed halfway still leaves a file. Size alone proves nothing:
+
+```powershell
+& "$PG\pg_restore.exe" --list "$OUT\$stamp.dump" |
+  Select-String "TABLE DATA" | Measure-Object -Line
+```
+
+That counts the tables carrying rows. It should be in the twenties and should
+not drop between one backup and the next.
+
+#### What this does not cover
+
+- **The storage buckets.** `badge-art`, `gallery`, `prize-art` and `deck-lists`
+  are object storage, not rows. A database backup holds the paths and not the
+  files, so the gallery photographs and professor-uploaded badge art need a copy
+  of their own.
+- **`auth.users`**, the professor logins, which are outside `public`. They are
+  recreatable by inviting people again; the league's data is not.
+- **The schema**, which is not a gap: `supabase/migrations/` is the schema, in
+  git, and that is the whole point of the migration rule above. What cannot be
+  rebuilt from this repository is the rows.
+
+#### Prove it once
+
+A backup nobody has restored is a file, not a backup. Once, make a throwaway
+Supabase project and `pg_restore` into it. The day you need this is not the day
+to discover the flags were wrong.
+
+#### Keep few
+
+Each file is a list of children's names. Keep the last handful, delete the rest,
+and do not sync the folder anywhere you would not put the database itself.
+
 ---
 
 ## Build phases
