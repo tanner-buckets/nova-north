@@ -14,7 +14,8 @@ import { el } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
 import {
   ATTEND_LABEL, loadActions, actionField, status, playerPicker,
-  recordAttendance, outcomeNodes, describeFailure, otherAttendeesField
+  recordAttendance, outcomeNodes, describeFailure, otherAttendeesField,
+  prizePackField
 } from './attendance-core.js';
 
 const gate = document.querySelector('#gate');
@@ -24,6 +25,7 @@ let professor = null;
 let actions = [];
 let attendees = [];
 let known = new Set();   // those who already exist; the rest are created on record
+let fields = null;       // the date and the two counts about the day, built once
 
 // League time, not the browser's. A professor entering Sunday's attendance late
 // on Sunday night from a laptop set to another zone should still get Sunday.
@@ -100,10 +102,30 @@ function awardField() {
   };
 }
 
-function render() {
+// The three things that describe the day rather than the list: which day it
+// was, how many came without a Player ID, and how many packs went out. Built
+// once, not once per render.
+//
+// redraw() replaces the whole screen and runs every time somebody is added or
+// removed, so building these inside it silently reverted them: set the date to
+// last Sunday, add one more person, and the box was back to today with nothing
+// on screen saying so. The upload screen learned this with its point fields;
+// this is the same mistake in the same shape.
+function dayFields() {
   const dateInput = el('input', { type: 'date', id: 'attended-on', value: today() });
   const others = otherAttendeesField(dateInput.value);
-  dateInput.addEventListener('change', () => others.setDate(dateInput.value));
+  const packs = prizePackField(dateInput.value, 0);
+
+  dateInput.addEventListener('change', () => {
+    others.setDate(dateInput.value);
+    packs.setDate(dateInput.value);
+  });
+
+  return { dateInput, others, packs };
+}
+
+function render() {
+  const { dateInput, others, packs } = fields;
   const award = awardField();
   const result = el('div', { id: 'result' });
   const go = el('button', { type: 'submit', className: 'button', text: 'Record attendance' });
@@ -126,6 +148,8 @@ function render() {
       el('span', { text: '.' })
     ]),
     ...others.nodes,
+    el('h3', { text: 'Prize packs handed out' }),
+    ...packs.nodes,
     newCount ? el('div', { className: 'warn-block' }, [
       el('p', { text: `${newCount} of them ${newCount === 1 ? 'is' : 'are'} new and `
         + `will be created when you record this. They are not listed publicly, and `
@@ -141,6 +165,7 @@ function render() {
       attendedOn: dateInput.value,
       attendActionId: award.value(),
       otherAttendees: others.value(),
+      prizePacks: packs.value(),
       resultNode: result,
       button: go
     });
@@ -161,10 +186,14 @@ function render() {
 }
 
 function redraw() {
+  // The pack boxes are measured against who is on the list, so the line under
+  // them follows as people are added and removed.
+  fields.packs.setCount(attendees.length);
   app.replaceChildren(...render());
 }
 
-async function commit({ attendedOn, attendActionId, otherAttendees, resultNode, button }) {
+async function commit({ attendedOn, attendActionId, otherAttendees, prizePacks,
+                        resultNode, button }) {
   button.disabled = true;
   status(resultNode, 'Recording.');
 
@@ -180,7 +209,8 @@ async function commit({ attendedOn, attendActionId, otherAttendees, resultNode, 
       professor,
       actions,
       source: 'manual',
-      otherAttendees
+      otherAttendees,
+      prizePacks
     });
 
     resultNode.className = 'form-status is-good';
@@ -214,5 +244,6 @@ async function commit({ attendedOn, attendActionId, otherAttendees, resultNode, 
           + 'recorded safely. Reload the page and try again.' }));
     return;
   }
+  fields = dayFields();
   redraw();
 })();

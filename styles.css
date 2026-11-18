@@ -3389,37 +3389,176 @@ h1.event-name + .event-when {
   .charter-statement { font-size: 1.5rem; }
 }
 
+#charter > section { margin-bottom: 2rem; }
+
+/* .field-help is sized for a line under a form field, which is narrower than
+   anything on this page. Here it introduces a section the full width of the
+   column, and four short ragged lines above a wide list read as a mistake. */
+#charter .field-help { max-width: none; }
+
+/* Seven values, which divides into no sensible number of columns, so the row
+   is flex rather than grid: `flex: 0 1 <share>` refuses to stretch and
+   `justify-content: center` puts the odd card left over at the end of a row in
+   the middle of it. An auto-fit grid cannot do this -- its tracks are 1fr, so
+   the last card would widen to fill the row on its own. */
 .value-grid {
   margin: 0 0 1.5rem;
   padding: 0;
   list-style: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 0.7rem;
 }
 
-/* One word per card, centred, with room around it. The words are the content
-   here -- a definition is coming later and the card is already the right shape
-   to hold one underneath. */
+/* The word above, its meaning under it. */
 .value-card {
+  flex: 0 1 100%;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 5.5rem;
-  padding: 1rem 0.75rem;
-  text-align: center;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1rem;
   background: var(--card);
   border: 1px solid var(--line);
   border-top: 3px solid var(--gold-line);
   border-radius: 8px;
 }
 
+@media (min-width: 34rem) {
+  .value-card { flex: 0 1 calc((100% - 0.7rem) / 2); }
+}
+
+/* The word is the link down to what that value asks of us. The link is the
+   word alone and not the whole card: an anchor wrapped round the card would
+   make the four-line definition part of the link's name, which is no use to
+   anybody reading with their ears. It is a block, so the tap target is still
+   the full width of the card. */
 .value-word {
+  display: block;
   font-family: var(--font-head);
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   font-weight: 700;
   line-height: 1.2;
-  color: var(--text);
+  text-decoration: none;
+}
+
+.value-word:hover,
+.value-word:focus-visible { text-decoration: underline; }
+
+.value-meaning {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+
+/* --- What each value asks of us ----------------------------------------------- */
+
+.duty-set { margin: 0 0 1.6rem; }
+
+.duty-heading {
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.3rem;
+  font-size: 1.25rem;
+  border-bottom: 1px solid var(--line);
+  scroll-margin-top: 1rem;
+}
+
+/* Landing here from a value card, the heading says so. Quiet, because the
+   scroll has already done most of the work. */
+.duty-heading:target { color: var(--gold); }
+
+.duty-list {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.duty-list li { margin: 0 0 0.6rem; }
+
+/* --- The sources, and the documents they cite ---------------------------------
+   Every class in this group is `charter-`, because `.note-text` was already
+   taken by the week note on the attendance history table and redefining it
+   there would have silently restyled that. The names collided once. */
+
+/* line-height 0 keeps the marker from opening up the line it sits in, and the
+   padding makes a one-character link big enough to hit with a thumb. */
+.charter-note-ref {
+  margin-left: 0.1rem;
+  font-size: 0.72rem;
+  line-height: 0;
+}
+
+.charter-note-ref a {
+  padding: 0 0.25rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.charter-note-ref a:hover,
+.charter-note-ref a:focus-visible { text-decoration: underline; }
+
+.charter-note-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The number is the way back to the line that cited it, so it is a link rather
+   than a list marker -- which is why the list draws none of its own. The
+   transparent left border is there at rest so that marking the line somebody
+   jumped to does not shift the text sideways. */
+.charter-note-item {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 0 0.6rem;
+  padding-left: 0.4rem;
+  border-left: 3px solid transparent;
+  font-size: 0.88rem;
+  scroll-margin-top: 1rem;
+}
+
+.charter-note-item:target { border-left-color: var(--gold-line); }
+
+.charter-note-number {
+  flex: 0 0 1.8rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+
+.charter-note-number:hover,
+.charter-note-number:focus-visible { text-decoration: underline; }
+
+.charter-note-text {
+  margin: 0;
+  min-width: 0;
+  color: var(--ink-soft);
+}
+
+.charter-doc-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.charter-doc-item {
+  display: flex;
+  flex-direction: column;
+  padding: 0.6rem 0 0.6rem 0.4rem;
+  border-left: 3px solid transparent;
+  border-bottom: 1px solid var(--line);
+  scroll-margin-top: 1rem;
+}
+
+.charter-doc-item:target { border-left-color: var(--gold-line); }
+
+.charter-doc-name { font-weight: 600; }
+
+/* Where the link goes, and whether it is a file. Same bargain the professor
+   resources page makes: a phone has no status bar to read a destination off. */
+.charter-doc-rev,
+.charter-doc-host {
+  font-size: 0.82rem;
+  color: var(--muted);
 }
 
 /* --- Handles on a player card -------------------------------------------------- */
@@ -3654,15 +3793,47 @@ h1.event-name + .event-when {
 }
 .bounty-reward li { margin-bottom: 0.25rem; }
 
-.rental-format { margin: 0 0 1.2rem; }
-.rental-format h4 {
-  margin: 0 0 0.5rem;
+/* Each deck format, and the bounty list, folds away behind its own disclosure.
+   The shelf is the longest thing on the programs page, and all of it used to
+   sit between a reader and everything below it.
+
+   Paper rather than card, because the panel behind is already card and the deck
+   rows inside are too -- white on white would leave the band with nothing but
+   its border to say it is a band. */
+.rental-group {
+  margin: 0 0 0.6rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.rental-group > summary {
+  cursor: pointer;
+  padding: 0.6rem 0.8rem;
+}
+.rental-group[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+/* Inline so it rides the disclosure marker's line rather than starting a block
+   underneath it. The marker is the native one; see the note in rentals.js. */
+.rental-group-name {
+  display: inline;
+  margin: 0;
   font-size: 0.82rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+/* What a collapsed section still has to answer. */
+.rental-group-count {
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
   color: var(--muted);
 }
+
+.rental-group-body { padding: 0.7rem 0.8rem 0.8rem; }
 
 .rental-list {
   margin: 0;
@@ -4824,3 +4995,76 @@ h1.event-name + .event-when {
   /* Advice about printing is not part of what is being printed. */
   .print-guide-block { display: none !important; }
 }
+
+/* --- Prize packs ----------------------------------------------------------------- */
+/* The boxes on the two attendance screens: one per series still in play, with
+   what is left beside each. A row rather than a plain field, because the
+   number being typed only means something next to the count it draws down. */
+.pack-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.6rem;
+  margin: 0.4rem 0 0.2rem;
+}
+
+.pack-row {
+  padding: 0.6rem 0.75rem;
+  background: var(--paper);
+  border-radius: 8px;
+  border-left: 3px solid var(--gold-line);
+  min-width: 0;
+}
+
+.pack-row .field { margin: 0; }
+.pack-row .field-help { margin: 0.25rem 0 0; }
+.pack-left .count { font-weight: 700; }
+
+/* The running total under the boxes, which is what makes a mistyped figure
+   visible: it is read against how many people were in the room. */
+.pack-tally {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* One line per series on the stock chart. The stroke is set per series in page
+   code, because the colour belongs to the series rather than to the class. */
+.pack-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* A legend key for a line is a stroke, not a filled block, so it mirrors the
+   mark it stands for. The colour arrives as `color` and the border takes it,
+   so one class serves every series. */
+.chart-key-series {
+  height: 0;
+  border-top: 3px solid currentColor;
+  border-radius: 0;
+}
+
+/* A field toggled with the `hidden` property stays laid out without this: the
+   class above sets display:flex, which beats the browser's own [hidden] rule,
+   so the "series number" box on the prize packs screen never went away. */
+.field[hidden] { display: none; }
+
+/* Nothing recorded for that series on that day. It is still a button -- that
+   is how a missed day gets filled in -- but a dash with an underline through
+   it reads as an equals sign, so the affordance arrives on hover and focus,
+   the same way the attendance note column's Add does. */
+.pack-add {
+  color: var(--muted);
+  text-decoration: none;
+}
+.data-table tr:hover .pack-add,
+.pack-add:hover,
+.pack-add:focus-visible {
+  color: var(--gold);
+  text-decoration: underline;
+}
+
+/* A delivery marked in a narrow numeric column. "+600 in" is three characters
+   and a word, and wrapping it leaves "in" alone on a second line. */
+.pack-in { white-space: nowrap; }

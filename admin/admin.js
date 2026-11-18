@@ -75,6 +75,8 @@ const SECTIONS = [
         note: 'Records attendance and awards points for an event. The file is read in your browser and never uploaded anywhere.' },
       { href: 'attendance.html', name: 'Record attendance by hand',
         note: 'For a day with no tournament file. One point and one loyalty week for turning up. Adds new players too.' },
+      { href: 'prize-packs.html', name: 'Prize packs',
+        note: 'What is left of each series, what went out each week, and when to order more. Packs are counted on the two attendance screens; this is where they are read back.' },
       { href: 'attendance-history.html', name: 'Attendance history',
         note: 'How many came each week, split by played, attended and age division, and who was here on any given day. Read only.' },
       { href: 'drops.html', name: 'Drop requests', queue: 'drops',

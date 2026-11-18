@@ -234,7 +234,7 @@ function newPlayerForm(onPick) {
 export async function recordAttendance({
   attendees, known, attendedOn, attendActionId, playActionId,
   createMissing, professor, actions, source, reason, skipPlayFor,
-  otherAttendees, attendPoints, playPoints, sourceRef
+  otherAttendees, attendPoints, playPoints, sourceRef, prizePacks
 }) {
   // A screen may hand over the number of points itself rather than let the
   // earning action decide. Point values are defaults a professor can change at
@@ -360,7 +360,9 @@ export async function recordAttendance({
     return {
       created, eligibleCount: eligible.length, newCount: newlyPresent.size,
       repeatCount: eligible.length - newlyPresent.size, ledgerCount: 0,
-      playAwarded: false
+      playAwarded: false,
+      packsProblem: await writePrizePacks(attendedOn, prizePacks),
+      packCount: (prizePacks || []).reduce((sum, row) => sum + row.quantity, 0)
     };
   }
 
@@ -368,9 +370,12 @@ export async function recordAttendance({
   if (ledErr) { ledErr.stage = 'points'; throw ledErr; }
 
   await writeOtherAttendees(attendedOn, otherAttendees, professor);
+  const packsProblem = await writePrizePacks(attendedOn, prizePacks);
 
   return {
     created,
+    packsProblem,
+    packCount: (prizePacks || []).reduce((sum, row) => sum + row.quantity, 0),
     eligibleCount: eligible.length,
     newCount: newlyPresent.size,
     repeatCount: eligible.length - newlyPresent.size,
@@ -477,6 +482,224 @@ export function otherAttendeesField(initialDate) {
   };
 }
 
+// --- Prize packs --------------------------------------------------------------
+//
+// Packs come from Pokémon a few hundred at a time and go out at the desk, and
+// how many are left decides when the next lot is ordered. The count was being
+// kept on a spreadsheet somewhere else, which is why it stopped being kept: the
+// moment the number is known is the moment the day is being recorded, so this
+// is where it is asked for.
+//
+// On both recording screens, for the reason the other-attendee box is on both.
+// A Sunday with no tournament file still hands out packs, and leaving this off
+// manual entry would show those weeks as nothing going out while the shelf
+// really emptied.
+//
+// One box per series still in play, because several series are live at once --
+// a new one arrives before the old one runs out, and both go out on the same
+// afternoon. The day's headcount is printed above them as the usual figure
+// rather than filled into any of them: with two series live there is no way to
+// split one number between them that is not a guess.
+
+export async function activePackSeries() {
+  const { data, error } = await supabase.rpc('prize_pack_stock');
+  if (error) throw error;
+  return (data || []).filter((s) => s.is_active);
+}
+
+export async function packsHandedOutOn(day) {
+  if (!day) return new Map();
+  const { data, error } = await supabase.from('prize_pack_handouts')
+    .select('series_id, quantity').eq('handed_out_on', day);
+  if (error) throw error;
+  return new Map((data || []).map((r) => [r.series_id, r.quantity]));
+}
+
+export function prizePackField(initialDate, initialCount) {
+  const list = el('div', { className: 'pack-rows' });
+  const tally = el('p', { className: 'field-help pack-tally' });
+  const note = el('p', { className: 'form-status', role: 'status' });
+
+  let boxes = [];
+  let day = initialDate;
+  let count = Number.isFinite(initialCount) ? initialCount : null;
+  // A failed load must not look like a shelf with nothing on it. Nothing is
+  // written in that state, and the recording carries on regardless: a missing
+  // pack count is a number somebody can type again, and refusing the whole
+  // upload over it would be the wrong trade.
+  let broken = false;
+
+  const typed = (box) => {
+    const raw = box.input.value.trim();
+    if (raw === '') return null;
+    const n = Math.trunc(Number(raw));
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
+
+  // The headcount follows the boxes only while nobody has taken them over. A
+  // professor who typed a number keeps it, however many judges are ticked
+  // afterwards -- the same rule the point boxes on the upload screen follow.
+  function prefill() {
+    // Nobody on the list yet is not a figure worth offering: the manual screen
+    // opens with an empty list, and a prefilled 0 there is a number somebody
+    // has to clear rather than one that helps.
+    if (boxes.length !== 1 || !count) return;
+    const only = boxes[0];
+    if (only.dirty || only.recorded !== null) return;
+    only.input.value = String(count);
+  }
+
+  function retally() {
+    if (broken || !boxes.length) { tally.textContent = ''; return; }
+
+    const given = boxes.map(typed).filter((n) => n !== null);
+    if (!given.length) { tally.textContent = ''; return; }
+
+    const total = given.reduce((a, b) => a + b, 0);
+    const word = `${total} pack${total === 1 ? '' : 's'} going out`;
+
+    // Nobody on the list to read it against: the total alone, rather than
+    // "26 more than the 0 here today", which is arithmetic rather than help.
+    if (!count) { tally.textContent = `${word}.`; return; }
+
+    const gap = total - count;
+    tally.textContent = gap === 0
+      ? `${word}, one for everybody here today.`
+      : gap > 0
+        ? `${word}, ${gap} more than the ${count} here today.`
+        : `${word}, ${-gap} fewer than the ${count} here today.`;
+  }
+
+  function drawRows() {
+    list.replaceChildren(...boxes.map((box) => el('div', { className: 'pack-row' }, [
+      el('p', { className: 'field' }, [
+        el('label', { for: box.input.id, text: `Series ${box.series.series_number}` }),
+        box.input
+      ]),
+      el('p', { className: 'field-help pack-left' }, [
+        el('span', { className: 'count', text: box.series.remaining }),
+        el('span', { text: ' left on the shelf before today.' })
+      ]),
+      box.recorded === null ? null : el('p', { className: 'field-help',
+        text: `${box.recorded} already recorded for this day. Leave the box empty `
+            + 'to keep that number, or type a new one to replace it.' })
+    ])));
+  }
+
+  async function look(nextDay) {
+    day = nextDay;
+    if (broken || !boxes.length) return;
+    try {
+      const recorded = await packsHandedOutOn(day);
+      for (const box of boxes) {
+        box.recorded = recorded.has(box.series.series_id)
+          ? recorded.get(box.series.series_id) : null;
+        // A day that already has a number is a correction, not a fresh entry,
+        // so the headcount stops being offered for it.
+        if (!box.dirty && box.recorded !== null) box.input.value = '';
+      }
+      drawRows();
+      prefill();
+      retally();
+    } catch (err) {
+      console.error(err);
+      status(note, 'What is already recorded for this day could not be checked. '
+        + 'Anything you type here will replace it.', 'error');
+    }
+  }
+
+  (async () => {
+    try {
+      const series = await activePackSeries();
+      if (!series.length) {
+        list.replaceChildren(el('p', { className: 'muted-note' }, [
+          el('span', { text: 'No pack series is in play. Add one on ' }),
+          el('a', { href: 'prize-packs.html', text: 'prize packs' }),
+          el('span', { text: ' and it will appear here.' })
+        ]));
+        return;
+      }
+
+      boxes = series.map((s) => {
+        const input = el('input', {
+          type: 'number', id: `packs-${s.series_number}`, min: '0', step: '1',
+          inputmode: 'numeric', placeholder: '0'
+        });
+        const box = { series: s, input, recorded: null, dirty: false };
+        input.addEventListener('input', () => { box.dirty = true; retally(); });
+        return box;
+      });
+
+      drawRows();
+      await look(day);
+    } catch (err) {
+      console.error(err);
+      broken = true;
+      boxes = [];
+      list.replaceChildren();
+      status(note, 'The prize pack series could not be loaded, so packs cannot be '
+        + 'recorded with this. Everything else still records; add the packs on '
+        + 'the prize packs screen afterwards.', 'error');
+    }
+  })();
+
+  return {
+    nodes: [
+      el('p', { className: 'field-help',
+        text: 'How many packs went out today, per series. Usually one each, so '
+            + 'the number tends to match how many were here — but it is the '
+            + 'count at the desk that is right, not the headcount.' }),
+      list,
+      tally,
+      note
+    ],
+    setDate: look,
+    // The headcount changes as judges are ticked and people are added by hand,
+    // so the line underneath follows rather than being written once.
+    setCount: (n) => {
+      count = Number.isFinite(n) ? n : null;
+      prefill();
+      retally();
+    },
+    // An empty box means "leave whatever is recorded", which is not zero. Zero
+    // is a professor saying none of that series went out.
+    value: () => {
+      if (broken || !boxes.length) return null;
+      const out = boxes
+        .map((box) => ({ series_id: box.series.series_id, quantity: typed(box) }))
+        .filter((row) => row.quantity !== null);
+      return out.length ? out : null;
+    }
+  };
+}
+
+// One row per series per day, replaced rather than added to. Two tournament
+// files from one Sunday are one afternoon of packs going out, and a professor
+// re-uploading a file to fix something must not double the count.
+//
+// Like the other-attendee count, this does not fail the recording: the
+// attendance and the points are the part that matters. Unlike it, the failure
+// is reported, because a pack count nobody notices is missing is a stock figure
+// quietly drifting away from the shelf.
+async function writePrizePacks(day, packs) {
+  if (!packs || !packs.length) return null;
+
+  const { error } = await supabase.from('prize_pack_handouts')
+    .upsert(packs.map((row) => ({
+      series_id: row.series_id,
+      handed_out_on: day,
+      quantity: row.quantity
+      // recorded_by and recorded_at are stamped by a trigger, and the grants
+      // leave them out, so a browser cannot name somebody else.
+    })), { onConflict: 'series_id,handed_out_on' });
+
+  if (error) {
+    console.warn('The prize pack counts did not save:', error.message);
+    return error.message || 'unknown error';
+  }
+  return null;
+}
+
 // Which of these players already hold a play award for this exact tournament.
 //
 // Keyed on the tournament's own id, not on its name. A league that exports the
@@ -535,6 +758,13 @@ export function describeFailure(err) {
 
 // The same summary wording for both routes, so a professor reads one thing
 // whichever way the attendance was entered.
+//
+// FILTERED BEFORE IT IS RETURNED. Most of these lines withhold themselves --
+// nobody was skipped, nothing was repeated -- and both callers spread this
+// straight into replaceChildren, which stringifies a null into the literal
+// word "null" on the page. An ordinary upload with nobody skipped and nobody
+// repeated was printing "nullnull" into the receipt. el() drops a falsy child
+// for exactly this reason; replaceChildren is not el().
 export function outcomeNodes(outcome, attendedOn, { fileNote = false } = {}) {
   return [
     el('p', { text: `Recorded. ${outcome.newCount} attendance row`
@@ -557,6 +787,24 @@ export function outcomeNodes(outcome, attendedOn, { fileNote = false } = {}) {
               ? '. They still received points for playing.'
               : ' and they earned nothing further.') }) : null,
 
+    outcome.packCount ? el('p', { className: 'muted-note' }, [
+      el('span', { text: `${outcome.packCount} prize pack`
+        + `${outcome.packCount === 1 ? '' : 's'} recorded as handed out. ` }),
+      el('a', { href: 'prize-packs.html', text: 'Prize packs' })
+    ]) : null,
+
+    // Said out loud rather than logged, because a pack count that quietly fails
+    // to save is a stock figure drifting away from the shelf with nothing on
+    // screen to say so. The attendance and the points went in regardless.
+    outcome.packsProblem ? el('div', { className: 'warn-block' }, [
+      el('p', { text: `The prize pack counts did not save: ${outcome.packsProblem}. `
+        + 'The attendance and the points did. Record the packs on the prize '
+        + 'packs screen, which takes a date.' }),
+      el('p', { className: 'field-help' }, [
+        el('a', { href: 'prize-packs.html', text: 'Prize packs' })
+      ])
+    ]) : null,
+
     fileNote ? el('p', { className: 'muted-note',
       text: 'The file itself was read in your browser and has not been stored anywhere.' }) : null,
 
@@ -577,5 +825,5 @@ export function outcomeNodes(outcome, attendedOn, { fileNote = false } = {}) {
           ])
         ])))
     ]) : null
-  ];
+  ].filter(Boolean);
 }

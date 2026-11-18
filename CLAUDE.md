@@ -285,6 +285,19 @@ is applied to the production database.** There is no confirmation step.
 - Review of migration SQL happens **before commit**, not before deploy.
 - Never edit a migration that has already been pushed. Write a new one.
 - Do not commit a migration as work in progress. If it is in `main`, it is live.
+- **Recreating a function whole means starting from its CURRENT definition**,
+  not from the migration that first created it. A `returns table` column list is
+  part of the signature, so changing one forces a drop and a create often enough
+  that this comes up regularly — and the migration that created the function is
+  the obvious one to copy the body from and is usually the wrong one.
+  `20261116160000` added the two deck list columns to `rental_deck_shelf()` by
+  starting from `20261022160000`, and silently undid `20261023120000` in the
+  process: tags went back to bare labels and every coloured pill on the programs
+  page fell back to grey. **Nothing failed**, which is why it shipped — a tag
+  with no colour is a legitimate state, so `readableOn(null)` returned null and
+  the page drew the quiet pill exactly as designed. `20261117120000` put it
+  back. Where a function has been redefined more than once, the newest migration
+  naming it is the only safe thing to start from; `grep` for the name first.
 
 ---
 
@@ -662,6 +675,72 @@ it runs.
   hand or a judge is ticked. Rebuilding the fields with it silently reverted
   them: tick "this was a premier event", add one person, and premier was off
   again and everybody earned a point less, with nothing on screen saying so.
+  **The manual attendance screen had the same fault and it was worse there**: it
+  built the date box along with everything else, so adding a second person put
+  the day back to today. Anything describing the day rather than the list is
+  built once.
+
+---
+
+## Prize packs
+
+Packs come from Pokémon a few hundred at a time and go out at the desk, roughly
+one a player. `admin/prize-packs.html` is where the stock is read back and where
+a delivery is added; the counting happens on the two attendance screens.
+
+- **Counted where the day is already being recorded.** This was a spreadsheet
+  with a block of columns per series, and it stopped being kept — which is what
+  happens to a second place to write something down, because the packs go out at
+  the desk and the sheet is somewhere else. The box is on the TDF upload **and**
+  on record-attendance-by-hand: a Sunday with no tournament file still hands out
+  packs, and leaving it off that screen would show those weeks as nothing going
+  out while the shelf really emptied.
+- **Several series are in play at once**, which is the thing the whole feature is
+  shaped around. A new series arrives before the old one runs out and both go out
+  on the same afternoon, so there is a box per series rather than one number.
+- **The headcount is printed above the boxes, not filled into them.** With two
+  series live there is no way to split one number between them that is not a
+  guess. With exactly one live it prefills, and follows the list as judges are
+  ticked and people are added — until somebody types over it, after which their
+  number stands. A running total underneath reads the boxes against the room,
+  which is what makes a mistyped figure visible.
+- **One row per series per day, replaced rather than added to.** Two files from
+  one Sunday are one afternoon of packs, and re-uploading a file to fix something
+  must not double the count. The same rule `other_attendees` follows, and the box
+  says what is already recorded for that day so a professor is correcting a
+  number they can see rather than overwriting one they cannot.
+- **An empty box means leave whatever is recorded; zero means none went out.**
+  Same distinction as the other-attendee count, and the check constraint allows
+  zero for it.
+- **Remaining is never stored.** It is received minus handed out, worked out by
+  `prize_pack_stock()` every time it is asked for — the rule the point ledger
+  already follows. A running total in a column is one that can disagree with the
+  rows under it.
+- **The spreadsheet's history was not imported.** It is out of date, and a stock
+  figure that is nearly right is worse than no figure, because somebody would
+  order against it. `20261117130000` creates series 8 and 9 holding nothing, so
+  the first thing recorded is a professor counting what is on the shelf. Series
+  5, 6 and 7 are spent and are not created at all.
+- **"About N more Sundays" counts only the days a series actually went out on.**
+  A series that has been superseded hands out nothing for weeks, and counting
+  those would have it reading as lasting forever on the day it runs out.
+- **A series is a table, retired and never deleted**, for the reason the rental
+  deck tags are: a new series arrives every few months and adding one should not
+  be a migration. Retiring takes it off both attendance screens and keeps every
+  week it was going out.
+- **A delivery is voided, never deleted**, through `void_prize_pack_receipt()`
+  rather than an UPDATE grant on the table — the same reason
+  `void_trainer_card_batch()` is a function. A handout needs no void: it is
+  replaced by day, so a correction is typing the right number.
+- **Professor-only.** There is nothing about a player in a count of what is in
+  the cupboard, but there is nothing for a player in it either, and a public
+  figure would read as a promise about what is still available.
+- **A failed pack write does not fail the recording, and unlike the
+  other-attendee count it is reported.** The attendance and the points are the
+  part that matters, so a pack count that will not save is not worth losing an
+  upload over — but a stock figure quietly drifting away from the shelf is
+  exactly what this exists to prevent, so the receipt says so and points at this
+  screen.
 
 ---
 
@@ -781,6 +860,31 @@ The section at the foot of `league_programs.html`, filled by `rentals.js`, and
 `admin/rentals.html` behind it. Four tables, all of them public: there is no
 personal data in a catalogue of what is on a shelf.
 
+- **Each format, and the bounty list, folds away behind a disclosure.** A deck
+  carries a status, its tags, a note and now its whole list, so three decks is
+  most of a phone screen and six is more — and all of it sat between a reader
+  and everything below it whether or not they had come to borrow a deck. The
+  section lands as three closed bars.
+  - **The count is part of the summary, not decoration on it.** Collapsing a
+    section hides what is inside, so the line that stays visible has to answer
+    the question somebody would have opened it to ask. Same rule as the tools
+    menu, which puts a waiting count on the section and not only on the card
+    within it. An empty format says *None yet* there rather than nothing.
+  - **Both formats still draw a disclosure each, even empty**, for the reason
+    they always both rendered: a missing Standard list and an empty one look
+    identical on a page and mean different things. The bounty list is one list
+    rather than a pair, so when it is empty it drops the disclosure and prints
+    the sentence — a fold exists to put length away, and one sentence has none.
+  - **The native marker is kept rather than drawn.** A summary is a list-item by
+    default and laying it out any other way — a flex row, say, to put the name
+    and the count at opposite ends — takes the triangle with it, so the heading
+    goes inline beside the marker instead. The format name stays a real `h4`
+    inside the summary, which the HTML spec allows and which keeps these
+    reachable by heading navigation now that they are no longer headings on the
+    page. A space is written between the name and the count: they are adjacent
+    inline boxes, and the margin that draws the gap is not in the text, so
+    without it this control's accessible name runs together as
+    "Standard decks3 decks".
 - **The Current chip is silver, not gold.** Once a professor could choose a
   tag's colour, gold stopped being available to the status: a gold Current beside
   a gold Regional winner is two pills that look the same and mean different
@@ -904,24 +1008,62 @@ Static HTML with no module and no database call, like the Resources page.
 
 ## The league charter
 
-`charter.html` carries the mission and the values, taken from the charter draft.
+`charter.html` carries the whole of the finalised charter: the mission, the
+seven values, what each one asks of us, and the sources behind them.
 
-- **It is not published yet.** The draft is unfinished, so the page renders for
-  a signed-in professor and everybody else gets a short note. The nav item wears
-  `nav-prof`, hidden until `mountProfessorBar()` puts `has-prof-bar` on the body
-  — the one signal every public page already shares. Like everything `auth.js`
-  governs this decides what to **show**: the file is fetchable and the text is
-  in it, which is fine, because the charter is unfinished rather than secret.
-  Publishing it is deleting the gate in `charter.js` and the class on the nav
-  item.
-- **Values are the words alone.** The draft has a one-line definition beside
-  each, still being worded. Half-written definitions on a page about how to
-  treat each other would be worse than the words by themselves. The card is
-  already the right shape to hold one underneath.
-- **Responsibilities are not here.** That section of the draft says TODO.
+- **It is not published yet.** The charter is finished but has not been put in
+  front of the league, so the page renders for a signed-in professor and
+  everybody else gets a short note. The nav item wears `nav-prof`, hidden until
+  `mountProfessorBar()` puts `has-prof-bar` on the body — the one signal every
+  public page already shares. Like everything `auth.js` governs this decides
+  what to **show**: the file is fetchable and the text is in it, which is fine,
+  because the charter is unannounced rather than secret. Publishing it is
+  deleting the gate in `charter.js` and the class on the nav item.
+- **Three layers, each pointing at the next.** A value says what we care about,
+  a responsibility says what that asks of somebody on a Sunday, and a source
+  says where the expectation comes from in the Play! Pokémon rules. Every link
+  on the page runs down that chain — value card to its responsibilities,
+  footnote marker to its source, source to the document at the foot of the
+  page — so a professor asked "says who?" gets from the words to the paragraph
+  without leaving the page until the last step.
+- **The sources hold no URLs.** `DOCUMENTS` lists each cited document once at
+  the foot of the page, and a document named inside a source is a link **down
+  to that entry**, never out to pokemon.com. Official documents move; this way
+  a link that moves moves in one place. It is also why a source is written as a
+  run of pieces rather than one string: "the Penalty Guidelines" and "Play!
+  Pokémon Penalty Guidelines" are the same document and should not have to be
+  spelled the same way to link.
+- **Footnote numbers are the charter's own**, written on each responsibility
+  and never worked out from position. The appendix is written against those
+  numbers, so nothing may be reordered without the markers moving with it.
+- **The numbers go both ways.** A marker links down to its source and the
+  source's number links back to the marker, because an appendix of twenty-one
+  lines is no use if reading one costs you your place.
+- **The value cards are flex, not grid, and that is the whole reason.** Seven
+  divides into no sensible number of columns, and `flex: 0 1 <share>` with
+  `justify-content: center` puts the odd card left over at the end of a row in
+  the middle of it. An auto-fit grid cannot: its tracks are `1fr`, so the last
+  card widens to fill the row alone.
+- **The link is the word, not the card.** An anchor wrapped round the card
+  would make the four-line definition part of the link's name, which is no use
+  to anybody reading with their ears. The word is a block, so the tap target is
+  still the full width of the card.
+- **Every class on this page is `charter-`**, because `.note-text` was already
+  the week note on the attendance history table and redefining it there would
+  have silently restyled that. The names collided once; do not reuse them.
+- **Quoting an official document in a source is not copying from one.** The
+  rule under **Intellectual property** is about passing official wording off as
+  the league's own. These are short attributed quotations in an appendix whose
+  entire job is to name where a rule comes from, written by the organiser, on a
+  page that is not public. The charter's own text — the mission, the values,
+  the responsibilities — is ours.
 - **The league is LoCo League in the mission statement**, as everywhere else.
-  The draft calls it by the venue's name, which is the room rather than the
+  The charter calls it by the venue's name, which is the room rather than the
   league.
+- **One citation has no entry at the foot**: source 16 names "Pokémon TCG Rules
+  & Formats (tempo guidelines)", which the charter's own referenced-documents
+  list does not carry. It stays plain text rather than being pointed at a
+  document somebody guessed at.
 
 ## What is on next
 
@@ -1624,6 +1766,8 @@ admin/deck-list-image.js  a photographed deck list: picking, resizing, storing
 home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
 admin/staff.html    the staffing roster, availability and event staffing
+admin/prize-packs.html  prize pack stock per series, week by week, and deliveries
+admin/attendance-core.js  the shared write, and the boxes both recording screens carry
 admin/printables.html  handouts for players, built from the database
 admin/sheet-trainer-card.js  the Trainer Card Program information sheet
 admin/sheet-chaos-cup.js     the Chaos Cup rules sheet and its catalogue
@@ -1859,10 +2003,28 @@ should still read as one rather than quietly losing its mark.
 
 ### Charts
 
-One chart exists: the stacked column on the attendance history page. Inline SVG
-built in page code — there is no charting library, because there is no build step
-and no dependency budget, and a stacked column is a handful of rectangles.
+Two charts exist: the stacked column on the attendance history page, and the
+line per series on the prize packs page. Both are inline SVG built in page code
+— there is no charting library, because there is no build step and no dependency
+budget, and neither of these is more than a handful of shapes. The rules below
+are the attendance chart's unless they say otherwise; everything about colour,
+gridlines, legends, labelling and the scrolling wrapper applies to both.
 
+- **The form follows the question.** Attendance is part-to-whole on a given
+  week, so it stacks. Prize packs are a level over time — how much is left,
+  falling as packs go out and stepping up when a delivery arrives — so they are
+  lines. A column chart of what remains would say the weeks are the thing being
+  compared, and they are not.
+- **A pack line starts at its series' first delivery**, not at the left edge. A
+  series that was not on the shelf yet is absent rather than drawn along zero,
+  which would read as having run out. Where a week passes with none of a series
+  going out, its count is carried forward: the level has not changed.
+- **The pack series take distinguishable hues rather than an ordinal ramp.**
+  Series numbers do run in order, but the lines cross and overlap, so telling
+  them apart is what matters — the newest takes the site's gold and the one
+  before it the slate from the imported attendance weeks. Each line is labelled
+  at its own endpoint, and two that end nearly level have their labels pushed
+  apart just enough to be read; the lines themselves are untouched.
 - **Stacked, because the question is part-to-whole.** The height of a column is
   everybody who was there; inside it the divisions stack darkest first with
   Others on top.
@@ -2007,6 +2169,20 @@ unannounced.
 - No emoji in the UI.
 - Semantic HTML. Keyboard focus visible. Alt text on images.
 - Comment the non-obvious. Do not comment the obvious.
+- **`replaceChildren` prints a null as the word "null"; `el()` drops it.** A
+  list of nodes where some withhold themselves has to be filtered before it is
+  spread into `replaceChildren`. This has bitten three times — the tools menu's
+  waiting line, the attendance history cards, and the upload receipt, which was
+  printing "nullnull" on an ordinary upload where nobody had been skipped and
+  nobody repeated. `outcomeNodes()` now filters before returning, which is the
+  right place: at the source, not at each call site.
+- **A `hidden` property does nothing to an element whose class sets `display`.**
+  `.field` is `display: flex`, which beats the browser's own `[hidden]` rule, so
+  a field toggled with `.hidden = true` stays on screen. `.field[hidden]` in
+  `styles.css` is what makes it work.
+- **An underline through a dash reads as an equals sign.** A `link-button`
+  whose whole text is "—" needs its underline held back until hover and focus;
+  `.pack-add` is the one that does it.
 
 ---
 
