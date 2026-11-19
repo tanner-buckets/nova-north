@@ -3028,9 +3028,28 @@ h1.event-name + .event-when {
   print-color-adjust: exact;
 }
 
-/* The block above the boxes, anchored at its BOTTOM. A player with thirteen
-   badges wraps to a second row, and anchoring this way grows that row upward
-   into empty artwork rather than down through the name box. */
+/* The block above the boxes. 5.8% from the left is not a round number chosen
+   for looks: the artwork's own "Birth year:" starts at 5.82%, so the heading
+   and the lowest label share a left edge. 6% from the top is EDGE, the inset
+   nothing is printed inside.
+
+   CONDENSED, and that is the only reason the type can be read at all. The
+   pokeball cuts in from the right and cuts in further the lower you go, so
+   "Cooltrainer" set plainly is boxed in: at the 15.84pt this used to be it
+   already had under 5pt of air before the white circle, and the ceiling on
+   size alone is 16.03pt -- one per cent, which is no answer to type that is
+   hard to read. Squeezing to 0.85 buys 18.5pt, seventeen per cent, with the
+   same 4pt of air. It is also what the artwork does: "Birth year:" is a heavy
+   condensed sans, which is how it reads at a 6.72pt cap height where this did
+   not at 11.25pt.
+
+   A transform rather than a condensed font family, because a family is a
+   gamble. If the narrow face is missing on the machine doing the printing the
+   text silently sets wide and runs onto the ball, and there are no web fonts
+   here to guarantee one. A scale is the same on every machine.
+
+   It scales the text-shadow's x offset with everything else, which is why the
+   offset below is written wider than it means to land. */
 .tcard-head {
   position: absolute;
   left: 5.8%;
@@ -3040,6 +3059,8 @@ h1.event-name + .event-when {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.5pt;
+  transform: scaleX(0.85);
+  transform-origin: left top;
 }
 
 /* The colour and the shadow are sampled from the labels already drawn on the
@@ -3054,19 +3075,26 @@ h1.event-name + .event-when {
    is 1.29:1, which is a smudge, and white on it is 3.41:1 before the shadow is
    counted. Sample the labels on every replacement; the answer has moved twice.
 
-   The shadow is the measured one. The darkest pixel under a label is #232323
-   over a background of #898989, which is black at 0.74 -- so 0.7, rounded the
-   way the old 0.52 measurement was written as 0.45. */
+   The shadow is the measured one, and it is a hard offset thrown down and to
+   the right rather than an outline -- magnify "Birth year:" on the template
+   and the top left edges of the glyphs are bare white against the grey. It is
+   about 3.5 template pixels, which is 0.85pt, and the darkest pixel under a
+   label is #232323 over a background of #898989, which is black at 0.74. The
+   0.6pt at 0.45 this carried before was a shadow for gold text and far too
+   timid to hold white off a grey building.
+
+   The x offset is written 0.95 because .tcard-head squeezes it to 0.85 of
+   that, landing on the 0.81 the artwork uses. */
 .tcard-league,
 .tcard-rank {
   margin: 0;
   font-family: var(--font-body);
-  font-size: 15.84pt;
+  font-size: 18.5pt;
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: 0.01em;
   color: #ffffff;
-  text-shadow: 0.6pt 0.6pt 0 rgba(0, 0, 0, 0.7);
+  text-shadow: 0.95pt 0.8pt 0 rgba(0, 0, 0, 0.75);
   white-space: nowrap;
 }
 

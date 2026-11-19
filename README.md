@@ -1661,6 +1661,16 @@ Four things are sampled from the artwork and move with it — the circle, the
 star's position and gold, these two lines, and the fallback badge fill — and a
 replacement means re-measuring all four.
 
+**The two lines are condensed, by a `scaleX(0.85)` on the block.** The pokéball
+cuts in from the right and further in the lower you go, so `Cooltrainer`, the
+widest rank the ladder holds, is boxed in: the ceiling on plain size is
+**16.03pt**, one per cent above where it sat, which is no answer to type that
+is hard to read. Squeezing buys 18.5pt at the same clearance, and it is what
+the artwork itself does — `Birth year:` is a heavy condensed sans, which is how
+it reads at a 6.72pt cap height. A transform rather than a narrow font family,
+because a missing family sets wide and runs onto the ball silently, and there
+are no web fonts here to guarantee one.
+
 **A card counts as printed the moment the dialog opens.** Nothing tells a page
 whether the print went ahead, and assuming it did not is worse — that hands out
 duplicates. The screen says so plainly, and **"The cards did not print"** is the

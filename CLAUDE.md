@@ -1566,8 +1566,28 @@ makes the file.
   colour is.** They are white now because `Name:` is white now. This is not
   taste: the card's own gold on the grey building is 1.29:1, which on paper is
   a smudge, and white on it is 3.41:1 before the shadow counts. The shadow is
-  the measured one — the darkest pixel under a label is `#232323` over a
-  `#898989` background, which is black at 0.74, written as 0.7.
+  measured too — a hard offset down and to the right, about 3.5 template pixels
+  which is 0.85pt, no blur and no outline, and the darkest pixel under a label
+  is `#232323` over `#898989`, which is black at 0.74.
+- **They are also CONDENSED, and that is the only reason they can be read.**
+  The pokéball cuts in from the right and cuts in further the lower you go, so
+  `Cooltrainer` — the widest rank the ladder holds — is boxed in. At 15.84pt
+  it already had under 5pt of air before the white circle, and **the ceiling on
+  size alone is 16.03pt**: one per cent, which is no answer to type somebody
+  says is hard to read. A `scaleX(0.85)` on `.tcard-head` buys 18.5pt with the
+  same clearance. It is also what the artwork does — `Birth year:` is a heavy
+  condensed sans, which is how it reads at a 6.72pt cap height.
+  - **A transform, not a condensed font family.** A family is a gamble: if the
+    narrow face is missing on the machine doing the printing, the text sets
+    wide and runs onto the ball with nothing on screen to say so, and the no
+    web fonts rule means none can be guaranteed. A scale is the same
+    everywhere.
+  - **It scales the text-shadow's x offset too**, which is why that offset is
+    written 0.95pt to land on 0.81.
+  - **Check `Cooltrainer`, not the rank in front of you.** `Ace Trainer` is a
+    hair narrower and `Champion` and `Trainer` are nowhere near. Every one of
+    them is measured, against the circle and against the badge run, which the
+    rank line can also reach.
 - **A Champion gets a gold star**, on the white below the gold band and in from
   the right edge, about a fifth taller than a field box and dropped by its own
   height so it sits clear of the band. It is drawn as an SVG polygon rather than typed
