@@ -3042,12 +3042,21 @@ h1.event-name + .event-when {
   gap: 0.5pt;
 }
 
-/* The gold and the shadow are sampled from the labels already drawn on the
-   template -- #d1a213 is the exact colour of "Name:" -- so the two lines read
-   as part of the card rather than as something typed over it. Slightly larger
-   than those labels, which measure about 9.2pt on this card. The artwork's
-   gold was #b99d2c until it was redrawn brighter; change the art and this
-   is re-sampled with it, or the two lines stop matching the labels. */
+/* The colour and the shadow are sampled from the labels already drawn on the
+   template, so the two lines read as part of the card rather than as something
+   typed over it. Slightly larger than those labels, which measure about 9.2pt
+   on this card.
+
+   WHITE, because that is what "Name:" is now. It was gold while the labels
+   were gold -- #b99d2c, then #d1a213 when the art was redrawn brighter -- and
+   the replacement template draws them white on the grey building instead. That
+   is a legibility change rather than a taste one: the card's gold on that grey
+   is 1.29:1, which is a smudge, and white on it is 3.41:1 before the shadow is
+   counted. Sample the labels on every replacement; the answer has moved twice.
+
+   The shadow is the measured one. The darkest pixel under a label is #232323
+   over a background of #898989, which is black at 0.74 -- so 0.7, rounded the
+   way the old 0.52 measurement was written as 0.45. */
 .tcard-league,
 .tcard-rank {
   margin: 0;
@@ -3056,16 +3065,17 @@ h1.event-name + .event-when {
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: 0.01em;
-  color: #d1a213;
-  text-shadow: 0.6pt 0.6pt 0 rgba(0, 0, 0, 0.45);
+  color: #ffffff;
+  text-shadow: 0.6pt 0.6pt 0 rgba(0, 0, 0, 0.7);
   white-space: nowrap;
 }
 
 /* The badges ride the inside edge of the white circle, top to bottom. The
-   circle is measured off the artwork, not guessed: centre (815.8, 225.6) and
-   radius 350.5 on the 1013 by 638 template, which is a half-pixel fit. Every
+   circle is measured off the artwork, not guessed: centre (730.0, 321.5) and
+   radius 348.5 on the 1013 by 638 template, fitted to its left edge. Every
    position is worked out in page code, because where one sits depends on how
-   many there are -- see arcPlacement() in trainer-cards.js. */
+   many there are -- see arcPlacement() in admin/trainer-card-art.js, which is
+   also where the measurement lives. */
 .tcard-badges {
   position: absolute;
   inset: 0;
@@ -3099,7 +3109,7 @@ h1.event-name + .event-when {
   width: var(--size, 8pt);
   height: var(--size, 8pt);
   transform: translate(-50%, -50%);
-  background-color: var(--fill, #d1a213);
+  background-color: var(--fill, #b99d2c);
   -webkit-mask-image: var(--art);
   mask-image: var(--art);
   -webkit-mask-size: contain;
@@ -3111,27 +3121,36 @@ h1.event-name + .event-when {
 }
 
 /* A Champion's star: on the white below the gold band, in from the right edge.
-   Measured off the artwork like everything else here -- the band's lower edge
-   sits at 30.6% of the card height at the sides, and the square below it is
-   clean white all the way across.
+   Measured off the artwork like everything else here -- the band reaches its
+   lowest at 45.61% of the card height across the star's own columns, and the
+   square below it is clean white all the way across.
 
    12.136% of the card height against a field box's 10.03%, and dropped by its
-   own height so it sits clear of the band rather than tucked under it. The
-   bottom lands at 56.09%, which leaves it short of the name box at 58.78%. */
+   own height so it sits clear of the band rather than tucked under it, plus
+   the same 1.217% the old placement carried: 45.61 + 12.136 + 1.217. The
+   bottom lands at 71.10%, which is still well above the wordmark at 86%.
+
+   THE BAND MOVED when the artwork was replaced -- it was 30.6%, which put this
+   at 43.953%, and against the new template a sixth of the star's box would
+   have been gold on gold. The star no longer fits in the gap between the band
+   and the name box, which the old comment here used as its reassurance; it
+   does not need to, because the name box ends at 82.92% and this starts at
+   88.51%, so the two never share a column. */
 .tcard-star {
   position: absolute;
   right: 3.85%;
-  top: 43.953%;
+  top: 58.963%;
   height: 12.136%;
   aspect-ratio: 1;
   /* drop-shadow rather than text-shadow or box-shadow: it follows the polygon,
      where a box-shadow would outline the square the star is drawn in.
 
-     Darker than the 0.45 the two text lines use, and deliberately so. Those sit
-     on the grey building; the star sits on white, where the same alpha washes
-     out. Sampling the artwork's own label shadow gives a core of (60,60,60) and
-     an average of (86,83,72) -- 0.65 over white lands on (89,89,89), which is
-     that average rather than a guess. */
+     0.65 is read off white and not off the grey, which is why it is not the
+     same number as the two heading lines even though both come from the same
+     place. Sampling a label's shadow on the artwork gives a core of (60,60,60)
+     and an average of (86,83,72); 0.65 over white lands on (89,89,89), which
+     is that average rather than a guess. The heading lines are composited over
+     the grey building instead, so their alpha is solved against that. */
   filter: drop-shadow(0.6pt 0.6pt 0 rgba(0, 0, 0, 0.65));
 }
 

@@ -1608,10 +1608,18 @@ split across them.
 Badges print as silhouettes riding the inside edge of the white circle, top to
 bottom: the artwork used as a CSS mask, filled with the `tile_color` already
 stored on the badge row. The circle is measured off the template rather than
-eyeballed — fitting its left edge gives centre (815.8, 225.6) and radius 350.5,
-to within half a pixel. `arcPlacement()` spreads them at a comfortable pitch
-until they would reach the name box, then compresses and shrinks just enough
-that all thirteen fit without touching.
+eyeballed — fitting its left edge gives centre (730.0, 321.5) and radius 348.5,
+sub-pixel wherever the edge is steep enough to measure. `arcPlacement()` spreads
+them at a comfortable pitch until they would reach the name box, then compresses
+and shrinks just enough that all thirteen fit without touching.
+
+**That circle has moved, and when it does the badges follow it in silence.**
+The replacement template put it at (730.0, 321.5) from (815.8, 225.6); nothing
+failed, because the arc was still an arc and every badge was still drawn — onto
+the gold band, where a gold-ish silhouette on gold is a card with no badges on
+it. Twenty-six positions across the ordinary badge counts landed there. What
+catches it is sampling the template under each badge's own square and counting
+gold pixels, not looking at a rendered card.
 
 Several of the stored colours are nearly white — Friendship is `#fefec5`,
 Community `#ffcbde` — and they sit on a white circle, so each silhouette carries
@@ -1632,15 +1640,26 @@ keep their margins.
 
 **A Champion carries a gold star**, on the white below the gold band and in from
 the right edge, about a fifth taller than a field box and dropped by its own
-height so it clears the band. Its shadow is a `drop-shadow`, so it follows the
-polygon rather than the square, and it is darker than the two text lines use —
-those sit on the grey building, the star sits on white, and the same alpha washes
-out there. The artwork's own label shadow averages (86, 83, 72); 0.65 black over
-white renders (89, 89, 89). It is an SVG polygon
+height so it clears the band. The band's lowest point across the star's own
+columns is the measurement that places it: 45.61% of the card height on the
+current template, which puts the star at 58.963%. It was 30.6% and 43.953%
+before, and against the new artwork a sixth of the star's box would have been
+gold on gold. Its shadow is a `drop-shadow`, so it follows the polygon rather
+than the square. The artwork's own label shadow averages (86, 83, 72); 0.65
+black over white renders (89, 89, 89). It is an SVG polygon
 rather than a star glyph, because there are no web fonts here and a glyph is
-whatever shape the reading font happens to carry; the gold is `#d1a213`, sampled
+whatever shape the reading font happens to carry; the gold is `#b99d2c`, sampled
 off the band. Which rank earns it comes from `requires_elite_four` on
 `trainer_card_ranks` rather than from matching the word "Champion".
+
+**The "League" and rank lines take their colour from the labels drawn on the
+artwork**, so they read as part of the card rather than as something typed over
+it. That is white on the current template, because `Name:` is white on it; it
+was gold on both of the earlier ones. The card's gold on the grey building is
+1.29:1, which on paper is a smudge, so this is legibility rather than taste.
+Four things are sampled from the artwork and move with it — the circle, the
+star's position and gold, these two lines, and the fallback badge fill — and a
+replacement means re-measuring all four.
 
 **A card counts as printed the moment the dialog opens.** Nothing tells a page
 whether the print went ahead, and assuming it did not is worse — that hands out

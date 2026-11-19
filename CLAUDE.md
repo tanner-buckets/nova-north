@@ -1526,11 +1526,20 @@ makes the file.
   say "LoCo League" above the stripped rank, which repeated the word.
 - **They ride the inside edge of the white circle, top to bottom.** The circle
   is measured off the artwork rather than eyeballed: fitting its left edge gives
-  centre (815.8, 225.6) and radius 350.5 on the template, to within half a
-  pixel. `arcPlacement()` spreads them at a comfortable pitch until they would
-  reach the name box, then compresses and shrinks just enough that thirteen
-  still fit without touching. The run stops above the name box because
-  everything inside the circle below that line is also inside the box.
+  centre (730.0, 321.5) and radius 348.5 on the template, sub-pixel wherever
+  the edge is steep enough to measure at all. `arcPlacement()` spreads them at
+  a comfortable pitch until they would reach the name box, then compresses and
+  shrinks just enough that thirteen still fit without touching. The run stops
+  above the name box because everything inside the circle below that line is
+  also inside the box.
+- **That circle has moved once, and the badges followed it silently.** It was
+  centre (815.8, 225.6) radius 350.5 under the previous artwork. Nothing fails
+  when the old numbers are left behind: the arc is still an arc and every badge
+  is still drawn. They are drawn on the gold band, where a gold-ish silhouette
+  on gold is a card with no badges on it — twenty-six of the positions across
+  the ordinary badge counts landed there when this was checked. The check that
+  catches it is sampling the template under each badge's own square, not
+  looking at a render.
 - **Several stored colours are nearly white** — Friendship is `#fefec5`,
   Community `#ffcbde` — and they now sit on a white circle. A hairline halo on
   the list keeps those readable. It belongs on the list rather than the item, or
@@ -1542,25 +1551,40 @@ makes the file.
   loyalty and registration sheets keep theirs.
 - **The page box is a NAMED page**, `@page trainer-cards`. A bare `@page` with
   no margin would strip the margins off every other printable page too.
-- **The artwork was redrawn once, in colour only.** The gold went from
-  `#b99d2c` to a brighter `#d1a213` and the grey behind it darkened slightly;
-  the circle, the boxes and the band were checked pixel for pixel and did not
-  move, so every measurement here still holds. Three things are written in the
-  artwork's gold and changed with it: the "League" and rank lines, the
-  Champion star, and the fallback badge fill. A replacement that moves a shape
-  needs re-measuring, which is what the edge check is for -- not a glance.
+- **The artwork has been replaced twice, and the two were nothing alike.** The
+  first was a recolour: gold `#b99d2c` to a brighter `#d1a213`, the grey behind
+  it a shade darker, every shape pixel for pixel where it had been. The second
+  (`trainer_card_v2.2a`) moved the pokéball — bigger, and a long way down and
+  left — put the gold back to `#b99d2c`, made the three field boxes a
+  translucent grey instead of solid white, and drew the `Name:` / `Player ID:`
+  / `Birth year:` labels **white** where they had been gold. Four things on the
+  card are sampled from the artwork and move with it: the circle the badges
+  ride, the Champion star's position and its gold, the "League" and rank lines'
+  colour, and the fallback badge fill. **Re-measure all four on a replacement.
+  Do not nudge, and do not trust a recolour to stay a recolour.**
+- **The two heading lines take their colour from the labels, whatever that
+  colour is.** They are white now because `Name:` is white now. This is not
+  taste: the card's own gold on the grey building is 1.29:1, which on paper is
+  a smudge, and white on it is 3.41:1 before the shadow counts. The shadow is
+  the measured one — the darkest pixel under a label is `#232323` over a
+  `#898989` background, which is black at 0.74, written as 0.7.
 - **A Champion gets a gold star**, on the white below the gold band and in from
   the right edge, about a fifth taller than a field box and dropped by its own
   height so it sits clear of the band. It is drawn as an SVG polygon rather than typed
   as a star glyph: there are no web fonts here, so a glyph would be whatever
-  shape the reading font happens to carry. The gold is `#d1a213`, sampled from
+  shape the reading font happens to carry. The gold is `#b99d2c`, sampled from
   the band itself. Its shadow is a `drop-shadow`, which follows the polygon,
   rather than a `box-shadow`, which would outline the square the star is drawn
-  in — and it is **darker than the two text lines use**, because those sit on
-  the grey building while the star sits on white, where the same alpha washes
-  out. Sampling the artwork's own label shadow gives an average of (86, 83, 72);
+  in. Sampling the artwork's own label shadow gives an average of (86, 83, 72);
   0.65 black over white renders (89, 89, 89), which is that, measured rather
-  than guessed.
+  than guessed — and it is read off white, which is why it is not the same
+  number as the heading lines, which are composited over the grey.
+- **The band under the star moved from 30.6% of the card height to 45.61%**,
+  which took the star from 43.953% to 58.963% — the same rule applied to the
+  new measurement, not a new rule. The old note here reassured itself that the
+  star finished above the name box; that is no longer true and does not need to
+  be, because the name box ends at 82.92% and the star starts at 88.51%, so
+  the two never share a column.
 - **Champion is found from `requires_elite_four`, not from the word.** The flag
   is a column on `trainer_card_ranks`; matching the name would break the star
   the day somebody rewords the ladder.
