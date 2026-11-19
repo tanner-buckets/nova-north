@@ -52,6 +52,108 @@ than from this schema: the `anon` and `authenticated` roles, `auth.users`,
 the harness lives in a scratch directory outside it, and it is a check worth
 running for any migration carrying a function somebody will read numbers off.
 
+### Backing up the database
+
+Take one before every merge to `main` that carries a migration. That is the
+moment the schema changes with no confirmation step, and the only moment a
+backup is worth more than it costs to take.
+
+**The backup file is the most sensitive thing this project produces.** It holds
+every player's full name and birth year in plain text, and most players are
+children. It never goes in this repository — this repository is public, and
+`.gitignore` deliberately does not blanket-ignore `*.sql` because migrations are
+`.sql` and tracked. Keep it outside, in `C:\Users\Tanner\Backups\nova-north\`.
+
+#### Once: get `pg_dump`
+
+It has to be at least the server's version. Supabase is on **Postgres 17.6**
+(`supabase/.temp/postgres-version` says which), so install 17 or newer.
+
+Do **not** reach for `supabase db dump`: it runs `pg_dump` inside a container
+and needs Docker Desktop, which is a lot of machinery for one command.
+
+*Either* download the binaries with no installer at all, from
+[EDB's binaries page](https://www.enterprisedb.com/download-postgresql-binaries) —
+take the **Windows x86-64** link under version 17 and unzip it to
+`C:\Tools\pgsql17`. Nothing is installed, no service runs, no admin rights are
+needed, and deleting the folder undoes it.
+
+*Or* `winget install PostgreSQL.PostgreSQL.17` and, at the wizard's **Select
+Components** step, untick *PostgreSQL Server*, *pgAdmin 4* and *Stack Builder*,
+leaving only **Command Line Tools**. Left ticked, the server installs as an
+auto-starting Windows service you will never use.
+
+#### Once: get the connection string
+
+Supabase dashboard → **Connect** → **Session pooler**, port **5432**. Note the
+host and the username; the username carries the project ref, like
+`postgres.abcdefgh`.
+
+**Not** the transaction pooler on 6543. `pg_dump` cannot run through a
+transaction pooler, and the failure is obscure rather than obvious.
+
+#### Each time
+
+```powershell
+$PG     = "C:\Tools\pgsql17\bin"
+$OUT    = "C:\Users\Tanner\Backups\nova-north"
+$HOSTNAME = "aws-0-<region>.pooler.supabase.com"   # from Connect
+$USERNAME = "postgres.<project-ref>"               # from Connect
+
+# Typed, never pasted into the command. An argument is visible in the process
+# list and lands in PowerShell history; what Read-Host takes is in neither, and
+# the variable dies with the window.
+$env:PGPASSWORD = Read-Host "Database password"
+
+$stamp = Get-Date -Format "yyyy-MM-dd-HHmm"
+& "$PG\pg_dump.exe" `
+  --host=$HOSTNAME --port=5432 --username=$USERNAME --dbname=postgres `
+  --format=custom --schema=public --no-owner --no-privileges `
+  --file="$OUT\$stamp.dump"
+
+Remove-Item Env:\PGPASSWORD
+```
+
+`--format=custom` is compressed and lets `pg_restore` pull back one table
+instead of all of them. `--no-owner --no-privileges` means it restores into a
+project whose roles are not identical to this one's, which is the situation you
+are in on the day you actually need it.
+
+#### Check it, every time
+
+A dump that failed halfway still leaves a file. Size alone proves nothing:
+
+```powershell
+& "$PG\pg_restore.exe" --list "$OUT\$stamp.dump" |
+  Select-String "TABLE DATA" | Measure-Object -Line
+```
+
+That counts the tables carrying rows. It should be in the twenties and should
+not drop between one backup and the next.
+
+#### What this does not cover
+
+- **The storage buckets.** `badge-art`, `gallery`, `prize-art` and `deck-lists`
+  are object storage, not rows. A database backup holds the paths and not the
+  files, so the gallery photographs and professor-uploaded badge art need a copy
+  of their own.
+- **`auth.users`**, the professor logins, which are outside `public`. They are
+  recreatable by inviting people again; the league's data is not.
+- **The schema**, which is not a gap: `supabase/migrations/` is the schema, in
+  git, and that is the whole point of the migration rule above. What cannot be
+  rebuilt from this repository is the rows.
+
+#### Prove it once
+
+A backup nobody has restored is a file, not a backup. Once, make a throwaway
+Supabase project and `pg_restore` into it. The day you need this is not the day
+to discover the flags were wrong.
+
+#### Keep few
+
+Each file is a list of children's names. Keep the last handful, delete the rest,
+and do not sync the folder anywhere you would not put the database itself.
+
 ---
 
 ## Build phases
@@ -1506,10 +1608,18 @@ split across them.
 Badges print as silhouettes riding the inside edge of the white circle, top to
 bottom: the artwork used as a CSS mask, filled with the `tile_color` already
 stored on the badge row. The circle is measured off the template rather than
-eyeballed — fitting its left edge gives centre (815.8, 225.6) and radius 350.5,
-to within half a pixel. `arcPlacement()` spreads them at a comfortable pitch
-until they would reach the name box, then compresses and shrinks just enough
-that all thirteen fit without touching.
+eyeballed — fitting its left edge gives centre (730.0, 321.5) and radius 348.5,
+sub-pixel wherever the edge is steep enough to measure. `arcPlacement()` spreads
+them at a comfortable pitch until they would reach the name box, then compresses
+and shrinks just enough that all thirteen fit without touching.
+
+**That circle has moved, and when it does the badges follow it in silence.**
+The replacement template put it at (730.0, 321.5) from (815.8, 225.6); nothing
+failed, because the arc was still an arc and every badge was still drawn — onto
+the gold band, where a gold-ish silhouette on gold is a card with no badges on
+it. Twenty-six positions across the ordinary badge counts landed there. What
+catches it is sampling the template under each badge's own square and counting
+gold pixels, not looking at a rendered card.
 
 Several of the stored colours are nearly white — Friendship is `#fefec5`,
 Community `#ffcbde` — and they sit on a white circle, so each silhouette carries
@@ -1530,15 +1640,36 @@ keep their margins.
 
 **A Champion carries a gold star**, on the white below the gold band and in from
 the right edge, about a fifth taller than a field box and dropped by its own
-height so it clears the band. Its shadow is a `drop-shadow`, so it follows the
-polygon rather than the square, and it is darker than the two text lines use —
-those sit on the grey building, the star sits on white, and the same alpha washes
-out there. The artwork's own label shadow averages (86, 83, 72); 0.65 black over
-white renders (89, 89, 89). It is an SVG polygon
+height so it clears the band. The band's lowest point across the star's own
+columns is the measurement that places it: 45.61% of the card height on the
+current template, which puts the star at 58.963%. It was 30.6% and 43.953%
+before, and against the new artwork a sixth of the star's box would have been
+gold on gold. Its shadow is a `drop-shadow`, so it follows the polygon rather
+than the square. The artwork's own label shadow averages (86, 83, 72); 0.65
+black over white renders (89, 89, 89). It is an SVG polygon
 rather than a star glyph, because there are no web fonts here and a glyph is
-whatever shape the reading font happens to carry; the gold is `#d1a213`, sampled
+whatever shape the reading font happens to carry; the gold is `#b99d2c`, sampled
 off the band. Which rank earns it comes from `requires_elite_four` on
 `trainer_card_ranks` rather than from matching the word "Champion".
+
+**The "League" and rank lines take their colour from the labels drawn on the
+artwork**, so they read as part of the card rather than as something typed over
+it. That is white on the current template, because `Name:` is white on it; it
+was gold on both of the earlier ones. The card's gold on the grey building is
+1.29:1, which on paper is a smudge, so this is legibility rather than taste.
+Four things are sampled from the artwork and move with it — the circle, the
+star's position and gold, these two lines, and the fallback badge fill — and a
+replacement means re-measuring all four.
+
+**The two lines are condensed, by a `scaleX(0.85)` on the block.** The pokéball
+cuts in from the right and further in the lower you go, so `Cooltrainer`, the
+widest rank the ladder holds, is boxed in: the ceiling on plain size is
+**16.03pt**, one per cent above where it sat, which is no answer to type that
+is hard to read. Squeezing buys 18.5pt at the same clearance, and it is what
+the artwork itself does — `Birth year:` is a heavy condensed sans, which is how
+it reads at a 6.72pt cap height. A transform rather than a narrow font family,
+because a missing family sets wide and runs onto the ball silently, and there
+are no web fonts here to guarantee one.
 
 **A card counts as printed the moment the dialog opens.** Nothing tells a page
 whether the print went ahead, and assuming it did not is worse — that hands out

@@ -18,6 +18,19 @@ data/source/*
 !data/source/earning-actions.csv
 !data/source/prize-items.csv
 
+# Database backups: deny by default.
+#
+# A dump holds every player's full name and birth year in plain text, and most
+# players are children. Backups belong outside this repository entirely -- see
+# "Backing up the database" in the README -- and this is the seatbelt for the
+# day somebody runs pg_dump with the working directory set here. Migrations are
+# .sql and tracked, so *.sql cannot be ignored wholesale; these are the names a
+# dump actually takes.
+*.dump
+*.dump.gz
+*backup*.sql
+*.pgdump
+
 # Local-only demo pages. Never committed.
 _demo*.html
 _demo*.js

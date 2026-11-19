@@ -12,12 +12,22 @@
 import { el, badgeArtUrl } from '../supabase-client.js';
 
 // The circle the badges ride, measured off the artwork rather than guessed:
-// fitting its left edge gives centre (815.8, 225.6) and radius 350.5 on the
-// 1013 by 638 template, to within half a pixel. Converted to the printed card
-// at 251.97 by 158.70pt, that is:
+// a least-squares fit of its left edge gives centre (730.0, 321.5) and radius
+// 348.5 on the 1013 by 638 template, sub-pixel everywhere the edge is steep
+// enough to measure. Converted to the printed card at 251.97 by 158.70pt,
+// that is:
 export const CARD_W = 251.97;
 export const CARD_H = 158.7;
-const RING = { cx: 202.92, cy: 56.12, r: 87.19 };   // points
+const RING = { cx: 181.57, cy: 79.97, r: 86.69 };   // points
+
+// The pokeball moved when the artwork was replaced: it was centre (815.8,
+// 225.6) radius 350.5, which is RING { 202.92, 56.12, 87.19 }. The circle grew
+// a little and dropped a long way down and to the left, and NOTHING FAILS when
+// these numbers are left behind -- the arc is still an arc and the badges are
+// still drawn. They are simply drawn on the gold band, where a gold silhouette
+// on gold is an empty card. Twenty-six of the positions across the ordinary
+// badge counts landed there before this was re-measured. Re-measure on every
+// replacement; do not nudge.
 
 const BADGE_MAX = 8;        // the size they were approved at
 const PITCH_MAX = 10;       // the gap between two when there is room to spare
@@ -84,7 +94,7 @@ function badgeDot(badge, index, place) {
     className: 'tcard-badge',
     title: badge.name || '',
     style: `--art: url("${badgeArtHref(badge)}"); `
-         + `--fill: ${badge.tile_color || '#c9a227'}; `
+         + `--fill: ${badge.tile_color || '#b99d2c'}; `
          + `--x: ${(x / CARD_W * 100).toFixed(3)}%; `
          + `--y: ${(y / CARD_H * 100).toFixed(3)}%; `
          + `--size: ${place.size.toFixed(2)}pt`
@@ -94,9 +104,10 @@ function badgeDot(badge, index, place) {
 // A Champion's star, on the white directly below the gold band and in from the
 // right edge. Drawn rather than typed: a star glyph is whatever shape the
 // reading font happens to have, and there are no web fonts here. The gold is
-// #d1a213, sampled from the band itself, so it is the card's own gold and not
-// an approximation of it -- and it moves when the artwork does, as it did when
-// the band went from #b99d2c to this.
+// #b99d2c, sampled from the band itself, so it is the card's own gold and not
+// an approximation of it -- and it moves when the artwork does. It has been
+// both ways now: #b99d2c, then #d1a213 when the art was redrawn brighter, and
+// back to #b99d2c with this template. Sample it; do not remember it.
 const STAR_POINTS = '50.00,0.00 61.23,34.55 97.55,34.55 68.17,55.90 79.39,90.45 '
   + '50.00,69.10 20.61,90.45 31.83,55.90 2.45,34.55 38.77,34.55';
 
@@ -112,7 +123,7 @@ export function championStar() {
     className: 'tcard-star',
     html: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" '
         + 'aria-hidden="true" focusable="false">'
-        + `<polygon points="${STAR_POINTS}" fill="#d1a213"/></svg>`
+        + `<polygon points="${STAR_POINTS}" fill="#b99d2c"/></svg>`
   });
 }
 
