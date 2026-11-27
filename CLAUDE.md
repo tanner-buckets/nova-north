@@ -601,6 +601,33 @@ it runs.
   so a professor has a link to post that is one event rather than the whole
   schedule. It reads what the schedule reads and nothing more: places left and
   the number waiting, never who is registered. A flight code opens the group.
+- **An event says which game it is for**, `events.game`: `tcg`, `vgc`, or null.
+  The schedule and the event page draw a card symbol or a gamepad from it.
+  - **A column and not a match on the name.** The Chaos Cup link is matched on
+    the name and the note there already says what is wrong with that — a
+    cleverer match is not a flag. A symbol is a claim about what somebody will
+    be playing, and it should not appear or vanish because of how an event was
+    typed into a box.
+  - **Display only.** Nothing keys on it: not registration, not the division
+    caps, not rank. Null is a real answer — a day that is neither, or one
+    running both — and such an event simply carries no symbol. **No symbol is
+    better than the wrong one.**
+  - **Only the Prerelease preset fills it in**, because a prerelease is a
+    trading card set launch by definition. A Cup or a Challenge can be either
+    game, so neither guesses — the same reasoning that has a Prerelease *clear*
+    capacity rather than inherit a Cup's 56.
+  - **`20261127140000` backfilled it from the names**, and declined where a name
+    said both: "Standard + VGC" is a day this column cannot describe. The card
+    side matches the formats too, not only the letters "TCG", or that name sees
+    one match instead of two and gets labelled a video game event. A prerelease
+    was judged on `event_type`, which is a fact rather than a reading of a name.
+- **Inside a day, an event still taking sign-ups is listed first.** Only inside
+  a day: the schedule stays one chronological run under its date headings, so an
+  event three weeks out is still three weeks down the page. It tests
+  `registrationState(event) === 'open'` rather than the `registration_open`
+  flag, because the flag only says the event takes registration at all — one
+  already closed by a professor, or one that has started, is nothing to act on
+  and must not be promoted over the event beside it.
 - **Every registration requires a Player ID**, prereleases included. Someone
   without one is sent to a help page explaining how to look one up or create one,
   including for a child, with professor contact details as the fallback. A
@@ -1811,6 +1838,7 @@ home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
 admin/staff.html    the staffing roster, availability and event staffing
 admin/prize-packs.html  prize pack stock per series, week by week, and deliveries
+admin/badge-progress.html  every player against one season's badges, read only
 admin/attendance-core.js  the shared write, and the boxes both recording screens carry
 admin/printables.html  handouts for players, built from the database
 admin/sheet-trainer-card.js  the Trainer Card Program information sheet
@@ -2045,6 +2073,30 @@ steps back to 3.2rem, where an event name still has somewhere to go.
 today, but it is a column somebody can tick, and a premier event that is neither
 should still read as one rather than quietly losing its mark.
 
+### The game symbols
+
+A card or a gamepad in the badges row, from `gameMark()` in
+`supabase-client.js` — beside `premierMark()` and there for the same reason: the
+schedule and the event page both draw that row, and two copies would drift.
+
+- **Drawn as inline SVG, never typed.** There are no web fonts here, so a card
+  or gamepad character is whatever shape the reading font happens to carry, and
+  the UI takes no emoji — which is what a 🃏 would be.
+- **Generic shapes on purpose.** Neither is anybody's mark, which keeps a symbol
+  meaning "this is the card game" clear of the rule about official Pokémon
+  artwork. That artwork is supplied by the organiser and asked about first; this
+  needs none of it.
+- **Outlines, and that is not a style choice.** They draw about sixteen pixels
+  across. The first pair of solid overlapping cards came out as a smudge nobody
+  could name, so the back card is an outline and only the front one is solid —
+  which is what makes two cards read as two. The gamepad is an outline for the
+  same reason: filled, it is a pill.
+- **The word is in the chip beside the shape.** A symbol alone is a guess for
+  anybody who has not been told what it means. The shape is `aria-hidden`,
+  because the word says the same thing and twice is worse than once.
+- `fill: currentColor` on the `svg`, so the shape and the word are one object
+  and a chip recoloured later takes the symbol with it.
+
 ### Charts
 
 Two charts exist: the stacked column on the attendance history page, and the
@@ -2204,6 +2256,149 @@ it like any other. Once earned it is on the card and in the total.
 
 Secret is not retired. A retired badge is finished with; a secret one is live and
 unannounced.
+
+### A badge can be earned in steps
+
+Some badges are a short list of things rather than one moment. Raid is a Level 1,
+a Level 2 and a Level 3 raid; 2026 Expert is two judge questions at one attempt a
+week, so it cannot be finished in an afternoon by definition. `badges.step_count`
+says how many, and `badge_progress` holds one row per step a player has done.
+The Trainer Card screen draws that many checkboxes under the badge's name.
+
+- **IT DECIDES NOTHING.** The badge is still awarded by tapping the tile, with
+  the boxes empty or full, and a full set does not award it. The moment this
+  gated the award it would stop being a notepad: a professor who watched all
+  three raids would have to go back and fill in boxes before the site would let
+  them record what they saw. It exists because that half-done state used to live
+  on a piece of paper between Sundays, which is the same way the prize pack
+  spreadsheet stopped being kept.
+- **Null, not zero**, the rule `loyalty_tiers.msrp` already follows. "Not earned
+  in steps" and "earned in no steps" are not two facts. Two is the floor because
+  a one-step badge *is* the badge — one checkbox beside the award is the same
+  fact twice, and a tick without an award is a disagreement with no right
+  answer. Twelve is the ceiling: they are drawn under a tile on a phone, and a
+  professor who types 60 has mistyped something.
+- **The count is the whole of it; the steps have no names.** The task sentence
+  already describes them — "Win a Level 1 Raid, a Level 2 Raid, and a Level 3
+  Raid" — and a second copy is a second thing to keep in step with the first.
+- **One field on the badge form, not a tick-box and a number.** Two controls for
+  one fact can disagree, and then "tracked, but zero steps" is a state somebody
+  has to decide the meaning of. Empty means no tracking. Same reasoning as
+  **Only the Sundays decide whether a tier exists**.
+- **The step boxes are SIBLINGS of the award button, never inside it.** A
+  checkbox inside a button is invalid, and the browser hands its clicks to the
+  button — ticking a step would award the badge. `.badge-track` is the wrapper
+  that keeps them apart.
+- **`badge_progress` grants INSERT and DELETE and no UPDATE**, the arrangement
+  `player_badges` has: a step is ticked or cleared, never amended. It is
+  professor-only with no public access at all, because a half-finished badge is
+  a working note and not something about a player anybody else reads.
+- **`step_number` is deliberately NOT checked against `step_count`.** A check
+  constraint cannot read another table, and a trigger would refuse a row the day
+  somebody lowered the count. A step above the current count lies dormant and
+  comes back if the count is raised — and **the Trainer Card screen says so**,
+  naming the badge and the step, because work disappearing with nothing on
+  screen about it is worse than the row being hidden.
+- **The step box carries no `min` or `max` attribute.** They make the browser
+  refuse the submit in its own wording before the screen's own check runs, so
+  the sentence explaining what a step count is for would never be read. Nothing
+  else on that form is `required` either, for the same reason.
+- **Ticking is written in place rather than through a redraw.** A tick is a
+  one-row change nothing else on the screen reads — not the rank, not the count,
+  not Champion — and rebuilding the page around a checkbox throws away the focus
+  of a professor part way along a row of them. A refused write puts the box back
+  where the database still says it is.
+- **Pre-existing and not fixed here**: an empty badge tile takes its size from
+  the length of its own name, because `.badge-tile` is `width: 100%` inside a
+  `justify-items: center` grid, which sizes the column to the name instead. So
+  "Raid" draws a 24px tile and "Network" a 44px one. `.badge-grid-toggle` is
+  `align-items: start` so at least the names in a row sit level; the tile
+  sizing itself wants `.badge-button` to stop centring, and that changes every
+  badge grid on the site rather than only the awarding screen.
+
+### The badge board
+
+`admin/badge-progress.html`, filled by `badge-progress.js` on top of
+`badge_board()`. Every player against one season's badges: who has earned what,
+who is part way through one that takes steps, who is closest to the next rank.
+The other professor screens ask about one player; this asks about one badge, or
+one threshold, across everybody, and before it the only way to find that out was
+to open the Trainer Card forty times.
+
+- **READ ONLY, and that is the design.** Every name links to that player's own
+  Trainer Card, which is where a badge is given or taken back. A grid of three
+  hundred rows where every cell is a button is a grid where a mis-tap awards a
+  badge to the wrong child, and the undo for that is a conversation.
+- **Columns and rows are separate questions.** Ticking badges chooses which
+  **columns** appear; the *Rows to list* select chooses who gets a **row** —
+  everyone, who has any of the ticked badges, who has them all, who is missing
+  any. Tick one badge and ask "who has any" and you have "who earned Raid",
+  which is the question the page was asked for first.
+- **The count is the whole season however few badges are ticked.** It stays the
+  number rank is judged on, so narrowing the view never changes what a number
+  means. A count that followed the filter would read "2 of 3" and quietly stop
+  being comparable to the Trainer Card.
+- **Rank is a column and a filter, and it is `player_rank()` per season**, not
+  `best_player_rank()`. The board is one season at a time, and the best rank any
+  running season gives is a different number — a player part way into a new list
+  keeps last season's rank on their card until this one overtakes it, so showing
+  that beside the 2027 badge columns would be the wrong number beside the right
+  ones. The screen says so in the help text, because the two disagreeing is
+  surprising until you know why.
+- **Rank is read from the function, never recomputed from the count.** A
+  Champion award outranks any number of badges, which is the half a count cannot
+  work out — somebody on zero badges can be Champion, and the board shows it.
+- **The rank sort follows `sort_order`, not the name.** Alphabetically Ace
+  Trainer comes above Champion, and sorting by badge count instead would put a
+  Champion on zero badges last.
+- **The rank column strips "League " with `shortRank()`, imported from
+  `admin/trainer-card-art.js`** rather than written again. The Trainer Card
+  already takes the prefix off and two copies of that rule would drift the day a
+  rank is reworded. That module runs nothing on import, unlike
+  `trainer-cards.js`, which mounts the Creator. The full stored name is the
+  cell's `title`.
+- **It counts badges the way `player_rank()` does, retired ones included.**
+  CLAUDE.md said retiring a badge stops it counting towards rank and the
+  function does not do that — it joins on `season_year` alone. Counting
+  differently here would put a number on this screen that disagrees with the
+  rank on the player's own card, which is worse than the inconsistency it would
+  be fixing. Retired badges are shown as columns and marked, so the disagreement
+  is visible rather than baked into a total. **Fixing `player_rank()` would
+  change people's ranks and is a decision, not a tidy-up.**
+- **One fetch, then every filter and sort runs in the page.** A professor moving
+  a threshold is re-asking the same question of the same rows; a round trip per
+  keystroke would make it feel broken. The payload is names and Player IDs,
+  which this screen already shows, and `badge_board()` carries **no birth year
+  and no division** — the same line `trainer_card_roster` holds.
+- **`badge_board()` is `security definer` and raises for anybody who is not a
+  professor**, and EXECUTE is revoked from `public` first. Postgres grants
+  EXECUTE to PUBLIC by default, so the grant to `authenticated` is not what
+  decides who may call it — without the revoke, anon can.
+- **All the steps ticked and the badge not given is drawn differently**, in
+  gold, and says "all 3 steps done, badge not awarded" to a screen reader.
+  Somebody did the work and nobody recorded it, which is the most actionable
+  cell on the page. It is not an error: the steps are a note, and a professor
+  may simply not have handed it over yet.
+- **An untouched stepped badge shows a dash, not "0 of 3".** The column heading
+  already says how many steps the badge takes, and a fraction in every
+  untouched cell is noise.
+- **The mark for an earned badge is drawn in CSS, not typed.** There are no web
+  fonts here, so a tick character is whatever shape the reading font happens to
+  carry, and the UI takes no emoji. Its accessible name is a word, because a
+  column of silent cells tells a screen reader nothing.
+- **The count column comes before the badge columns.** A table with a column per
+  badge is wide by nature, and a summary at the far right is the first thing off
+  the side of a phone — the mistake the attendance table made with Total.
+- **The spaces in a column heading are written into the markup.** The badge
+  name, the step count and the tags are adjacent boxes and the gap between them
+  is margin, which is not in the text — so without them the heading's accessible
+  name runs together as "Raid3 steps". The rental shelf hit this as
+  "Standard decks3 decks".
+- **Every class on this page is `bp-`.** It has a table, a count and a set of
+  pickers, and all three of those words were already taken in `styles.css`.
+- `badge_seasons_all()` is every season that has badges, which is **not**
+  `active_badge_seasons()` — last year's board is a real thing somebody may want
+  to look at.
 
 ## Conventions
 

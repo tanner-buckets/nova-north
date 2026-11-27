@@ -1,9 +1,9 @@
 import {
   supabase, el, problem, formatEventDay, formatEventTime, leagueDayKey,
-  eventShortcuts, arriveAt, premierMark
+  eventShortcuts, arriveAt, premierMark, gameMark
 } from './supabase-client.js';
 import {
-  TYPE_LABELS, spotsHost, fillSpots, registrationBlock, eventPath
+  TYPE_LABELS, spotsHost, fillSpots, registrationBlock, eventPath, registrationState
 } from './event-registration.js';
 import { currentProfessor } from './auth.js';
 
@@ -60,6 +60,10 @@ function eventCard(event, counts) {
     className: `badge badge-${event.event_type}`,
     text: TYPE_LABELS[event.event_type] || event.event_type
   })];
+  // Which game, where there is one. Straight after the type, because the two
+  // together are what somebody is scanning the row for: a League Cup of what.
+  const game = gameMark(event);
+  if (game) badges.push(game);
   if (event.is_premier) {
     badges.push(el('li', { className: 'badge badge-note', text: 'Player ID required' }));
   }
@@ -210,6 +214,25 @@ async function refresh() {
       const key = leagueDayKey(event.starts_at);
       if (!days.has(key)) days.set(key, []);
       days.get(key).push(event);
+    }
+
+    // Inside a day, anything still taking sign-ups goes first, so a day
+    // carrying both a prerelease and an ordinary league afternoon leads with
+    // the one that needs acting on. The DAYS do not move: the schedule stays
+    // one chronological run under its date headings, and an event weeks out is
+    // still weeks down the page.
+    //
+    // registrationState() rather than the registration_open flag, because the
+    // flag only says the event takes registration at all -- one already closed
+    // by a professor, or one that has started, is nothing to act on and should
+    // not be promoted over the event beside it.
+    //
+    // Sorted stably: equal events keep the order starts_at gave them, so two
+    // sign-up events on one day stay in time order between themselves.
+    for (const dayEvents of days.values()) {
+      if (dayEvents.length < 2) continue;
+      dayEvents.sort((a, b) =>
+        (registrationState(b) === 'open') - (registrationState(a) === 'open'));
     }
 
     list.replaceChildren(...[...days.entries()].map(([key, dayEvents]) =>

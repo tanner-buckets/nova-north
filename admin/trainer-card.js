@@ -53,9 +53,11 @@ function day(value) {
 // --- Loading -----------------------------------------------------------------
 
 async function loadState(playerId) {
-  const [held, elite, champion, rank, rankSeason] = await Promise.all([
+  const [held, steps, elite, champion, rank, rankSeason] = await Promise.all([
     supabase.from('player_badges')
       .select('id, badge_id, awarded_on').eq('player_id', playerId),
+    supabase.from('badge_progress')
+      .select('id, badge_id, step_number, marked_on').eq('player_id', playerId),
     supabase.from('elite_four_wins')
       .select('id, battle_number, won_on').eq('player_id', playerId).eq('season_year', workingSeason),
     supabase.from('champion_awards')
@@ -66,10 +68,20 @@ async function loadState(playerId) {
 
   const byBadge = new Map((held.data || []).map((r) => [r.badge_id, r]));
 
+  // Badge id -> step number -> the row. Read for every badge rather than only
+  // the ones that currently have steps, so a count lowered and raised again
+  // finds its ticks where it left them.
+  const progress = new Map();
+  for (const row of steps.data || []) {
+    if (!progress.has(row.badge_id)) progress.set(row.badge_id, new Map());
+    progress.get(row.badge_id).set(row.step_number, row);
+  }
+
   return {
     // Every badge in a running season is a toggle. Retired seasons are history
     // and are listed separately.
     held: byBadge,
+    progress,
     elite: new Map((elite.data || []).map((r) => [r.battle_number, r])),
     champion: (champion.data || []).find((r) => r.season_year === workingSeason) || null,
     championSeasons: (champion.data || []).map((r) => r.season_year).sort((a, b) => b - a),
@@ -116,9 +128,123 @@ function seasonCard() {
 
 // --- Badges ------------------------------------------------------------------
 
+// Some badges are a short list of things rather than one moment: Raid is a
+// Level 1, a Level 2 and a Level 3 raid, and Expert is two judge questions a
+// week apart, so it cannot be finished in an afternoon. These are the boxes
+// that remember where a player got to between Sundays.
+//
+// THEY DECIDE NOTHING. Awarding the badge is the tile above them and is not
+// gated on any of this: a professor who watched all three raids taps the badge
+// whether or not the boxes were ever ticked. Making it a precondition would
+// mean filling in history before the site would record what somebody saw.
+//
+// It writes in place rather than calling show(). A tick is a one-row change
+// that nothing else on the screen reads -- not the rank, not the count, not
+// Champion -- and redrawing the page around a checkbox would throw away the
+// focus of the professor who is part way along a row of them.
+function stepRow(badge, state, note) {
+  const total = badge.step_count;
+  let done = state.progress.get(badge.id);
+  if (!done) { done = new Map(); state.progress.set(badge.id, done); }
+
+  const group = el('span', {
+    className: 'badge-steps',
+    role: 'group',
+    'aria-label': `${badge.name} progress`
+  });
+
+  const boxes = [];
+  const sync = () => {
+    group.setAttribute('aria-label',
+      `${badge.name} progress, ${done.size} of ${total} steps`);
+    boxes.forEach((box, i) => {
+      const row = done.get(i + 1);
+      box.title = row
+        ? `Step ${i + 1} of ${total}, marked ${day(row.marked_on)}`
+        : `Step ${i + 1} of ${total}, not yet`;
+    });
+  };
+
+  for (let n = 1; n <= total; n++) {
+    const box = el('input', {
+      type: 'checkbox',
+      className: 'badge-step',
+      'aria-label': `Step ${n} of ${total}`
+    });
+    box.checked = done.has(n);
+
+    box.addEventListener('change', async () => {
+      const wanted = box.checked;
+      box.disabled = true;
+      try {
+        if (wanted) {
+          const { data, error } = await supabase.from('badge_progress')
+            .insert({
+              player_id: player.player_id,
+              badge_id: badge.id,
+              step_number: n,
+              marked_by: professor.userId
+            })
+            .select('id, badge_id, step_number, marked_on')
+            .single();
+          if (error) throw error;
+          done.set(n, data);
+        } else {
+          const row = done.get(n);
+          if (row) {
+            const { error } = await supabase.from('badge_progress')
+              .delete().eq('id', row.id);
+            if (error) throw error;
+          }
+          done.delete(n);
+        }
+        box.disabled = false;
+        sync();
+        status(note, '');
+      } catch (err) {
+        console.error(err);
+        // Put the box back where the database still says it is. A checkbox
+        // that stays ticked after a failed write is a professor believing
+        // something was recorded that was not.
+        box.checked = !wanted;
+        box.disabled = false;
+        status(note, `${badge.name} step ${n} did not save: `
+          + `${err.message || 'unknown error'}.`, 'error');
+      }
+    });
+
+    boxes.push(box);
+    group.append(box);
+  }
+
+  sync();
+  return group;
+}
+
+// Steps recorded against a badge that now asks for fewer of them. Lowering a
+// count hides those rather than deleting them -- a check constraint cannot read
+// another table and a trigger would refuse the row outright, so the database
+// keeps them and the screen has to be the thing that says so. Silence here
+// would be a professor's work disappearing with nothing on screen about it.
+function dormant(state) {
+  return badges.flatMap((badge) => {
+    const done = state.progress.get(badge.id);
+    if (!done) return [];
+    const over = [...done.keys()].filter((n) => n > (badge.step_count || 0)).sort((a, b) => a - b);
+    return over.length ? [`${badge.name} (step ${over.join(', ')})`] : [];
+  });
+}
+
 export function badgePanel(state) {
+  // This is exported, and the local demo builds its own state rather than
+  // calling loadState(), so it can arrive without one. An empty map reads as
+  // "nothing ticked", which is the right answer for a demo and for a player
+  // whose steps failed to load.
+  if (!state.progress) state.progress = new Map();
+
   const note = el('p', { className: 'form-status', role: 'status' });
   const earned = badges.filter((b) => state.held.has(b.id)).length;
+  const hidden = dormant(state);
 
   const chips = badges.map((badge) => {
     const row = state.held.get(badge.id);
@@ -157,7 +283,13 @@ export function badgePanel(state) {
       }
     });
 
-    return button;
+    // A badge with steps gets the boxes under its tile. They are siblings of
+    // the button and not inside it: a checkbox inside a button is invalid, and
+    // the browser would hand every tick to the button's own click handler --
+    // ticking a step would award the badge.
+    return badge.step_count
+      ? el('div', { className: 'badge-track' }, [button, stepRow(badge, state, note)])
+      : button;
   });
 
   // Grouped by season while more than one is being awarded, so a professor can
@@ -191,6 +323,16 @@ export function badgePanel(state) {
     badges.some((b) => b.is_secret) ? el('p', { className: 'field-help',
       text: 'A badge marked secret is not listed for players and is not counted '
           + 'on their card until they earn it. You award it like any other.' }) : null,
+    badges.some((b) => b.step_count) ? el('p', { className: 'field-help',
+      text: 'The boxes under a badge are the steps it takes — a raid at each '
+          + 'level, a judge question each week. Tick them as they happen so the '
+          + 'next professor can see where this player got to. They are a note '
+          + 'and nothing more: the badge is still awarded by tapping it, with '
+          + 'or without them, and a full set of boxes does not award it.' }) : null,
+    hidden.length ? el('p', { className: 'field-help is-warning',
+      text: 'Steps are recorded above what the badge now asks for: '
+          + `${hidden.join('; ')}. They are not shown and not lost. Raise the `
+          + 'step count on the reference screen to see them again.' }) : null,
     badges.length
       ? el('div', {}, groups)
       : el('p', { className: 'muted-note',

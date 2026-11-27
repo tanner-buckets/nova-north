@@ -59,6 +59,44 @@ function day(value) {
 const field = (text, input) =>
   el('p', { className: 'field' }, [el('label', { text }, [input])]);
 
+// --- Steps ---------------------------------------------------------------------
+// A badge that is earned in stages: three raids, two judge questions. The count
+// is the whole of it -- the steps have no names, because the task sentence
+// already describes them and a second copy would be a second thing to keep in
+// step with the first.
+//
+// One field and not a tick-box plus a number. Two controls for one fact can
+// disagree, and then "tracked, but zero steps" is a state somebody has to
+// decide the meaning of. Empty means no tracking; that is the only answer.
+//
+// Written once and used by both forms, because the range here has to be the
+// range the check constraint enforces -- a form that accepts 1 and a database
+// that refuses it is a confusing error at the end of a save.
+const STEPS_MIN = 2;
+const STEPS_MAX = 12;
+
+const stepsHelp = () => el('p', { className: 'field-help',
+  text: 'Leave empty for an ordinary badge. A number from 2 to 12 turns on step '
+      + 'tracking: the Trainer Card screen draws that many boxes under the badge '
+      + 'so a professor can record how far a player has got between Sundays. It '
+      + 'never decides whether the badge can be given — that is still one tap, '
+      + 'with the boxes empty or full. Lowering it later hides the steps above '
+      + 'the new number rather than deleting them, and raising it brings them '
+      + 'back.' });
+
+// Null for "not tracked in steps", a number, or a message saying why not.
+function readSteps(input) {
+  const raw = input.value.trim();
+  if (raw === '') return { value: null };
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < STEPS_MIN || n > STEPS_MAX) {
+    return { message: `Steps must be a whole number from ${STEPS_MIN} to `
+      + `${STEPS_MAX}, or empty for a badge that is simply awarded. One step `
+      + 'would be the badge itself.' };
+  }
+  return { value: n };
+}
+
 async function loadAll() {
   const [b, s, r, rel, t] = await Promise.all([
     supabase.from('badges').select('*')
@@ -93,6 +131,16 @@ function badgeRow(badge) {
   const code = el('input', { value: badge.code });
   const task = el('input', { value: badge.task });
   const order = el('input', { type: 'number', step: '1', value: badge.sort_order });
+  const steps = el('input', {
+    // No min or max attribute, deliberately. They make the BROWSER refuse the
+    // submit, in its own wording, before readSteps() ever runs -- so the
+    // sentence this screen wrote about what a step count is for would never be
+    // read. Every other check on this page is the same: the name and code are
+    // not `required` either. step="1" stays, because that is how the sort order
+    // box beside it is written.
+    type: 'number', step: '1',
+    value: badge.step_count == null ? '' : badge.step_count
+  });
   const secret = el('input', { type: 'checkbox', id: `secret-${badge.id}` });
   secret.checked = !!badge.is_secret;
   const art = artField(badge, { label: 'Replace the picture' });
@@ -151,6 +199,8 @@ function badgeRow(badge) {
           + 'players already hold is safe but pointless.' }),
     field('Task', task),
     field('Sort order', order),
+    field('Steps to earn it', steps),
+    stepsHelp(),
     el('p', { className: 'field field-inline' }, [
       secret, el('label', { for: secret.id, text: 'Keep this badge secret' })
     ]),
@@ -170,6 +220,8 @@ function badgeRow(badge) {
       status(note, 'A badge needs a name, a code and a task.', 'error');
       return;
     }
+    const stepCount = readSteps(steps);
+    if (stepCount.message) { status(note, stepCount.message, 'error'); return; }
     save.disabled = true;
     status(note, 'Saving.');
     try {
@@ -178,7 +230,8 @@ function badgeRow(badge) {
         code: code.value.trim(),
         task: task.value.trim(),
         sort_order: Number(order.value) || 0,
-        is_secret: secret.checked
+        is_secret: secret.checked,
+        step_count: stepCount.value
       };
 
       // A new picture brings its own colours. Uploaded before the row is
@@ -211,6 +264,11 @@ function badgeRow(badge) {
       el('summary', {}, [
         el('span', { className: 'player-label', text: badge.name }),
         el('span', { className: 'count', text: badge.code }),
+        // On the summary rather than only inside, so which badges are tracked
+        // in steps is readable down the closed list.
+        badge.step_count
+          ? el('span', { className: 'tag tag-steps', text: `${badge.step_count} steps` })
+          : null,
         badge.is_secret ? el('span', { className: 'tag tag-secret', text: 'secret' }) : null,
         badge.is_active ? null : el('span', { className: 'tag tag-voided', text: 'retired' })
       ]),
@@ -224,6 +282,8 @@ function addBadgePanel(current) {
   const code = el('input', {});
   const task = el('input', {});
   const season = el('input', { type: 'number', step: '1', value: current || new Date().getFullYear() });
+  // No min or max: see the note on the same field in badgeRow().
+  const steps = el('input', { type: 'number', step: '1' });
   const secret = el('input', { type: 'checkbox', id: 'add-badge-secret' });
   const art = artField(null, { label: 'Badge picture' });
   const note = el('p', { className: 'form-status', role: 'status' });
@@ -261,6 +321,8 @@ function addBadgePanel(current) {
     field('Task', task),
     field('Season', season),
     warn,
+    field('Steps to earn it', steps),
+    stepsHelp(),
     el('p', { className: 'field field-inline' }, [
       secret, el('label', { for: secret.id, text: 'Keep this badge secret' })
     ]),
@@ -283,6 +345,8 @@ function addBadgePanel(current) {
       status(note, 'The season must be a year.', 'error');
       return;
     }
+    const stepCount = readSteps(steps);
+    if (stepCount.message) { status(note, stepCount.message, 'error'); return; }
 
     go.disabled = true;
     status(note, 'Adding.');
@@ -296,7 +360,8 @@ function addBadgePanel(current) {
         task: task.value.trim(),
         season_year: year,
         sort_order: nextOrder,
-        is_secret: secret.checked
+        is_secret: secret.checked,
+        step_count: stepCount.value
       };
 
       // Without a picture the tile falls back to plain gold, which is what made

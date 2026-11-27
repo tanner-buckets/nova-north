@@ -488,6 +488,43 @@ order they happened to click. Paging is keyset on `(submitted_at, id)` rather
 than an offset, so a photograph approved while somebody is part way down the
 page cannot shift the rest and show one of them twice.
 
+### Which game an event is for
+
+`events.game` holds `tcg`, `vgc` or null, set on the events screen, and the
+schedule and the event page draw a card symbol or a gamepad from it. **Display
+only** — nothing keys on it, and null is a real answer for a day that is neither
+or one running both. Such an event carries no symbol, because no symbol is
+better than the wrong one.
+
+A column rather than a match on the event name. The Chaos Cup link is matched on
+its name and the note on that match already says what is wrong with it: a
+cleverer match is not a flag, and a symbol claiming what somebody will be
+playing should not appear or vanish because of how an event was typed into a
+box. The migration backfilled the existing events from their names and
+**declined where a name said both** — "Standard + VGC" is a day the column
+cannot describe. That is why the card side matches the formats as well as the
+letters "TCG": without "Standard" in the list, that name sees one match instead
+of two and gets labelled a video game event. A prerelease was judged on
+`event_type` rather than its name, because it is a trading card set launch by
+definition and the names never say so. Only the Prerelease type preset fills the
+field in; a Cup or a Challenge can be either game, so neither guesses.
+
+The symbols are inline SVG from `gameMark()`, next to `premierMark()` and shared
+for the same reason — both pages draw that badge row. They are drawn rather than
+typed, because there are no web fonts here and the UI takes no emoji, and they
+are generic shapes that are nobody's mark. They are **outlines**: at sixteen
+pixels across, the first pair of solid overlapping cards was a smudge nobody
+could name, so the back card is an outline and only the front one is solid. The
+word sits in the chip beside the shape, and the shape is `aria-hidden` so it is
+not read out twice.
+
+Inside a day, an event still taking sign-ups is listed first, so a day carrying
+both a prerelease and an ordinary league afternoon leads with the one that needs
+acting on. Only inside a day — the schedule stays one chronological run under
+its date headings. It tests `registrationState()`, not the `registration_open`
+flag: an event already closed by a professor, or one that has started, is
+nothing to act on and is not promoted.
+
 ### One event, on a page of its own
 
 `event.html` is the link a professor posts. The schedule carries every event and
@@ -637,6 +674,84 @@ on their card and in their total.
 
 Secret is not the same as retired. A retired badge is finished with; a secret one
 is live and unannounced.
+
+### A badge can be earned in steps
+
+Some badges are a short list of things rather than one moment: Raid is a Level 1,
+a Level 2 and a Level 3 raid, and 2026 Expert is two judge questions at one
+attempt a week, so it cannot be finished in an afternoon. `badges.step_count` is
+how many, set on the badge form, and `badge_progress` holds one row per step a
+player has done. The Trainer Card screen draws that many checkboxes under the
+badge's name, and a professor ticks them as they happen.
+
+**It decides nothing.** The badge is still awarded by tapping the tile, with the
+boxes empty or full, and a full set does not award it. Making it a precondition
+would turn a notepad into paperwork — a professor who watched all three raids
+would have to fill in history before the site would record what they saw. The
+state it holds used to live on a piece of paper between Sundays, which is how
+the prize pack spreadsheet stopped being kept.
+
+Null means no step tracking, never zero. Two is the floor, because a one-step
+badge is the badge and a single checkbox beside the award is the same fact
+written twice; twelve is the ceiling, because they are drawn under a tile on a
+phone. The steps carry no names: the task sentence already describes them, and a
+second copy is a second thing to keep right.
+
+`badge_progress` is professor-only with no public read at all, and grants INSERT
+and DELETE and no UPDATE — a step is ticked or cleared, never amended, the same
+posture `player_badges` takes. `step_number` is deliberately not checked against
+`step_count`, because a check constraint cannot read another table and a trigger
+would refuse the row the day somebody lowered the count; a step above the count
+lies dormant instead, and the screen names it rather than letting it vanish
+quietly.
+
+### The badge board
+
+`admin/badge-progress.html` is every player against one season's badges, read
+through `badge_board()`. The other professor screens ask about one player; this
+asks about one badge, or one threshold, across everybody — who has earned Raid,
+who is sitting on exactly two, who is one short of the next rank.
+
+Ticking badges chooses which **columns** appear. A separate control chooses who
+gets a **row**: everyone, who has any of the ticked badges, who has them all, or
+who is missing any. Tick one badge and ask for "who has any" and that is "who
+earned this badge". On top of that, filter by rank, by days attended in the last
+three months and by a badge-count range, and sort by badges, by rank, by name or
+by who has been here most recently.
+
+**Rank is that season's rank**, `player_rank(player, season)`, not
+`best_player_rank()`. The board is one season at a time, and the best rank any
+running season gives is a different number: a player part way into a new badge
+list keeps last season's rank on their card until this one overtakes it. Showing
+that beside this season's badge columns would be the wrong number next to the
+right ones, so the page shows the per-season one and says so. It comes from the
+function rather than from the count, because a Champion award outranks any
+number of badges — somebody on zero badges can be Champion, and the board shows
+it. The rank sort follows the ladder's `sort_order`: alphabetically Ace Trainer
+would come above Champion.
+
+**It is read only.** Every name links to that player's Trainer Card, which is
+where a badge is given or taken back. A grid of three hundred rows where every
+cell is a button is a grid where a mis-tap awards a badge to the wrong child.
+
+The count beside each name is the whole season however few badges are ticked, so
+narrowing the view never changes what the number means — and it counts the way
+`player_rank()` counts, **retired badges included**. The docs say retiring a
+badge stops it counting towards rank; the function joins on `season_year` alone
+and does not do that. Counting differently here would put a number on this
+screen that disagrees with the rank on the player's own card, so the board
+matches the function and marks retired badges instead. Changing `player_rank()`
+would move people's ranks and is a decision rather than a tidy-up.
+
+One fetch, then every filter and sort runs in the page: a professor moving a
+threshold is re-asking the same question of the same rows. `badge_board()` is
+`security definer`, raises for anybody who is not a professor, has EXECUTE
+revoked from `public` before it is granted to `authenticated` — Postgres grants
+EXECUTE to PUBLIC by default, so the grant alone would not have kept anon out —
+and carries no birth year and no division.
+
+A badge with every step ticked and no award is drawn in gold and reads as "all 3
+steps done, badge not awarded": somebody did the work and nobody recorded it.
 
 ### Professor screens
 

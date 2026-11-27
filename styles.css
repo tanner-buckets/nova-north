@@ -2140,7 +2140,15 @@ a.player-button:hover .player-label {
 
 /* The Trainer Card screen shows the same tiles, as buttons. A professor
    awarding a badge should be looking at what the player will see. */
-.badge-grid-toggle { grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr)); }
+/* Cells hug their own content rather than stretching to the tallest in the row.
+   Without this a badge carrying step boxes makes every cell beside it as tall
+   as itself, and those cells stretch their contents to fill -- so the badge
+   NAMES in a row stop sitting level with each other, which reads as a
+   misalignment rather than as one badge having more under it. */
+.badge-grid-toggle {
+  grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
+  align-items: start;
+}
 .badge-button {
   font: inherit;
   background: none;
@@ -2155,6 +2163,44 @@ a.player-button:hover .player-label {
 .badge-button:hover .badge-tile { filter: brightness(1.05); }
 .badge-button:focus-visible { outline: 3px solid var(--gold-line); outline-offset: 2px; }
 .badge-button .badge-toggle-date { font-size: 0.68rem; color: var(--muted); }
+
+/* --- The steps inside a badge ------------------------------------------------
+   Raid is three raids and Expert is two judge questions a week apart, so those
+   badges have a half-done state that used to live on a piece of paper. These
+   are the boxes that hold it, under the tile on the Trainer Card screen.
+
+   The wrapper exists because the tile is a BUTTON: a checkbox inside a button
+   is invalid, and the browser hands its clicks to the button, so ticking a
+   step would award the badge. They are siblings instead. */
+.badge-track {
+  display: grid;
+  gap: 0.3rem;
+}
+.badge-steps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem;
+}
+/* 1.25rem, not the browser's 13px default. These are tapped at a desk on a
+   phone, usually in a row of three, and the gap is what stops a thumb aimed at
+   step 2 landing on step 1. A dozen is the most a badge may ask for and they
+   wrap rather than squeezing. */
+.badge-step {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+.badge-step:disabled { cursor: progress; }
+
+/* Quiet, because how many steps a badge takes is information and not a state
+   anybody has to act on. Not tag-voided's muted grey, which reads as retired. */
+.tag-steps {
+  background: var(--line);
+  color: var(--ink-soft);
+}
 
 /* --- The Play! Pokemon mark ------------------------------------------------- */
 /* Bottom right of every page. Under the footer text on a phone, beside it once
@@ -5115,3 +5161,129 @@ h1.event-name + .event-when {
 /* A delivery marked in a narrow numeric column. "+600 in" is three characters
    and a word, and wrapping it leaves "in" alone on a second line. */
 .pack-in { white-space: nowrap; }
+
+/* --- Badge progress --------------------------------------------------------
+   admin/badge-progress.html: every player against one season's badges. A
+   column per badge makes this wide by nature, so it keeps its own pitch and
+   .table-wrap scrolls, the bargain the attendance chart already makes.
+
+   Every class here is bp-, because this page has a table, a count and a set
+   of pickers and all three of those words are already taken elsewhere in this
+   stylesheet. The names have collided twice before -- .note-text on the
+   attendance history, and sheet-* between the two printables. */
+.bp-badges {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.bp-badges legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0 0.35rem;
+  font-weight: 600;
+}
+.bp-pick-actions { display: flex; gap: 0.6rem; }
+
+/* Wraps to one per line on a phone and fills the width on a laptop, rather
+   than a fixed column count that is wrong at one of the two. */
+.bp-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.3rem 0.9rem;
+}
+.bp-pick { display: flex; align-items: center; gap: 0.4rem; }
+.bp-pick label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+
+.bp-range { flex-wrap: wrap; gap: 0.5rem; }
+.bp-range input { width: 5rem; }
+
+/* The name is a link to that player's own Trainer Card, with the Player ID
+   under it -- the ID is what does not change spelling, so it is what somebody
+   checks when two players share a first name. */
+.bp-player a { font-weight: 600; }
+.bp-player .count { display: block; font-size: 0.78rem; }
+
+.bp-table th,
+.bp-table td { padding-right: 0.75rem; white-space: nowrap; }
+.bp-num { text-align: right; font-variant-numeric: tabular-nums; }
+.bp-count { font-weight: 600; }
+
+.bp-badge-head { vertical-align: bottom; }
+.bp-badge-name { display: block; }
+.bp-badge-note {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.bp-cell { text-align: center; }
+
+/* Drawn, not typed. There are no web fonts here, so a tick character is
+   whatever shape the reading font happens to carry, and the UI takes no
+   emoji. Its accessible name is on the element, because a column of silent
+   cells tells a screen reader nothing at all. */
+.bp-mark {
+  display: inline-block;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: var(--gold);
+}
+.bp-steps {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+/* An em dash held back to the quiet colour: the eye should skip it and land on
+   the cells that say something. */
+.bp-none { color: var(--line); }
+/* Every step ticked and the badge not given: somebody did the work and nobody
+   recorded it. Gold and bold, so it reads differently from "one of three"
+   without being an error -- the steps are a note, and a professor may simply
+   not have handed it over yet. */
+.bp-steps.is-ready {
+  font-weight: 700;
+  color: var(--gold);
+}
+/* The rank column: the ladder name with "League " taken off, so it stays
+   narrow beside a table that already has a column per badge. */
+.bp-rank { font-family: var(--font-head); white-space: nowrap; }
+
+/* --- Which game an event is for ---------------------------------------------
+   A chip in the badges row carrying a drawn symbol and the word for it. Both:
+   a card and a gamepad at this size are two small rounded blobs to anybody who
+   has not been told what they mean, and the word costs one line of nothing.
+
+   The shapes are inline SVG rather than characters. There are no web fonts
+   here, so a card or gamepad glyph is whatever the reading font happens to
+   carry, and the UI takes no emoji. They are generic on purpose -- neither is
+   anybody's mark, which keeps a symbol saying "this is the card game" clear of
+   the rule about official Pokemon artwork. */
+.badge-game {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--ink-soft);
+}
+.game-mark {
+  display: inline-flex;
+  /* Sized from the chip's own text, so it follows if the chip is ever
+     resized -- a fixed pixel size would stay behind. */
+  width: 1.15em;
+  height: 1.15em;
+}
+.game-mark svg {
+  width: 100%;
+  height: 100%;
+  /* The chip's own colour, so the shape and the word are one object. Set on
+     the element rather than left to each shape, and the shapes that want an
+     outline name currentColor for their stroke. */
+  fill: currentColor;
+  overflow: visible;
+}

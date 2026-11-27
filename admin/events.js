@@ -202,7 +202,12 @@ const TYPE_PRESETS = {
                caps: { all: 56, junior: 16, senior: 16, master: 32 } },
   // Capacity cleared rather than left alone: a Prerelease that quietly kept a
   // Cup's 56 would publish a limit nobody chose.
-  prerelease: { premier: false, registration: true, caps: null }
+  //
+  // A Prerelease is the only kind that gets a game: it is a trading card set
+  // launch by definition. A Cup or a Challenge can be either game, so neither
+  // carries one -- a preset that guessed would publish a symbol nobody chose,
+  // which is the same reason capacity is cleared above rather than inherited.
+  prerelease: { premier: false, registration: true, caps: null, game: 'tcg' }
 };
 
 // Writes exactly what is on screen: every division present is upserted, and
@@ -306,6 +311,17 @@ export function eventForm(event, { onSaved, caps: seedCaps = [] } = {}) {
   const fee = el('input', { value: event.entry_fee ?? '' });
   const description = el('input', { value: event.description ?? '' });
 
+  // Which game this is for. Display only -- the schedule and the event page
+  // draw a symbol from it and nothing else reads it, so an event with nothing
+  // chosen simply carries no symbol rather than defaulting to whichever game
+  // most events happen to be.
+  const game = el('select', { id: `game-${uid}` }, [
+    el('option', { value: '', text: 'Not said' }),
+    el('option', { value: 'tcg', text: 'Trading cards' }),
+    el('option', { value: 'vgc', text: 'Video game' })
+  ]);
+  game.value = event.game || '';
+
   const premier = el('input', { type: 'checkbox', id: `premier-${uid}` });
   premier.checked = !!event.is_premier;
 
@@ -347,6 +363,9 @@ export function eventForm(event, { onSaved, caps: seedCaps = [] } = {}) {
       if (!preset) return;             // no opinion about league, casual, special
       premier.checked = preset.premier;
       open.checked = preset.registration;
+      // Only where the preset has an opinion. Picking Cup must not wipe a game
+      // the professor already chose, and only the Prerelease preset names one.
+      if (preset.game) game.value = preset.game;
       if (caps) caps.set(preset.caps);
       syncCaps();
     });
@@ -398,6 +417,15 @@ export function eventForm(event, { onSaved, caps: seedCaps = [] } = {}) {
     el('p', { className: 'field-help',
       text: 'One line under the name. What to bring, what the format is, anything '
           + 'a first-timer would want warned about. Public.' }),
+
+    el('p', { className: 'field' }, [
+      el('label', { for: game.id, text: 'Game' }), game
+    ]),
+    el('p', { className: 'field-help',
+      text: 'Puts a card or a controller symbol on the schedule and on the '
+          + 'event’s own page. Leave it unsaid for a day that is neither, or one '
+          + 'running both — the symbol is a claim about what somebody will be '
+          + 'playing, and no symbol is better than the wrong one.' }),
 
     el('p', { className: 'field field-inline' }, [
       premier, el('label', { for: premier.id, text: 'Premier event' })
@@ -493,6 +521,9 @@ export function eventForm(event, { onSaved, caps: seedCaps = [] } = {}) {
           : null,
         entry_fee: fee.value.trim() || null,
         description: description.value.trim() || null,
+        // Empty is null, not the empty string: the check constraint allows only
+        // tcg and vgc, and '' is neither.
+        game: game.value || null,
         is_premier: premier.checked,
         registration_open: open.checked,
         linked_group_id: pin || null
@@ -568,6 +599,8 @@ function copyTemplate(source) {
     description: source.description,
     is_premier: source.is_premier,
     registration_open: source.registration_open,
+    // A copy is the same kind of afternoon, so it is the same game.
+    game: source.game,
     // The next Sunday, at the time of day the original ran. The date is the
     // first thing a professor will change and it is the field right there, so
     // a sensible guess beats an empty box.

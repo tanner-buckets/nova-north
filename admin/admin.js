@@ -115,6 +115,8 @@ const SECTIONS = [
     name: 'Staff tools',
     note: 'Things to print, and places to look something up.',
     tools: [
+      { href: 'badge-progress.html', name: 'Badge progress',
+        note: 'Every player against one season’s badges: who has earned what, who is part way through one that takes steps, and who is closest to the next rank. Read only — each name opens their Trainer Card.' },
       { href: 'trainer-cards.html', name: 'Trainer Card Creator',
         note: 'Print membership cards, eight to a page. Everyone active, everyone without one yet, or a list you build by hand.' },
       { href: 'printables.html', name: 'Printable resources',
