@@ -5251,3 +5251,6 @@ h1.event-name + .event-when {
   font-weight: 700;
   color: var(--gold);
 }
+/* The rank column: the ladder name with "League " taken off, so it stays
+   narrow beside a table that already has a column per badge. */
+.bp-rank { font-family: var(--font-head); white-space: nowrap; }

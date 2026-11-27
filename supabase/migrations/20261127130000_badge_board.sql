@@ -20,6 +20,7 @@ returns table (
   player_id text,
   first_name text,
   last_name text,
+  rank_name text,
   badge_count integer,
   recent_days integer,
   earned uuid[],
@@ -93,6 +94,17 @@ begin
     p.player_id,
     p.first_name,
     p.last_name,
+    -- player_rank() rather than the same arithmetic written again here. It is
+    -- one call per player, which is what trainer_card_roster already does, and
+    -- a second implementation of what a rank is would be a second thing to be
+    -- wrong -- it also has to know that a Champion award outranks any number
+    -- of badges, which a count does not.
+    --
+    -- PER SEASON, not best_player_rank(), which takes the best any running
+    -- season gives. This board is one season at a time, and a 2026 rank
+    -- showing against the 2027 badge columns would be the wrong number beside
+    -- the right ones.
+    public.player_rank(p.player_id, p_season),
     coalesce(h.n, 0),
     coalesce(r.n, 0),
     -- An empty array rather than null, so the page never has to ask which kind
@@ -108,7 +120,7 @@ end;
 $function$;
 
 comment on function public.badge_board(integer) is
-  'Professor only. One row per player for a badge season: how many of that season''s badges they hold, which ones, how far through any stepped badge they are, and distinct days attended in the last three months. Carries no birth year and no division.';
+  'Professor only. One row per player for a badge season: their rank in that season, how many of that season''s badges they hold, which ones, how far through any stepped badge they are, and distinct days attended in the last three months. Carries no birth year and no division.';
 
 -- Postgres grants EXECUTE on a new function to PUBLIC by default, so the grant
 -- below is not what decides who may call this -- without the revoke, anon can

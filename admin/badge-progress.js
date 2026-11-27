@@ -16,6 +16,12 @@
 // data to anybody who is not a professor; this file only decides what to draw.
 import { supabase, el, problem } from '../supabase-client.js';
 import { currentProfessor } from '../auth.js';
+// Ranks are stored as "League Cooltrainer" and this column is narrow, so the
+// prefix comes off. Imported rather than rewritten: the Trainer Card already
+// strips it the same way, and two copies of that rule would drift the day a
+// rank is reworded. trainer-card-art.js runs nothing on import, unlike
+// trainer-cards.js, which mounts the Creator.
+import { shortRank } from './trainer-card-art.js';
 
 const gate = document.querySelector('#gate');
 const app = document.querySelector('#app');
@@ -23,6 +29,7 @@ const app = document.querySelector('#app');
 let seasons = [];
 let season = null;
 let badges = [];        // every badge in the season, retired and secret included
+let ranks = [];         // the ladder, lowest first, for the filter and the sort
 let rows = [];          // one per player, from badge_board()
 
 // What the professor is looking at. Columns and rows are separate questions:
@@ -32,6 +39,7 @@ let rows = [];          // one per player, from badge_board()
 const view = {
   shown: new Set(),
   have: 'all-players',
+  rank: '',              // '' is any; otherwise the stored rank name
   minDays: 0,
   minBadges: '',
   maxBadges: '',
@@ -39,6 +47,14 @@ const view = {
 };
 
 const label = (row) => `${row.first_name} ${row.last_name}`.trim() || row.player_id;
+
+// Where a rank sits on the ladder, for sorting. Ranks carry sort_order, so this
+// reads it rather than assuming the order they arrived in -- and a rank the
+// ladder no longer holds sorts below everything rather than throwing.
+const rankOrder = (name) => {
+  const found = ranks.find((r) => r.name === name);
+  return found ? found.sort_order : -1;
+};
 
 // --- Filtering and sorting -----------------------------------------------------
 
@@ -49,6 +65,7 @@ function visible() {
 
   const kept = rows.filter((row) => {
     if (row.recent_days < view.minDays) return false;
+    if (view.rank && row.rank_name !== view.rank) return false;
     if (min !== null && row.badge_count < min) return false;
     if (max !== null && row.badge_count > max) return false;
 
@@ -66,6 +83,11 @@ function visible() {
   const sorters = {
     'badges-desc': (a, b) => b.badge_count - a.badge_count || byName(a, b),
     'badges-asc': (a, b) => a.badge_count - b.badge_count || byName(a, b),
+    // By the ladder and not by the name: alphabetical order would put Ace
+    // Trainer above Champion.
+    'rank-desc': (a, b) =>
+      rankOrder(b.rank_name) - rankOrder(a.rank_name)
+      || b.badge_count - a.badge_count || byName(a, b),
     'name': byName,
     'recent-desc': (a, b) => b.recent_days - a.recent_days || byName(a, b)
   };
@@ -124,10 +146,12 @@ function table(list) {
 
   const head = el('tr', {}, [
     el('th', { scope: 'col', text: 'Player' }),
-    // The count comes before the badge columns, not after them. A table with a
-    // column per badge is wide by nature, and a summary at the far right is the
-    // first thing off the side of a phone -- the mistake the attendance table
-    // made with Total.
+    // Rank and the count come before the badge columns, not after them. A table
+    // with a column per badge is wide by nature, and a summary at the far right
+    // is the first thing off the side of a phone -- the mistake the attendance
+    // table made with Total. Rank leads because it is what a professor scans
+    // for; the count behind it says how it was reached.
+    el('th', { scope: 'col', text: 'Rank' }),
     el('th', { scope: 'col', className: 'bp-num', text: `Badges` }),
     el('th', { scope: 'col', className: 'bp-num', text: 'Days' }),
     // The spaces between these are written, not left to the layout. They are
@@ -153,6 +177,12 @@ function table(list) {
       el('a', { href: `trainer-card.html?id=${encodeURIComponent(row.player_id)}`,
         text: label(row) }),
       el('span', { className: 'count', text: row.player_id })
+    ]),
+    el('td', { className: 'bp-rank' }, [
+      // The full stored name is the title, because the column shows it with
+      // "League " taken off and that is the name on the ranks table.
+      el('span', { text: shortRank(row.rank_name) || '—',
+        title: row.rank_name || '' })
     ]),
     el('td', { className: 'bp-num' }, [
       el('span', { className: 'bp-count', text: `${row.badge_count} of ${badges.length}` })
@@ -218,6 +248,18 @@ function controls(onChange) {
   have.value = view.have;
   have.addEventListener('change', () => { view.have = have.value; onChange(); });
 
+  // Highest first, because that is the end of the ladder somebody is usually
+  // asking about, and because the badge range below already answers the other
+  // end. Every player has a rank -- player_rank() falls back to the entry rank
+  // rather than returning null -- so there is no "no rank" to offer.
+  const rank = el('select', { id: 'bp-rank' }, [
+    el('option', { value: '', text: 'Any rank' }),
+    ...[...ranks].sort((a, b) => b.sort_order - a.sort_order)
+      .map((r) => el('option', { value: r.name, text: shortRank(r.name) }))
+  ]);
+  rank.value = view.rank;
+  rank.addEventListener('change', () => { view.rank = rank.value; onChange(); });
+
   const days = el('input', { type: 'number', step: '1', min: '0', id: 'bp-days',
     value: String(view.minDays) });
   days.addEventListener('input', () => {
@@ -235,6 +277,7 @@ function controls(onChange) {
   const sort = el('select', { id: 'bp-sort' }, [
     el('option', { value: 'badges-desc', text: 'Most badges first' }),
     el('option', { value: 'badges-asc', text: 'Fewest badges first' }),
+    el('option', { value: 'rank-desc', text: 'Highest rank first' }),
     el('option', { value: 'recent-desc', text: 'Here most recently' }),
     el('option', { value: 'name', text: 'By name' })
   ]);
@@ -266,6 +309,15 @@ function controls(onChange) {
     el('p', { className: 'field-help',
       text: 'Tick one badge and ask for “who has any” to read off who has '
           + 'earned it. “Missing any” is the list worth a word at the desk.' }),
+
+    el('p', { className: 'field' }, [
+      el('label', { for: rank.id, text: 'Rank' }), rank
+    ]),
+    el('p', { className: 'field-help',
+      text: 'The rank this season’s badges give, which is not necessarily the '
+          + 'one on their card: rank there is the best any season still being '
+          + 'awarded gives, so a player part way into a new list keeps last '
+          + 'season’s until this one overtakes it.' }),
 
     el('p', { className: 'field' }, [
       el('label', { for: days.id, text: 'Here at least this many days in the last three months' }),
@@ -336,6 +388,10 @@ async function load() {
   // Every badge ticked to begin with: the first question is usually "where is
   // everybody", and narrowing is easier than building a view up from nothing.
   view.shown = new Set(badges.map((x) => x.id));
+
+  // The ladder is the same every season -- ranks carry no season_year -- but a
+  // rank chosen for one season has to survive the move to another, and it does,
+  // because it is matched on the stored name rather than on a position.
 }
 
 (async () => {
@@ -349,9 +405,16 @@ async function load() {
   }
 
   try {
-    const { data, error } = await supabase.rpc('badge_seasons_all');
-    if (error) throw error;
-    seasons = data || [];
+    const [seasonList, rankList] = await Promise.all([
+      supabase.rpc('badge_seasons_all'),
+      // Lowest first, the order a player climbs them, which is how the ranks
+      // screen stores them. The filter reverses it for display.
+      supabase.from('trainer_card_ranks').select('name, sort_order').order('sort_order')
+    ]);
+    if (seasonList.error || rankList.error) throw seasonList.error || rankList.error;
+    seasons = seasonList.data || [];
+    ranks = rankList.data || [];
+
     if (!seasons.length) {
       gate.replaceChildren(el('p', { className: 'notice notice-problem',
         text: 'No badges have been set up for any season yet, so there is '
@@ -360,7 +423,7 @@ async function load() {
     }
 
     const asked = Number(new URLSearchParams(location.search).get('season'));
-    season = seasons.some((s) => s.season_year === asked)
+    season = seasons.some((row) => row.season_year === asked)
       ? asked : seasons[0].season_year;
 
     await load();

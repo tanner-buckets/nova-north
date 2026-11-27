@@ -678,9 +678,20 @@ who is sitting on exactly two, who is one short of the next rank.
 Ticking badges chooses which **columns** appear. A separate control chooses who
 gets a **row**: everyone, who has any of the ticked badges, who has them all, or
 who is missing any. Tick one badge and ask for "who has any" and that is "who
-earned this badge". On top of that, filter by days attended in the last three
-months and by a badge-count range, and sort by badges, by name or by who has
-been here most recently.
+earned this badge". On top of that, filter by rank, by days attended in the last
+three months and by a badge-count range, and sort by badges, by rank, by name or
+by who has been here most recently.
+
+**Rank is that season's rank**, `player_rank(player, season)`, not
+`best_player_rank()`. The board is one season at a time, and the best rank any
+running season gives is a different number: a player part way into a new badge
+list keeps last season's rank on their card until this one overtakes it. Showing
+that beside this season's badge columns would be the wrong number next to the
+right ones, so the page shows the per-season one and says so. It comes from the
+function rather than from the count, because a Champion award outranks any
+number of badges — somebody on zero badges can be Champion, and the board shows
+it. The rank sort follows the ladder's `sort_order`: alphabetically Ace Trainer
+would come above Champion.
 
 **It is read only.** Every name links to that player's Trainer Card, which is
 where a badge is given or taken back. A grid of three hundred rows where every

@@ -2287,6 +2287,25 @@ to open the Trainer Card forty times.
   number rank is judged on, so narrowing the view never changes what a number
   means. A count that followed the filter would read "2 of 3" and quietly stop
   being comparable to the Trainer Card.
+- **Rank is a column and a filter, and it is `player_rank()` per season**, not
+  `best_player_rank()`. The board is one season at a time, and the best rank any
+  running season gives is a different number — a player part way into a new list
+  keeps last season's rank on their card until this one overtakes it, so showing
+  that beside the 2027 badge columns would be the wrong number beside the right
+  ones. The screen says so in the help text, because the two disagreeing is
+  surprising until you know why.
+- **Rank is read from the function, never recomputed from the count.** A
+  Champion award outranks any number of badges, which is the half a count cannot
+  work out — somebody on zero badges can be Champion, and the board shows it.
+- **The rank sort follows `sort_order`, not the name.** Alphabetically Ace
+  Trainer comes above Champion, and sorting by badge count instead would put a
+  Champion on zero badges last.
+- **The rank column strips "League " with `shortRank()`, imported from
+  `admin/trainer-card-art.js`** rather than written again. The Trainer Card
+  already takes the prefix off and two copies of that rule would drift the day a
+  rank is reworded. That module runs nothing on import, unlike
+  `trainer-cards.js`, which mounts the Creator. The full stored name is the
+  cell's `title`.
 - **It counts badges the way `player_rank()` does, retired ones included.**
   CLAUDE.md said retiring a badge stops it counting towards rank and the
   function does not do that — it joins on `season_year` alone. Counting
