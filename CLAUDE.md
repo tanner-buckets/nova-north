@@ -601,6 +601,33 @@ it runs.
   so a professor has a link to post that is one event rather than the whole
   schedule. It reads what the schedule reads and nothing more: places left and
   the number waiting, never who is registered. A flight code opens the group.
+- **An event says which game it is for**, `events.game`: `tcg`, `vgc`, or null.
+  The schedule and the event page draw a card symbol or a gamepad from it.
+  - **A column and not a match on the name.** The Chaos Cup link is matched on
+    the name and the note there already says what is wrong with that — a
+    cleverer match is not a flag. A symbol is a claim about what somebody will
+    be playing, and it should not appear or vanish because of how an event was
+    typed into a box.
+  - **Display only.** Nothing keys on it: not registration, not the division
+    caps, not rank. Null is a real answer — a day that is neither, or one
+    running both — and such an event simply carries no symbol. **No symbol is
+    better than the wrong one.**
+  - **Only the Prerelease preset fills it in**, because a prerelease is a
+    trading card set launch by definition. A Cup or a Challenge can be either
+    game, so neither guesses — the same reasoning that has a Prerelease *clear*
+    capacity rather than inherit a Cup's 56.
+  - **`20261127140000` backfilled it from the names**, and declined where a name
+    said both: "Standard + VGC" is a day this column cannot describe. The card
+    side matches the formats too, not only the letters "TCG", or that name sees
+    one match instead of two and gets labelled a video game event. A prerelease
+    was judged on `event_type`, which is a fact rather than a reading of a name.
+- **Inside a day, an event still taking sign-ups is listed first.** Only inside
+  a day: the schedule stays one chronological run under its date headings, so an
+  event three weeks out is still three weeks down the page. It tests
+  `registrationState(event) === 'open'` rather than the `registration_open`
+  flag, because the flag only says the event takes registration at all — one
+  already closed by a professor, or one that has started, is nothing to act on
+  and must not be promoted over the event beside it.
 - **Every registration requires a Player ID**, prereleases included. Someone
   without one is sent to a help page explaining how to look one up or create one,
   including for a child, with professor contact details as the fallback. A
@@ -2045,6 +2072,30 @@ steps back to 3.2rem, where an event name still has somewhere to go.
 `worlds.png` is the fallback. `is_premier` is set on exactly Cups and Challenges
 today, but it is a column somebody can tick, and a premier event that is neither
 should still read as one rather than quietly losing its mark.
+
+### The game symbols
+
+A card or a gamepad in the badges row, from `gameMark()` in
+`supabase-client.js` — beside `premierMark()` and there for the same reason: the
+schedule and the event page both draw that row, and two copies would drift.
+
+- **Drawn as inline SVG, never typed.** There are no web fonts here, so a card
+  or gamepad character is whatever shape the reading font happens to carry, and
+  the UI takes no emoji — which is what a 🃏 would be.
+- **Generic shapes on purpose.** Neither is anybody's mark, which keeps a symbol
+  meaning "this is the card game" clear of the rule about official Pokémon
+  artwork. That artwork is supplied by the organiser and asked about first; this
+  needs none of it.
+- **Outlines, and that is not a style choice.** They draw about sixteen pixels
+  across. The first pair of solid overlapping cards came out as a smudge nobody
+  could name, so the back card is an outline and only the front one is solid —
+  which is what makes two cards read as two. The gamepad is an outline for the
+  same reason: filled, it is a pill.
+- **The word is in the chip beside the shape.** A symbol alone is a guess for
+  anybody who has not been told what it means. The shape is `aria-hidden`,
+  because the word says the same thing and twice is worse than once.
+- `fill: currentColor` on the `svg`, so the shape and the word are one object
+  and a chip recoloured later takes the symbol with it.
 
 ### Charts
 

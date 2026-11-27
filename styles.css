@@ -5254,3 +5254,36 @@ h1.event-name + .event-when {
 /* The rank column: the ladder name with "League " taken off, so it stays
    narrow beside a table that already has a column per badge. */
 .bp-rank { font-family: var(--font-head); white-space: nowrap; }
+
+/* --- Which game an event is for ---------------------------------------------
+   A chip in the badges row carrying a drawn symbol and the word for it. Both:
+   a card and a gamepad at this size are two small rounded blobs to anybody who
+   has not been told what they mean, and the word costs one line of nothing.
+
+   The shapes are inline SVG rather than characters. There are no web fonts
+   here, so a card or gamepad glyph is whatever the reading font happens to
+   carry, and the UI takes no emoji. They are generic on purpose -- neither is
+   anybody's mark, which keeps a symbol saying "this is the card game" clear of
+   the rule about official Pokemon artwork. */
+.badge-game {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--ink-soft);
+}
+.game-mark {
+  display: inline-flex;
+  /* Sized from the chip's own text, so it follows if the chip is ever
+     resized -- a fixed pixel size would stay behind. */
+  width: 1.15em;
+  height: 1.15em;
+}
+.game-mark svg {
+  width: 100%;
+  height: 100%;
+  /* The chip's own colour, so the shape and the word are one object. Set on
+     the element rather than left to each shape, and the shapes that want an
+     outline name currentColor for their stroke. */
+  fill: currentColor;
+  overflow: visible;
+}

@@ -11,7 +11,7 @@
 // prerelease has to be able to pick a flight.
 import {
   supabase, el, problem, formatEventDay, formatEventTime, leagueDayKey, arriveAt,
-  premierMark
+  premierMark, gameMark
 } from './supabase-client.js';
 import {
   TYPE_LABELS, spotsHost, fillSpots, registrationBlock, registrationState
@@ -56,6 +56,10 @@ function detail(event, counts, { onChange, heading, tag = 'div' }) {
     className: `badge badge-${event.event_type}`,
     text: TYPE_LABELS[event.event_type] || event.event_type
   })];
+  // Which game, where there is one. Straight after the type, because the two
+  // together are what somebody is scanning the row for: a League Cup of what.
+  const game = gameMark(event);
+  if (game) badges.push(game);
   if (event.is_premier) {
     badges.push(el('li', { className: 'badge badge-note', text: 'Player ID required' }));
   }

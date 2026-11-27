@@ -488,6 +488,43 @@ order they happened to click. Paging is keyset on `(submitted_at, id)` rather
 than an offset, so a photograph approved while somebody is part way down the
 page cannot shift the rest and show one of them twice.
 
+### Which game an event is for
+
+`events.game` holds `tcg`, `vgc` or null, set on the events screen, and the
+schedule and the event page draw a card symbol or a gamepad from it. **Display
+only** — nothing keys on it, and null is a real answer for a day that is neither
+or one running both. Such an event carries no symbol, because no symbol is
+better than the wrong one.
+
+A column rather than a match on the event name. The Chaos Cup link is matched on
+its name and the note on that match already says what is wrong with it: a
+cleverer match is not a flag, and a symbol claiming what somebody will be
+playing should not appear or vanish because of how an event was typed into a
+box. The migration backfilled the existing events from their names and
+**declined where a name said both** — "Standard + VGC" is a day the column
+cannot describe. That is why the card side matches the formats as well as the
+letters "TCG": without "Standard" in the list, that name sees one match instead
+of two and gets labelled a video game event. A prerelease was judged on
+`event_type` rather than its name, because it is a trading card set launch by
+definition and the names never say so. Only the Prerelease type preset fills the
+field in; a Cup or a Challenge can be either game, so neither guesses.
+
+The symbols are inline SVG from `gameMark()`, next to `premierMark()` and shared
+for the same reason — both pages draw that badge row. They are drawn rather than
+typed, because there are no web fonts here and the UI takes no emoji, and they
+are generic shapes that are nobody's mark. They are **outlines**: at sixteen
+pixels across, the first pair of solid overlapping cards was a smudge nobody
+could name, so the back card is an outline and only the front one is solid. The
+word sits in the chip beside the shape, and the shape is `aria-hidden` so it is
+not read out twice.
+
+Inside a day, an event still taking sign-ups is listed first, so a day carrying
+both a prerelease and an ordinary league afternoon leads with the one that needs
+acting on. Only inside a day — the schedule stays one chronological run under
+its date headings. It tests `registrationState()`, not the `registration_open`
+flag: an event already closed by a professor, or one that has started, is
+nothing to act on and is not promoted.
+
 ### One event, on a page of its own
 
 `event.html` is the link a professor posts. The schedule carries every event and

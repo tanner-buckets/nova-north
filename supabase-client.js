@@ -288,6 +288,68 @@ export function premierMark(event, prefix = '') {
   return { src: `${prefix}images/${mark.file}`, alt: mark.alt };
 }
 
+// Which game an event is for, as a chip for the badges row.
+//
+// Here and not in either page, for the reason premierMark() is here: the
+// schedule and the event page both draw this row, and two copies would drift
+// the first time one of them was touched.
+//
+// DRAWN, not typed. There are no web fonts on this site, so a card or gamepad
+// character is whatever shape the reading font happens to carry -- and the UI
+// takes no emoji, which is what a 🃏 would be. Inline SVG is the only way to
+// put a shape on a page here and know what it will look like.
+//
+// Generic shapes on purpose: two overlapping cards, and a gamepad outline.
+// Neither is anybody's mark, which keeps this clear of the rule about official
+// Pokemon artwork -- that is supplied by the organiser and asked about first,
+// and a symbol saying "this is the card game" needs none of it.
+// OUTLINES, mostly, and that is not a style choice. These are drawn about
+// sixteen pixels across inside a chip. Solid overlapping shapes at that size
+// merge into one blob -- the first pair of filled cards came out as a smudge
+// nobody could name -- so the back card is an outline and only the front one is
+// solid, which is what makes two cards read as two. The gamepad is an outline
+// for the same reason: filled, it is a pill.
+const GAME_MARKS = {
+  tcg: {
+    label: 'Trading cards',
+    // A card, tilted, with a second one solid in front of it.
+    shapes: '<rect x="3.2" y="5" width="10.6" height="14.6" rx="2"'
+          + ' transform="rotate(-16 8.5 12.3)"'
+          + ' fill="none" stroke="currentColor" stroke-width="2"/>'
+          + '<rect x="11" y="4" width="10.5" height="16" rx="2" fill="currentColor"/>'
+  },
+  vgc: {
+    label: 'Video game',
+    // A gamepad: the body, a d-pad on the left, two buttons on the right.
+    shapes: '<rect x="2.4" y="7.4" width="19.2" height="10.4" rx="5.2"'
+          + ' fill="none" stroke="currentColor" stroke-width="2"/>'
+          + '<path d="M7.4 10.3v4.6M5.1 12.6h4.6" fill="none" stroke="currentColor"'
+          + ' stroke-width="2" stroke-linecap="round"/>'
+          + '<circle cx="16" cy="11.4" r="1.4" fill="currentColor"/>'
+          + '<circle cx="18.6" cy="14" r="1.4" fill="currentColor"/>'
+  }
+};
+
+export function gameMark(event) {
+  const mark = GAME_MARKS[event && event.game];
+  if (!mark) return null;
+
+  // The word is in the chip beside the shape rather than left to it. A symbol
+  // alone is a guess for anybody who has not been told what it means, and at
+  // this size a card and a gamepad are two small rounded outlines. The shape is
+  // hidden from a screen reader because the word beside it says the same thing
+  // and twice is worse than once.
+  const svg = el('span', {
+    className: 'game-mark',
+    'aria-hidden': 'true',
+    html: `<svg viewBox="0 0 24 24" focusable="false">${mark.shapes}</svg>`
+  });
+
+  return el('li', { className: `badge badge-game badge-game-${event.game}` }, [
+    svg, el('span', { text: mark.label })
+  ]);
+}
+
 export function badgeArtUrl(badge, prefix = '') {
   if (badge.image_path) {
     return `${SUPABASE_URL}/storage/v1/object/public/badge-art/${badge.image_path}`;
