@@ -2205,6 +2205,65 @@ it like any other. Once earned it is on the card and in the total.
 Secret is not retired. A retired badge is finished with; a secret one is live and
 unannounced.
 
+### A badge can be earned in steps
+
+Some badges are a short list of things rather than one moment. Raid is a Level 1,
+a Level 2 and a Level 3 raid; 2026 Expert is two judge questions at one attempt a
+week, so it cannot be finished in an afternoon by definition. `badges.step_count`
+says how many, and `badge_progress` holds one row per step a player has done.
+The Trainer Card screen draws that many checkboxes under the badge's name.
+
+- **IT DECIDES NOTHING.** The badge is still awarded by tapping the tile, with
+  the boxes empty or full, and a full set does not award it. The moment this
+  gated the award it would stop being a notepad: a professor who watched all
+  three raids would have to go back and fill in boxes before the site would let
+  them record what they saw. It exists because that half-done state used to live
+  on a piece of paper between Sundays, which is the same way the prize pack
+  spreadsheet stopped being kept.
+- **Null, not zero**, the rule `loyalty_tiers.msrp` already follows. "Not earned
+  in steps" and "earned in no steps" are not two facts. Two is the floor because
+  a one-step badge *is* the badge — one checkbox beside the award is the same
+  fact twice, and a tick without an award is a disagreement with no right
+  answer. Twelve is the ceiling: they are drawn under a tile on a phone, and a
+  professor who types 60 has mistyped something.
+- **The count is the whole of it; the steps have no names.** The task sentence
+  already describes them — "Win a Level 1 Raid, a Level 2 Raid, and a Level 3
+  Raid" — and a second copy is a second thing to keep in step with the first.
+- **One field on the badge form, not a tick-box and a number.** Two controls for
+  one fact can disagree, and then "tracked, but zero steps" is a state somebody
+  has to decide the meaning of. Empty means no tracking. Same reasoning as
+  **Only the Sundays decide whether a tier exists**.
+- **The step boxes are SIBLINGS of the award button, never inside it.** A
+  checkbox inside a button is invalid, and the browser hands its clicks to the
+  button — ticking a step would award the badge. `.badge-track` is the wrapper
+  that keeps them apart.
+- **`badge_progress` grants INSERT and DELETE and no UPDATE**, the arrangement
+  `player_badges` has: a step is ticked or cleared, never amended. It is
+  professor-only with no public access at all, because a half-finished badge is
+  a working note and not something about a player anybody else reads.
+- **`step_number` is deliberately NOT checked against `step_count`.** A check
+  constraint cannot read another table, and a trigger would refuse a row the day
+  somebody lowered the count. A step above the current count lies dormant and
+  comes back if the count is raised — and **the Trainer Card screen says so**,
+  naming the badge and the step, because work disappearing with nothing on
+  screen about it is worse than the row being hidden.
+- **The step box carries no `min` or `max` attribute.** They make the browser
+  refuse the submit in its own wording before the screen's own check runs, so
+  the sentence explaining what a step count is for would never be read. Nothing
+  else on that form is `required` either, for the same reason.
+- **Ticking is written in place rather than through a redraw.** A tick is a
+  one-row change nothing else on the screen reads — not the rank, not the count,
+  not Champion — and rebuilding the page around a checkbox throws away the focus
+  of a professor part way along a row of them. A refused write puts the box back
+  where the database still says it is.
+- **Pre-existing and not fixed here**: an empty badge tile takes its size from
+  the length of its own name, because `.badge-tile` is `width: 100%` inside a
+  `justify-items: center` grid, which sizes the column to the name instead. So
+  "Raid" draws a 24px tile and "Network" a 44px one. `.badge-grid-toggle` is
+  `align-items: start` so at least the names in a row sit level; the tile
+  sizing itself wants `.badge-button` to stop centring, and that changes every
+  badge grid on the site rather than only the awarding screen.
+
 ## Conventions
 
 - Two-space indentation.

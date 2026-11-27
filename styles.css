@@ -2140,7 +2140,15 @@ a.player-button:hover .player-label {
 
 /* The Trainer Card screen shows the same tiles, as buttons. A professor
    awarding a badge should be looking at what the player will see. */
-.badge-grid-toggle { grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr)); }
+/* Cells hug their own content rather than stretching to the tallest in the row.
+   Without this a badge carrying step boxes makes every cell beside it as tall
+   as itself, and those cells stretch their contents to fill -- so the badge
+   NAMES in a row stop sitting level with each other, which reads as a
+   misalignment rather than as one badge having more under it. */
+.badge-grid-toggle {
+  grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
+  align-items: start;
+}
 .badge-button {
   font: inherit;
   background: none;
@@ -2155,6 +2163,44 @@ a.player-button:hover .player-label {
 .badge-button:hover .badge-tile { filter: brightness(1.05); }
 .badge-button:focus-visible { outline: 3px solid var(--gold-line); outline-offset: 2px; }
 .badge-button .badge-toggle-date { font-size: 0.68rem; color: var(--muted); }
+
+/* --- The steps inside a badge ------------------------------------------------
+   Raid is three raids and Expert is two judge questions a week apart, so those
+   badges have a half-done state that used to live on a piece of paper. These
+   are the boxes that hold it, under the tile on the Trainer Card screen.
+
+   The wrapper exists because the tile is a BUTTON: a checkbox inside a button
+   is invalid, and the browser hands its clicks to the button, so ticking a
+   step would award the badge. They are siblings instead. */
+.badge-track {
+  display: grid;
+  gap: 0.3rem;
+}
+.badge-steps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem;
+}
+/* 1.25rem, not the browser's 13px default. These are tapped at a desk on a
+   phone, usually in a row of three, and the gap is what stops a thumb aimed at
+   step 2 landing on step 1. A dozen is the most a badge may ask for and they
+   wrap rather than squeezing. */
+.badge-step {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+.badge-step:disabled { cursor: progress; }
+
+/* Quiet, because how many steps a badge takes is information and not a state
+   anybody has to act on. Not tag-voided's muted grey, which reads as retired. */
+.tag-steps {
+  background: var(--line);
+  color: var(--ink-soft);
+}
 
 /* --- The Play! Pokemon mark ------------------------------------------------- */
 /* Bottom right of every page. Under the footer text on a phone, beside it once

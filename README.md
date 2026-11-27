@@ -638,6 +638,36 @@ on their card and in their total.
 Secret is not the same as retired. A retired badge is finished with; a secret one
 is live and unannounced.
 
+### A badge can be earned in steps
+
+Some badges are a short list of things rather than one moment: Raid is a Level 1,
+a Level 2 and a Level 3 raid, and 2026 Expert is two judge questions at one
+attempt a week, so it cannot be finished in an afternoon. `badges.step_count` is
+how many, set on the badge form, and `badge_progress` holds one row per step a
+player has done. The Trainer Card screen draws that many checkboxes under the
+badge's name, and a professor ticks them as they happen.
+
+**It decides nothing.** The badge is still awarded by tapping the tile, with the
+boxes empty or full, and a full set does not award it. Making it a precondition
+would turn a notepad into paperwork — a professor who watched all three raids
+would have to fill in history before the site would record what they saw. The
+state it holds used to live on a piece of paper between Sundays, which is how
+the prize pack spreadsheet stopped being kept.
+
+Null means no step tracking, never zero. Two is the floor, because a one-step
+badge is the badge and a single checkbox beside the award is the same fact
+written twice; twelve is the ceiling, because they are drawn under a tile on a
+phone. The steps carry no names: the task sentence already describes them, and a
+second copy is a second thing to keep right.
+
+`badge_progress` is professor-only with no public read at all, and grants INSERT
+and DELETE and no UPDATE — a step is ticked or cleared, never amended, the same
+posture `player_badges` takes. `step_number` is deliberately not checked against
+`step_count`, because a check constraint cannot read another table and a trigger
+would refuse the row the day somebody lowered the count; a step above the count
+lies dormant instead, and the screen names it rather than letting it vanish
+quietly.
+
 ### Professor screens
 
 Sign in at `admin/index.html` with the Supabase Auth account tied to a
