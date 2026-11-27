@@ -247,7 +247,7 @@ const VALUES = [
         + 'impartial when making judge calls.' },
       { note: 6, text: 'No wagering or gambling on games, matches, or results, '
         + 'and no offering anything to influence a result. Gambling and other '
-        + 'high-risk activities are discouraged in our space.' }
+        + 'high-risk activities are not allowed in our space.' }
     ]
   },
   {
