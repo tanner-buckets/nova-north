@@ -5161,3 +5161,93 @@ h1.event-name + .event-when {
 /* A delivery marked in a narrow numeric column. "+600 in" is three characters
    and a word, and wrapping it leaves "in" alone on a second line. */
 .pack-in { white-space: nowrap; }
+
+/* --- Badge progress --------------------------------------------------------
+   admin/badge-progress.html: every player against one season's badges. A
+   column per badge makes this wide by nature, so it keeps its own pitch and
+   .table-wrap scrolls, the bargain the attendance chart already makes.
+
+   Every class here is bp-, because this page has a table, a count and a set
+   of pickers and all three of those words are already taken elsewhere in this
+   stylesheet. The names have collided twice before -- .note-text on the
+   attendance history, and sheet-* between the two printables. */
+.bp-badges {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.bp-badges legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0 0.35rem;
+  font-weight: 600;
+}
+.bp-pick-actions { display: flex; gap: 0.6rem; }
+
+/* Wraps to one per line on a phone and fills the width on a laptop, rather
+   than a fixed column count that is wrong at one of the two. */
+.bp-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.3rem 0.9rem;
+}
+.bp-pick { display: flex; align-items: center; gap: 0.4rem; }
+.bp-pick label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+
+.bp-range { flex-wrap: wrap; gap: 0.5rem; }
+.bp-range input { width: 5rem; }
+
+/* The name is a link to that player's own Trainer Card, with the Player ID
+   under it -- the ID is what does not change spelling, so it is what somebody
+   checks when two players share a first name. */
+.bp-player a { font-weight: 600; }
+.bp-player .count { display: block; font-size: 0.78rem; }
+
+.bp-table th,
+.bp-table td { padding-right: 0.75rem; white-space: nowrap; }
+.bp-num { text-align: right; font-variant-numeric: tabular-nums; }
+.bp-count { font-weight: 600; }
+
+.bp-badge-head { vertical-align: bottom; }
+.bp-badge-name { display: block; }
+.bp-badge-note {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.bp-cell { text-align: center; }
+
+/* Drawn, not typed. There are no web fonts here, so a tick character is
+   whatever shape the reading font happens to carry, and the UI takes no
+   emoji. Its accessible name is on the element, because a column of silent
+   cells tells a screen reader nothing at all. */
+.bp-mark {
+  display: inline-block;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: var(--gold);
+}
+.bp-steps {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+/* An em dash held back to the quiet colour: the eye should skip it and land on
+   the cells that say something. */
+.bp-none { color: var(--line); }
+/* Every step ticked and the badge not given: somebody did the work and nobody
+   recorded it. Gold and bold, so it reads differently from "one of three"
+   without being an error -- the steps are a note, and a professor may simply
+   not have handed it over yet. */
+.bp-steps.is-ready {
+  font-weight: 700;
+  color: var(--gold);
+}

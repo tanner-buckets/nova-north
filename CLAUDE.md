@@ -1811,6 +1811,7 @@ home-events.js      the what-is-on-next banner at the top of the home page
 admin/              professor-only pages
 admin/staff.html    the staffing roster, availability and event staffing
 admin/prize-packs.html  prize pack stock per series, week by week, and deliveries
+admin/badge-progress.html  every player against one season's badges, read only
 admin/attendance-core.js  the shared write, and the boxes both recording screens carry
 admin/printables.html  handouts for players, built from the database
 admin/sheet-trainer-card.js  the Trainer Card Program information sheet
@@ -2263,6 +2264,71 @@ The Trainer Card screen draws that many checkboxes under the badge's name.
   `align-items: start` so at least the names in a row sit level; the tile
   sizing itself wants `.badge-button` to stop centring, and that changes every
   badge grid on the site rather than only the awarding screen.
+
+### The badge board
+
+`admin/badge-progress.html`, filled by `badge-progress.js` on top of
+`badge_board()`. Every player against one season's badges: who has earned what,
+who is part way through one that takes steps, who is closest to the next rank.
+The other professor screens ask about one player; this asks about one badge, or
+one threshold, across everybody, and before it the only way to find that out was
+to open the Trainer Card forty times.
+
+- **READ ONLY, and that is the design.** Every name links to that player's own
+  Trainer Card, which is where a badge is given or taken back. A grid of three
+  hundred rows where every cell is a button is a grid where a mis-tap awards a
+  badge to the wrong child, and the undo for that is a conversation.
+- **Columns and rows are separate questions.** Ticking badges chooses which
+  **columns** appear; the *Rows to list* select chooses who gets a **row** —
+  everyone, who has any of the ticked badges, who has them all, who is missing
+  any. Tick one badge and ask "who has any" and you have "who earned Raid",
+  which is the question the page was asked for first.
+- **The count is the whole season however few badges are ticked.** It stays the
+  number rank is judged on, so narrowing the view never changes what a number
+  means. A count that followed the filter would read "2 of 3" and quietly stop
+  being comparable to the Trainer Card.
+- **It counts badges the way `player_rank()` does, retired ones included.**
+  CLAUDE.md said retiring a badge stops it counting towards rank and the
+  function does not do that — it joins on `season_year` alone. Counting
+  differently here would put a number on this screen that disagrees with the
+  rank on the player's own card, which is worse than the inconsistency it would
+  be fixing. Retired badges are shown as columns and marked, so the disagreement
+  is visible rather than baked into a total. **Fixing `player_rank()` would
+  change people's ranks and is a decision, not a tidy-up.**
+- **One fetch, then every filter and sort runs in the page.** A professor moving
+  a threshold is re-asking the same question of the same rows; a round trip per
+  keystroke would make it feel broken. The payload is names and Player IDs,
+  which this screen already shows, and `badge_board()` carries **no birth year
+  and no division** — the same line `trainer_card_roster` holds.
+- **`badge_board()` is `security definer` and raises for anybody who is not a
+  professor**, and EXECUTE is revoked from `public` first. Postgres grants
+  EXECUTE to PUBLIC by default, so the grant to `authenticated` is not what
+  decides who may call it — without the revoke, anon can.
+- **All the steps ticked and the badge not given is drawn differently**, in
+  gold, and says "all 3 steps done, badge not awarded" to a screen reader.
+  Somebody did the work and nobody recorded it, which is the most actionable
+  cell on the page. It is not an error: the steps are a note, and a professor
+  may simply not have handed it over yet.
+- **An untouched stepped badge shows a dash, not "0 of 3".** The column heading
+  already says how many steps the badge takes, and a fraction in every
+  untouched cell is noise.
+- **The mark for an earned badge is drawn in CSS, not typed.** There are no web
+  fonts here, so a tick character is whatever shape the reading font happens to
+  carry, and the UI takes no emoji. Its accessible name is a word, because a
+  column of silent cells tells a screen reader nothing.
+- **The count column comes before the badge columns.** A table with a column per
+  badge is wide by nature, and a summary at the far right is the first thing off
+  the side of a phone — the mistake the attendance table made with Total.
+- **The spaces in a column heading are written into the markup.** The badge
+  name, the step count and the tags are adjacent boxes and the gap between them
+  is margin, which is not in the text — so without them the heading's accessible
+  name runs together as "Raid3 steps". The rental shelf hit this as
+  "Standard decks3 decks".
+- **Every class on this page is `bp-`.** It has a table, a count and a set of
+  pickers, and all three of those words were already taken in `styles.css`.
+- `badge_seasons_all()` is every season that has badges, which is **not**
+  `active_badge_seasons()` — last year's board is a real thing somebody may want
+  to look at.
 
 ## Conventions
 

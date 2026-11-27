@@ -668,6 +668,43 @@ would refuse the row the day somebody lowered the count; a step above the count
 lies dormant instead, and the screen names it rather than letting it vanish
 quietly.
 
+### The badge board
+
+`admin/badge-progress.html` is every player against one season's badges, read
+through `badge_board()`. The other professor screens ask about one player; this
+asks about one badge, or one threshold, across everybody — who has earned Raid,
+who is sitting on exactly two, who is one short of the next rank.
+
+Ticking badges chooses which **columns** appear. A separate control chooses who
+gets a **row**: everyone, who has any of the ticked badges, who has them all, or
+who is missing any. Tick one badge and ask for "who has any" and that is "who
+earned this badge". On top of that, filter by days attended in the last three
+months and by a badge-count range, and sort by badges, by name or by who has
+been here most recently.
+
+**It is read only.** Every name links to that player's Trainer Card, which is
+where a badge is given or taken back. A grid of three hundred rows where every
+cell is a button is a grid where a mis-tap awards a badge to the wrong child.
+
+The count beside each name is the whole season however few badges are ticked, so
+narrowing the view never changes what the number means — and it counts the way
+`player_rank()` counts, **retired badges included**. The docs say retiring a
+badge stops it counting towards rank; the function joins on `season_year` alone
+and does not do that. Counting differently here would put a number on this
+screen that disagrees with the rank on the player's own card, so the board
+matches the function and marks retired badges instead. Changing `player_rank()`
+would move people's ranks and is a decision rather than a tidy-up.
+
+One fetch, then every filter and sort runs in the page: a professor moving a
+threshold is re-asking the same question of the same rows. `badge_board()` is
+`security definer`, raises for anybody who is not a professor, has EXECUTE
+revoked from `public` before it is granted to `authenticated` — Postgres grants
+EXECUTE to PUBLIC by default, so the grant alone would not have kept anon out —
+and carries no birth year and no division.
+
+A badge with every step ticked and no award is drawn in gold and reads as "all 3
+steps done, badge not awarded": somebody did the work and nobody recorded it.
+
 ### Professor screens
 
 Sign in at `admin/index.html` with the Supabase Auth account tied to a
